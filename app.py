@@ -10,7 +10,7 @@ with st.sidebar:
     st.image("logosapori.png", width=200)
     st.markdown("---") # Una línea divisoria después del logo
 
-st.title("📊 Tablero de Control de Desviaciones Comerciales Sapori")
+st.title("📊 Sapori: Monitor Estratégico de Ventas por SKU")
 st.markdown("### Análisis Comparativo de Venta Diaria por SKU (Junio vs Julio)")
 st.info("Visualizador oficial para el equipo. Los datos son actualizados periódicamente por el administrador.")
 
