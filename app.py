@@ -110,8 +110,8 @@ else:
         # --- SECCIÓN DE FIRMA ---
         st.markdown("---")
         st.markdown(
-            "<div style='text-align: center; color: gray;'>"
-            "*Jair Ramos* <b>_Supply Chain Planning - Sapori_</b>"
+            "<div style='text-align: left; color: #555;'>"
+            "<small>Supply Chain Planning | Sapori</small>"
             "</div>", 
             unsafe_allow_html=True
         )
