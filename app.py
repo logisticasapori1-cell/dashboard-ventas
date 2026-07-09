@@ -111,7 +111,7 @@ else:
         st.markdown("---")
         st.markdown(
             "<div style='text-align: center; color: gray;'>"
-            "Elaborado por: <b>Jair Ramos - Planificador de Materiales</b>"
+            "*Jair Ramos* <b>_Supply Chain Planning - Sapori_</b>"
             "</div>", 
             unsafe_allow_html=True
         )
