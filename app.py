@@ -6,7 +6,7 @@ import os
 # Configuración de la interfaz
 st.set_page_config(layout="wide", page_title="Control de Desviaciones Comerciales", page_icon="📊")
 
-st.title("📊 Tablero de Control de Desviaciones Comerciales")
+st.title("📊 Tablero de Control de Desviaciones Comerciales Sapori")
 st.markdown("### Análisis Comparativo de Venta Diaria por SKU (Junio vs Julio)")
 st.info("Visualizador oficial para el equipo. Los datos son actualizados periódicamente por el administrador.")
 
@@ -107,7 +107,7 @@ else:
         st.markdown("---")
         st.markdown(
             "<div style='text-align: center; color: gray;'>"
-            "📝 Elaborado por: <b>Jair Ramos - Planificador de Materiales</b>"
+            "Elaborado por: <b>Jair Ramos - Planificador de Materiales</b>"
             "</div>", 
             unsafe_allow_html=True
         )
