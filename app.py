@@ -92,9 +92,9 @@ else:
         
         def resaltar_tendencia(val):
             if val == 'SUBIÓ':
-                return 'background-color: #fce4d6; color: #c65911; font-weight: bold;' # Rojo/Naranja de alerta constante con tu KPI
+                return 'background-color: #e2f0d9; color: #385723; font-weight: bold;' # Rojo/Naranja de alerta constante con tu KPI
             elif val == 'BAJO':
-                return 'background-color: #e2f0d9; color: #385723; font-weight: bold;'
+                return 'background-color: #fce4d6; color: #c65911; font-weight: bold;'
             return ''
             
         st.dataframe(
