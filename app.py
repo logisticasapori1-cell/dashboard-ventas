@@ -38,7 +38,7 @@ else:
         
         kpi1, kpi2, kpi3 = st.columns(3)
         kpi1.metric("Total SKUs Monitoreados", f"{total_skus} Productos")
-        kpi2.metric("SKUs con Crecimiento (SUBIÓ)", f"{subio}", delta=f"+{subio} SKUs", delta_color="inverse")
+        kpi2.metric("SKUs con Crecimiento (SUBIÓ)", f"{subio}", delta=f"+{subio} SKUs", delta_color="normal")
         kpi3.metric("SKUs en Alerta (BAJO)", f"{bajo}", delta=f"-{bajo} SKUs")
         
         st.markdown("---")
@@ -107,7 +107,7 @@ else:
         st.markdown("---")
         st.markdown(
             "<div style='text-align: center; color: gray;'>"
-            "📝 Elaborado por: <b>[Tu Nombre o Tu Departamento]</b>"
+            "📝 Elaborado por: <b>Jair Ramos - Planificador de Materiales</b>"
             "</div>", 
             unsafe_allow_html=True
         )
