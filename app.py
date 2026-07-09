@@ -39,7 +39,7 @@ else:
         kpi1, kpi2, kpi3 = st.columns(3)
         kpi1.metric("Total SKUs Monitoreados", f"{total_skus} Productos")
         kpi2.metric("SKUs con Crecimiento (SUBIÓ)", f"{subio}", delta=f"+{subio} SKUs", delta_color="normal")
-        kpi3.metric("SKUs en Alerta (BAJO)", f"{bajo}", delta=f"-{bajo} SKUs")
+        kpi3.metric("SKUs en Alerta (BAJO)", f"{bajo}", delta=f"-{bajo} SKUs", delta_color="normal")
         
         st.markdown("---")
         
