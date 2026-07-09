@@ -5,10 +5,9 @@ import os
 
 # Configuración de la interfaz
 st.set_page_config(layout="wide", page_title="Control de Desviaciones Comerciales", page_icon="📊")
-
 # --- LOGO DE LA EMPRESA ---
 with st.sidebar:
-    st.image("logosapori	.png", use_container_width=True)
+    st.image("logosapori.png", use_container_width=True)
     st.markdown("---") # Una línea divisoria después del logo
 
 st.title("📊 Tablero de Control de Desviaciones Comerciales Sapori")
