@@ -11,8 +11,8 @@ st.set_page_config(layout="wide", page_title="Control de Desviaciones Comerciale
 
 # Agregar Logo en la barra lateral (si existe el archivo)
 with st.sidebar:
-    if os.path.exists("logo_empresa.png"):
-        st.image("logo_empresa.png", use_container_width=True)
+    if os.path.exists("logosapori.png"):
+        st.image("logosapori.png", use_container_width=True)
     st.markdown("---")
     st.markdown("### Parámetros de Análisis")
     st.info("Visualizador oficial para el equipo. Los datos son actualizados por el administrador.")
