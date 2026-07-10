@@ -68,7 +68,7 @@ else:
         kpi1.metric("Total SKUs", f"{total_skus} Prod.")
         
         # KPI en rojo para incrementos (según configuración anterior)
-        kpi2.metric("SKUs en Alza", f"{subio}", delta=f"+{subio} SKUs", delta_color="inverse")
+        kpi2.metric("SKUs en Alza", f"{subio}", delta=f"+{subio} SKUs", delta_color="normal")
         
         kpi3.metric("SKUs en Alerta", f"{bajo}", delta=f"-{bajo} SKUs")
         
