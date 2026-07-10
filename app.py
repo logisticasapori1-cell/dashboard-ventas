@@ -9,17 +9,15 @@ import io
 # ==========================================
 st.set_page_config(layout="wide", page_title="Control de Desviaciones Comerciales", page_icon="📊")
 
-# Agregar Logo en la barra lateral (si existe el archivo)
 with st.sidebar:
-    if os.path.exists("logosapori.png"):
-        st.image("logosapori.png", use_container_width=True)
+    if os.path.exists("logo_empresa.png"):
+        st.image("logo_empresa.png", use_container_width=True)
     st.markdown("---")
     st.markdown("### Parámetros de Análisis")
     st.info("Visualizador oficial para el equipo. Los datos son actualizados por el administrador.")
 
-# Títulos principales
 st.title("📊 Tablero de Control de Desviaciones Comerciales")
-st.markdown("### Análisis Comparativo y Financiero por SKU (Junio vs Julio)")
+st.markdown("### Análisis Comparativo, Financiero y Pareto (ABC) por SKU")
 
 # ==========================================
 # CARGA Y PROCESAMIENTO DE DATOS
@@ -31,15 +29,12 @@ if not os.path.exists(file_name):
     st.warning("Asegúrate de que el archivo Excel esté en la misma carpeta que este script.")
 else:
     try:
-        # Cargar datos
         df = pd.read_excel(file_name, sheet_name="Table 1")
         
-        # Limpiar formatos de miles y decimales si vienen como texto
         for col in ['PROMD VTA DIA JUNIO', 'PROMD VTA DIA JULIO']:
             if df[col].dtype == 'object':
                 df[col] = df[col].astype(str).str.replace('.', '', regex=False).str.replace(',', '.', regex=False).astype(float)
         
-        # Calcular porcentaje de desviación numérico para ordenamientos internos
         if 'Porcentaje de desviación' in df.columns:
             df['Desviacion_Num'] = df['Porcentaje de desviación'].astype(str).str.rstrip('%').str.replace(',', '.', regex=False).astype(float)
         else:
@@ -48,14 +43,27 @@ else:
         # --- CÁLCULO DE IMPACTO FINANCIERO ---
         tiene_precio = 'PRECIO UNITARIO' in df.columns
         if tiene_precio:
-            # Calcular la diferencia en unidades diarias
             df['Dif_Unidades_Diarias'] = df['PROMD VTA DIA JULIO'] - df['PROMD VTA DIA JUNIO']
-            # Calcular el impacto diario en moneda
             df['Impacto_Diario_$'] = df['Dif_Unidades_Diarias'] * df['PRECIO UNITARIO']
-            # Proyectar el impacto al mes completo (30 días)
             df['Impacto_Mensual_$'] = df['Impacto_Diario_$'] * 30
-        else:
-            st.warning("⚠️ **Aviso:** Para ver el impacto financiero, agrega una columna llamada 'PRECIO UNITARIO' a tu archivo Excel original.")
+
+        # --- NUEVO: CÁLCULO DE ANÁLISIS ABC (PARETO) ---
+        # 1. Ordenar de mayor a menor por el volumen actual (Julio)
+        df = df.sort_values(by='PROMD VTA DIA JULIO', ascending=False).reset_index(drop=True)
+        # 2. Calcular el porcentaje de participación de cada SKU
+        volumen_total_julio = df['PROMD VTA DIA JULIO'].sum()
+        df['Porcentaje_Participacion'] = (df['PROMD VTA DIA JULIO'] / volumen_total_julio) * 100
+        # 3. Calcular el porcentaje acumulado
+        df['Acumulado_ABC'] = df['Porcentaje_Participacion'].cumsum()
+        # 4. Asignar Categoría ABC
+        def asignar_abc(acumulado):
+            if acumulado <= 80:
+                return 'A'
+            elif acumulado <= 95:
+                return 'B'
+            else:
+                return 'C'
+        df['Clasificación ABC'] = df['Acumulado_ABC'].apply(asignar_abc)
 
         # ==========================================
         # SECCIÓN 1: KPIs (TARJETAS DE MÉTRICAS)
@@ -66,10 +74,7 @@ else:
         
         kpi1, kpi2, kpi3, kpi4 = st.columns(4)
         kpi1.metric("Total SKUs", f"{total_skus} Prod.")
-        
-        # KPI en rojo para incrementos (según configuración anterior)
-        kpi2.metric("SKUs en Alza", f"{subio}", delta=f"+{subio} SKUs", delta_color="normal")
-        
+        kpi2.metric("SKUs en Alza", f"{subio}", delta=f"+{subio} SKUs", delta_color="inverse")
         kpi3.metric("SKUs en Alerta", f"{bajo}", delta=f"-{bajo} SKUs")
         
         if tiene_precio:
@@ -83,17 +88,23 @@ else:
         # ==========================================
         # SECCIÓN 2: FILTROS INTERACTIVOS
         # ==========================================
-        col_f1, col_f2 = st.columns(2)
+        # Se agregaron 3 columnas para incluir el nuevo filtro ABC
+        col_f1, col_f2, col_f3 = st.columns(3)
         with col_f1:
-            filtro_tendencia = st.selectbox("🎯 Filtrar por Estado de Tendencia:", ["Todos", "SUBIÓ", "BAJO"])
+            filtro_tendencia = st.selectbox("🎯 Estado de Tendencia:", ["Todos", "SUBIÓ", "BAJO"])
         with col_f2:
-            busqueda = st.text_input("🔍 Buscar por Nombre de Producto o Referencia:")
+            filtro_abc = st.selectbox("📊 Clasificación ABC:", ["Todos", "A", "B", "C"])
+        with col_f3:
+            busqueda = st.text_input("🔍 Buscar SKU o Producto:")
         
         # Aplicación de los filtros al dataframe
         df_filtrado = df.copy()
-        if filtro_tendencia != "Todos":
-            if 'Estado de tendencia' in df_filtrado.columns:
-                df_filtrado = df_filtrado[df_filtrado['Estado de tendencia'] == filtro_tendencia]
+        
+        if filtro_tendencia != "Todos" and 'Estado de tendencia' in df_filtrado.columns:
+            df_filtrado = df_filtrado[df_filtrado['Estado de tendencia'] == filtro_tendencia]
+            
+        if filtro_abc != "Todos":
+            df_filtrado = df_filtrado[df_filtrado['Clasificación ABC'] == filtro_abc]
                 
         if busqueda:
             df_filtrado = df_filtrado[
@@ -139,22 +150,21 @@ else:
         # SECCIÓN 4: TABLA DE DETALLE ESTILIZADA
         # ==========================================
         st.markdown("---")
-        st.markdown("### 📋 Detalle de Ventas, Desviaciones e Impacto")
+        st.markdown("### 📋 Detalle de Ventas, Clasificación ABC e Impacto")
         
+        # Se agregó la columna 'Clasificación ABC' para renderizar
         if tiene_precio:
-            columnas_render = ['REFERENCIA INTERNA', 'PRODUCTO', 'PROMD VTA DIA JUNIO', 'PROMD VTA DIA JULIO', 'Porcentaje de desviación', 'Impacto_Mensual_$', 'Estado de tendencia']
+            columnas_render = ['REFERENCIA INTERNA', 'PRODUCTO', 'Clasificación ABC', 'PROMD VTA DIA JUNIO', 'PROMD VTA DIA JULIO', 'Porcentaje de desviación', 'Impacto_Mensual_$', 'Estado de tendencia']
         else:
-            columnas_render = ['REFERENCIA INTERNA', 'PRODUCTO', 'PROMD VTA DIA JUNIO', 'PROMD VTA DIA JULIO', 'Porcentaje de desviación', 'Estado de tendencia']
+            columnas_render = ['REFERENCIA INTERNA', 'PRODUCTO', 'Clasificación ABC', 'PROMD VTA DIA JUNIO', 'PROMD VTA DIA JULIO', 'Porcentaje de desviación', 'Estado de tendencia']
         
-        # Función de colores invertida según solicitud: SUBIÓ (Verde), BAJO (Rojo)
         def resaltar_tendencia(val):
             if val == 'SUBIÓ':
-                return 'background-color: #e2f0d9; color: #385723; font-weight: bold;' # Verde
+                return 'background-color: #e2f0d9; color: #385723; font-weight: bold;'
             elif val == 'BAJO':
-                return 'background-color: #fce4d6; color: #c65911; font-weight: bold;' # Rojo/Naranja
+                return 'background-color: #fce4d6; color: #c65911; font-weight: bold;'
             return ''
         
-        # Aplicar formato de colores y moneda (si existe el precio)
         if tiene_precio:
             tabla_estilizada = df_filtrado[columnas_render].style.map(resaltar_tendencia, subset=['Estado de tendencia']).format({'Impacto_Mensual_$': '${:,.2f}'})
         else:
@@ -171,11 +181,9 @@ else:
         
         buffer = io.BytesIO()
         with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
-            # Escribir la tabla filtrada al Excel
             df_filtrado[columnas_render].to_excel(writer, sheet_name='Reporte_Filtrado', index=False)
             worksheet = writer.sheets['Reporte_Filtrado']
             
-            # Ajustar anchos de columna dinámicamente
             for col in worksheet.columns:
                 max_length = 0
                 column = col[0].column_letter 
@@ -188,7 +196,6 @@ else:
                 adjusted_width = (max_length + 2)
                 worksheet.column_dimensions[column].width = adjusted_width
             
-            # Bloque de Firmas al final de los datos
             max_row = worksheet.max_row
             worksheet.cell(row=max_row + 4, column=1, value="___________________________________")
             worksheet.cell(row=max_row + 5, column=1, value="Firma: Gerencia de Operaciones")
@@ -210,8 +217,8 @@ else:
         # ==========================================
         st.markdown("---")
         st.markdown(
-            "<div style='text-align: center; color: #555;'>"
-            "<strong>Jair Ramos</strong><br> <small>Supply Chain Planning - Sapori</small>"
+            "<div style='text-align: center; color: gray;'>"
+            "Jair Ramos - Supply Chain</b>"
             "</div>", 
             unsafe_allow_html=True
         )
