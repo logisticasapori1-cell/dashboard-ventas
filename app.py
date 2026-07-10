@@ -210,8 +210,8 @@ else:
         # ==========================================
         st.markdown("---")
         st.markdown(
-            "<div style='text-align: center; color: gray;'>"
-            "📝 Elaborado por: <b>[Tu Nombre o Tu Departamento]</b>"
+            "<div style='text-align: center; color: #555;'>"
+            "<strong>Jair Ramos</strong><br> <small>Supply Chain Planning - Sapori | Sapori</small>"
             "</div>", 
             unsafe_allow_html=True
         )
