@@ -6,13 +6,9 @@ import io
 
 # Configuración de la interfaz
 st.set_page_config(layout="wide", page_title="Control de Desviaciones Comerciales", page_icon="📊")
-# --- LOGO DE LA EMPRESA ---
-with st.sidebar:
-    st.image("logosapori.png", width=200)
-    st.markdown("---") # Una línea divisoria después del logo
 
-st.title("📊 Sapori: Monitor Estratégico de Ventas por SKU")
-st.markdown("### Análisis Comparativo de Venta Diaria por SKU (Junio vs Julio)")
+st.title("📊 Tablero de Control de Desviaciones Comerciales")
+st.markdown("### Análisis Comparativo y Financiero por SKU (Junio vs Julio)")
 st.info("Visualizador oficial para el equipo. Los datos son actualizados periódicamente por el administrador.")
 
 # Nombre del archivo excel esperado
@@ -36,16 +32,35 @@ else:
         else:
             df['Desviacion_Num'] = ((df['PROMD VTA DIA JULIO'] - df['PROMD VTA DIA JUNIO']) / df['PROMD VTA DIA JUNIO']) * 100
 
+        # --- SECCIÓN FINANCIERA (NUEVA) ---
+        tiene_precio = 'PRECIO UNITARIO' in df.columns
+        if tiene_precio:
+            # Calcular la diferencia en unidades diarias
+            df['Dif_Unidades_Diarias'] = df['PROMD VTA DIA JULIO'] - df['PROMD VTA DIA JUNIO']
+            # Calcular el impacto diario en moneda
+            df['Impacto_Diario_$'] = df['Dif_Unidades_Diarias'] * df['PRECIO UNITARIO']
+            # Proyectar el impacto al mes completo (30 días)
+            df['Impacto_Mensual_$'] = df['Impacto_Diario_$'] * 30
+        else:
+            st.warning("⚠️ **Aviso:** Para ver el impacto financiero, agrega una columna llamada 'PRECIO UNITARIO' a tu archivo Excel.")
+
         # --- SECCIÓN 1: METRICAS CLAVE (KPIs) ---
         total_skus = len(df)
         subio = len(df[df['Estado de tendencia'] == 'SUBIÓ']) if 'Estado de tendencia' in df.columns else len(df[df['Desviacion_Num'] > 0])
         bajo = len(df[df['Estado de tendencia'] == 'BAJO']) if 'Estado de tendencia' in df.columns else len(df[df['Desviacion_Num'] < 0])
         
-        kpi1, kpi2, kpi3 = st.columns(3)
-        kpi1.metric("Total SKUs Monitoreados", f"{total_skus} Productos")
-        kpi2.metric("SKUs con Crecimiento (SUBIÓ)", f"{subio}", delta=f"+{subio} SKUs", delta_color="normal")
-        kpi3.metric("SKUs en Alerta (BAJO)", f"{bajo}", delta=f"-{bajo} SKUs", delta_color="normal")
+        # Crear 4 columnas para incluir el KPI financiero
+        kpi1, kpi2, kpi3, kpi4 = st.columns(4)
+        kpi1.metric("Total SKUs", f"{total_skus} Prod.")
+        kpi2.metric("SKUs en Alza", f"{subio}", delta=f"+{subio} SKUs", delta_color="inverse")
+        kpi3.metric("SKUs en Alerta", f"{bajo}", delta=f"-{bajo} SKUs")
         
+        if tiene_precio:
+            impacto_total = df['Impacto_Mensual_$'].sum()
+            kpi4.metric("Balance Financiero Mensual", f"${impacto_total:,.2f}", delta="Proyección vs Junio")
+        else:
+            kpi4.metric("Balance Financiero", "Sin Datos")
+            
         st.markdown("---")
         
         # --- SECCIÓN 2: FILTROS INTERACTIVOS ---
@@ -89,39 +104,40 @@ else:
         else:
             st.warning("⚠️ No se encontraron productos que coincidan con tu búsqueda.")
         
-        # --- SECCIÓN 4: TABLA DE DETALLE ---
+        # --- SECCIÓN 4: TABLA DE DETALLE FINANCIERO ---
         st.markdown("---")
-        st.markdown("### 📋 Detalle de Ventas y Desviaciones")
+        st.markdown("### 📋 Detalle de Ventas, Desviaciones e Impacto")
         
-        columnas_render = ['REFERENCIA INTERNA', 'PRODUCTO', 'PROMD VTA DIA JUNIO', 'PROMD VTA DIA JULIO', 'Porcentaje de desviación', 'Estado de tendencia']
+        if tiene_precio:
+            columnas_render = ['REFERENCIA INTERNA', 'PRODUCTO', 'PROMD VTA DIA JUNIO', 'PROMD VTA DIA JULIO', 'Porcentaje de desviación', 'Impacto_Mensual_$', 'Estado de tendencia']
+        else:
+            columnas_render = ['REFERENCIA INTERNA', 'PRODUCTO', 'PROMD VTA DIA JUNIO', 'PROMD VTA DIA JULIO', 'Porcentaje de desviación', 'Estado de tendencia']
         
         def resaltar_tendencia(val):
             if val == 'SUBIÓ':
-                return 'background-color: #e2f0d9; color: #385723; font-weight: bold;' # Rojo/Naranja de alerta constante con tu KPI
+                return 'background-color: #e2f0d9; color: #385723; font-weight: bold;'
             elif val == 'BAJO':
                 return 'background-color: #fce4d6; color: #c65911; font-weight: bold;'
             return ''
+        
+        # Aplicar formato de moneda a la columna de impacto si existe
+        if tiene_precio:
+            tabla_estilizada = df_filtrado[columnas_render].style.map(resaltar_tendencia, subset=['Estado de tendencia']).format({'Impacto_Mensual_$': '${:,.2f}'})
+        else:
+            tabla_estilizada = df_filtrado[columnas_render].style.map(resaltar_tendencia, subset=['Estado de tendencia'])
             
-        st.dataframe(
-            df_filtrado[columnas_render].style.map(resaltar_tendencia, subset=['Estado de tendencia']), 
-            use_container_width=True, 
-            hide_index=True
-        )
+        st.dataframe(tabla_estilizada, use_container_width=True, hide_index=True)
+
         # --- SECCIÓN 5: MÓDULO DE DESCARGA EJECUTIVA ---
         st.markdown("---")
         st.markdown("### 📥 Módulo de Descarga Ejecutiva")
         st.info("Descarga la vista actual (con los filtros aplicados) en un documento formateado y listo para aprobación de gerencia.")
         
-        # 1. Crear un archivo Excel en la memoria del servidor (RAM)
         buffer = io.BytesIO()
         with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
-            # Escribir los datos filtrados
             df_filtrado[columnas_render].to_excel(writer, sheet_name='Reporte_Filtrado', index=False)
-            
-            # Acceder a la hoja para darle formato corporativo
             worksheet = writer.sheets['Reporte_Filtrado']
             
-            # Ajustar ancho de columnas para que se vea profesional
             for col in worksheet.columns:
                 max_length = 0
                 column = col[0].column_letter 
@@ -134,18 +150,13 @@ else:
                 adjusted_width = (max_length + 2)
                 worksheet.column_dimensions[column].width = adjusted_width
             
-            # Agregar el bloque de firmas al final de los datos
             max_row = worksheet.max_row
-            
             worksheet.cell(row=max_row + 4, column=1, value="___________________________________")
             worksheet.cell(row=max_row + 5, column=1, value="Firma: Gerencia de Operaciones")
-            
             worksheet.cell(row=max_row + 4, column=3, value="___________________________________")
             worksheet.cell(row=max_row + 5, column=3, value="Firma: Supply Chain / Ventas")
 
-        # 2. Preparar el botón de descarga en Streamlit
         excel_data = buffer.getvalue()
-        
         st.download_button(
             label="📄 Descargar Reporte para Firmas (Excel)",
             data=excel_data,
@@ -153,11 +164,12 @@ else:
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             type="primary"
         )
+
         # --- SECCIÓN DE FIRMA ---
         st.markdown("---")
         st.markdown(
-            "<div style='text-align: left; color: #555;'>"
-            "<strong>Jair Ramos</strong><br> <small>Supply Chain Planning | Sapori</small>"
+            "<div style='text-align: center; color: gray;'>"
+            "📝 Elaborado por: <b>[Tu Nombre o Tu Departamento]</b>"
             "</div>", 
             unsafe_allow_html=True
         )
