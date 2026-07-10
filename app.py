@@ -211,7 +211,7 @@ else:
         st.markdown("---")
         st.markdown(
             "<div style='text-align: center; color: #555;'>"
-            "<strong>Jair Ramos</strong><br> <small>Supply Chain Planning - Sapori | Sapori</small>"
+            "<strong>Jair Ramos</strong><br> <small>Supply Chain Planning - Sapori</small>"
             "</div>", 
             unsafe_allow_html=True
         )
