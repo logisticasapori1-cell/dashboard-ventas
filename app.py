@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
 import os
+import io
 
 # Configuración de la interfaz
 st.set_page_config(layout="wide", page_title="Control de Desviaciones Comerciales", page_icon="📊")
@@ -106,7 +107,52 @@ else:
             use_container_width=True, 
             hide_index=True
         )
+        # --- SECCIÓN 5: MÓDULO DE DESCARGA EJECUTIVA ---
+        st.markdown("---")
+        st.markdown("### 📥 Módulo de Descarga Ejecutiva")
+        st.info("Descarga la vista actual (con los filtros aplicados) en un documento formateado y listo para aprobación de gerencia.")
+        
+        # 1. Crear un archivo Excel en la memoria del servidor (RAM)
+        buffer = io.BytesIO()
+        with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
+            # Escribir los datos filtrados
+            df_filtrado[columnas_render].to_excel(writer, sheet_name='Reporte_Filtrado', index=False)
+            
+            # Acceder a la hoja para darle formato corporativo
+            worksheet = writer.sheets['Reporte_Filtrado']
+            
+            # Ajustar ancho de columnas para que se vea profesional
+            for col in worksheet.columns:
+                max_length = 0
+                column = col[0].column_letter 
+                for cell in col:
+                    try:
+                        if len(str(cell.value)) > max_length:
+                            max_length = len(str(cell.value))
+                    except:
+                        pass
+                adjusted_width = (max_length + 2)
+                worksheet.column_dimensions[column].width = adjusted_width
+            
+            # Agregar el bloque de firmas al final de los datos
+            max_row = worksheet.max_row
+            
+            worksheet.cell(row=max_row + 4, column=1, value="___________________________________")
+            worksheet.cell(row=max_row + 5, column=1, value="Firma: Gerencia de Operaciones")
+            
+            worksheet.cell(row=max_row + 4, column=3, value="___________________________________")
+            worksheet.cell(row=max_row + 5, column=3, value="Firma: Supply Chain / Ventas")
 
+        # 2. Preparar el botón de descarga en Streamlit
+        excel_data = buffer.getvalue()
+        
+        st.download_button(
+            label="📄 Descargar Reporte para Firmas (Excel)",
+            data=excel_data,
+            file_name="Reporte_Desviaciones_Gerencia.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            type="primary"
+        )
         # --- SECCIÓN DE FIRMA ---
         st.markdown("---")
         st.markdown(
