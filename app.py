@@ -17,7 +17,7 @@ if 'autenticado' not in st.session_state:
 # MÓDULO DE ACCESO / LOGIN (CARA PRINCIPAL)
 # ==========================================
 if not st.session_state['autenticado']:
-    # Ocultar la barra lateral predeterminada durante el login para limpieza visual
+    # Ocultar la barra lateral predeterminada durante el login
     st.markdown(
         """
         <style>
@@ -28,13 +28,11 @@ if not st.session_state['autenticado']:
         unsafe_allow_html=True
     )
 
-    # Crear una distribución centrada
     col_izq, col_centro, col_der = st.columns([1, 1.5, 1])
     
     with col_centro:
         st.markdown("<br><br>", unsafe_allow_html=True)
         
-        # Encabezado Institucional con el Logo de Sapori
         if os.path.exists("logo_empresa.png"):
             st.image("logo_empresa.png", use_container_width=True)
         else:
@@ -44,7 +42,6 @@ if not st.session_state['autenticado']:
         st.markdown("<p style='text-align: center; color: #666; font-size: 14px;'>Portal Oficial de Análisis Operativo y Cadena de Suministro</p>", unsafe_allow_html=True)
         st.markdown("<br>", unsafe_allow_html=True)
         
-        # Contenedor del Formulario de Seguridad
         with st.form("formulario_login"):
             st.markdown("##### 🔐 Ingrese sus credenciales corporativas")
             usuario = st.text_input("Usuario o Correo Institucional", placeholder="ej. gerencia.operaciones")
@@ -54,7 +51,6 @@ if not st.session_state['autenticado']:
             boton_ingresar = st.form_submit_button("Acceder al Tablero", type="primary", use_container_width=True)
             
             if boton_ingresar:
-                # Credenciales oficiales de acceso (Modificables según requerimiento)
                 if usuario == "admin" and contrasena == "sapori2026":
                     st.session_state['autenticado'] = True
                     st.success("✅ Acceso concedido. Inicializando entorno...")
@@ -64,7 +60,6 @@ if not st.session_state['autenticado']:
                 else:
                     st.error("❌ Credenciales incorrectas. Verifique e intente de nuevo.")
                     
-        # Notas de Seguridad e Información de Planta
         st.markdown("<br>", unsafe_allow_html=True)
         st.caption(
             "⚠️ **Aviso de Confidencialidad:** Este sistema contiene información estratégica de propiedad exclusiva "
@@ -75,7 +70,7 @@ if not st.session_state['autenticado']:
         st.markdown(
             "<div style='text-align: center; color: #888; font-size: 12px; font-family: Arial;'>"
             "© 2026 Sapori | Dirección de Supply Chain & Operaciones<br>"
-            "Soporte Técnico: TI-Planta | Versión del Sistema: 2.5"
+            "Soporte Técnico: TI-Planta | Versión del Sistema: 2.6"
             "</div>", 
             unsafe_allow_html=True
         )
@@ -84,7 +79,6 @@ if not st.session_state['autenticado']:
 # TABLERO PRINCIPAL (ACCESO AUTORIZADO)
 # ==========================================
 else:
-    # Barra lateral una vez autenticado
     with st.sidebar:
         if os.path.exists("logo_empresa.png"):
             st.image("logo_empresa.png", use_container_width=True)
@@ -93,7 +87,6 @@ else:
         st.success("Rol: **Administrador / Gerencia**")
         st.markdown("---")
         
-        # Botón para cerrar sesión de manera segura
         if st.button("🚪 Cerrar Sesión", type="secondary", use_container_width=True):
             st.session_state['autenticado'] = False
             st.rerun()
@@ -102,9 +95,8 @@ else:
         st.markdown("### Parámetros de Análisis")
         st.info("Los datos son consolidados periódicamente a partir de las matrices de Supply Chain.")
 
-    # Cuerpo del Tablero Ejecutivo
     st.title("📊 Tablero de Control de Desviaciones Comerciales")
-    st.markdown("### Análisis Comparativo, Financiero y Pareto (ABC) por SKU")
+    st.markdown("### Análisis Comparativo, Financiero, Categorías y Pareto (ABC) por SKU")
 
     file_name = "Comparación de Venta Diaria por SKU (Junio vs Julio).xlsx"
 
@@ -115,6 +107,11 @@ else:
         try:
             df = pd.read_excel(file_name, sheet_name="Table 1")
             
+            # --- VALIDACIÓN DE LA NUEVA COLUMNA DE CATEGORÍA/MARCA ---
+            if 'CATEGORÍA' not in df.columns:
+                df['CATEGORÍA'] = "Por Asignar"
+                st.sidebar.warning("⚠️ La columna 'CATEGORÍA' no existe en el Excel. Agrega una columna llamada 'CATEGORÍA' en tu archivo para ver las marcas.")
+
             for col in ['PROMD VTA DIA JUNIO', 'PROMD VTA DIA JULIO']:
                 if df[col].dtype == 'object':
                     df[col] = df[col].astype(str).str.replace('.', '', regex=False).str.replace(',', '.', regex=False).astype(float)
@@ -134,7 +131,7 @@ else:
             # --- ANÁLISIS ABC (PARETO) ---
             df = df.sort_values(by='PROMD VTA DIA JULIO', ascending=False).reset_index(drop=True)
             volumen_total_julio = df['PROMD VTA DIA JULIO'].sum()
-            df['Porcentaje_Participacion'] = (df['PROMD VTA DIA JULIO'] / volumen_total_julio) * 100
+            df['Porcentaje_Participacion'] = (df['PROMD VTA DIA JULIO'] / volumen_total_julio) * 100 if volumen_total_julio > 0 else 0
             df['Acumulado_ABC'] = df['Porcentaje_Participacion'].cumsum()
             
             def asignar_abc(acumulado):
@@ -144,7 +141,7 @@ else:
             df['Clasificación ABC'] = df['Acumulado_ABC'].apply(asignar_abc)
 
             # ==========================================
-            # SECCIÓN 1: KPIs OPERATIVOS Y FINANCIEROS
+            # SECCIÓN 1: KPIs OPERATIVOS Y FINANCIEROS (CORREGIDOS)
             # ==========================================
             total_skus = len(df)
             subio = len(df[df['Estado de tendencia'] == 'SUBIÓ']) if 'Estado de tendencia' in df.columns else len(df[df['Desviacion_Num'] > 0])
@@ -152,24 +149,15 @@ else:
             
             kpi1, kpi2, kpi3, kpi4 = st.columns(4)
             kpi1.metric("Total SKUs en Planta", f"{total_skus} Prod.")
-            
-            # Se ajusta a "normal" para que los positivos sean VERDES
             kpi2.metric("SKUs en Alza", f"{subio}", delta=f"+{subio} SKUs", delta_color="normal")
-            
-            # Se ajusta a "normal" para que los negativos sean ROJOS
             kpi3.metric("SKUs en Alerta", f"{bajo}", delta=f"-{bajo} SKUs", delta_color="normal")
             
             if tiene_precio:
                 impacto_total = df['Impacto_Mensual_$'].sum()
-                
-                # --- LÓGICA INTELIGENTE DE FLECHAS PARA BALANCE ---
                 if impacto_total < 0:
-                    # El "-" inicial obliga a la flecha hacia abajo y color rojo
                     delta_financiero = "- Mensual vs Junio"
                 else:
-                    # Sin el "-", la flecha va hacia arriba y color verde
                     delta_financiero = "Mensual vs Junio"
-                    
                 kpi4.metric("Balance Financiero Proyectado", f"${impacto_total:,.2f}", delta=delta_financiero, delta_color="normal")
             else:
                 kpi4.metric("Balance Financiero", "Falta Precio Unitario")
@@ -177,21 +165,28 @@ else:
             st.markdown("---")
             
             # ==========================================
-            # SECCIÓN 2: FILTROS INTERACTIVOS
+            # SECCIÓN 2: FILTROS INTERACTIVOS (4 COLUMNAS)
             # ==========================================
-            col_f1, col_f2, col_f3 = st.columns(3)
+            col_f1, col_f2, col_f3, col_f4 = st.columns(4)
             with col_f1:
                 filtro_tendencia = st.selectbox("🎯 Estado de Tendencia:", ["Todos", "SUBIÓ", "BAJO"])
             with col_f2:
                 filtro_abc = st.selectbox("📊 Clasificación ABC (Pareto):", ["Todos", "A", "B", "C"])
             with col_f3:
+                # Extrae dinámicamente las marcas/categorías únicas del archivo Excel
+                lista_categorias = ["Todos"] + sorted(df['CATEGORÍA'].dropna().unique().tolist())
+                filtro_categoria = st.selectbox("🏷️ Filtrar por Categoría / Marca:", lista_categorias)
+            with col_f4:
                 busqueda = st.text_input("🔍 Filtrar por Nombre o Referencia:")
             
+            # Aplicar filtros cruzados
             df_filtrado = df.copy()
             if filtro_tendencia != "Todos" and 'Estado de tendencia' in df_filtrado.columns:
                 df_filtrado = df_filtrado[df_filtrado['Estado de tendencia'] == filtro_tendencia]
             if filtro_abc != "Todos":
                 df_filtrado = df_filtrado[df_filtrado['Clasificación ABC'] == filtro_abc]
+            if filtro_categoria != "Todos":
+                df_filtrado = df_filtrado[df_filtrado['CATEGORÍA'] == filtro_categoria]
             if busqueda:
                 df_filtrado = df_filtrado[
                     df_filtrado['PRODUCTO'].str.contains(busqueda, case=False, na=False) | 
@@ -228,10 +223,11 @@ else:
             st.markdown("---")
             st.markdown("### 📋 Detalle de Ventas, Clasificación ABC e Impacto")
             
+            # Se incluye la columna 'CATEGORÍA' en la visualización
             if tiene_precio:
-                columnas_render = ['REFERENCIA INTERNA', 'PRODUCTO', 'Clasificación ABC', 'PROMD VTA DIA JUNIO', 'PROMD VTA DIA JULIO', 'Porcentaje de desviación', 'Impacto_Mensual_$', 'Estado de tendencia']
+                columnas_render = ['REFERENCIA INTERNA', 'PRODUCTO', 'CATEGORÍA', 'Clasificación ABC', 'PROMD VTA DIA JUNIO', 'PROMD VTA DIA JULIO', 'Porcentaje de desviación', 'Impacto_Mensual_$', 'Estado de tendencia']
             else:
-                columnas_render = ['REFERENCIA INTERNA', 'PRODUCTO', 'Clasificación ABC', 'PROMD VTA DIA JUNIO', 'PROMD VTA DIA JULIO', 'Porcentaje de desviación', 'Estado de tendencia']
+                columnas_render = ['REFERENCIA INTERNA', 'PRODUCTO', 'CATEGORÍA', 'Clasificación ABC', 'PROMD VTA DIA JUNIO', 'PROMD VTA DIA JULIO', 'Porcentaje de desviación', 'Estado de tendencia']
             
             def resaltar_tendencia(val):
                 if val == 'SUBIÓ': return 'background-color: #e2f0d9; color: #385723; font-weight: bold;'
@@ -261,7 +257,7 @@ else:
                     max_length = 0
                     column = col[0].column_letter 
                     for cell in col:
-                        try:
+                        try: 
                             if len(str(cell.value)) > max_length: max_length = len(str(cell.value))
                         except: pass
                     worksheet.column_dimensions[column].width = (max_length + 2)
@@ -288,7 +284,7 @@ else:
             st.markdown("---")
             st.markdown(
                 "<div style='text-align: center; color: gray; font-family: Arial;'>"
-                "Jair Ramos <b>Dirección de Supply Chain Sapori</b>"
+                "📝 Reporte Elaborado por: <b>Dirección de Supply Chain Sapori</b>"
                 "</div>", 
                 unsafe_allow_html=True
             )
