@@ -152,12 +152,25 @@ else:
             
             kpi1, kpi2, kpi3, kpi4 = st.columns(4)
             kpi1.metric("Total SKUs en Planta", f"{total_skus} Prod.")
-            kpi2.metric("SKUs en Alza", f"{subio}", delta=f"+{subio} SKUs", delta_color="inverse")
-            kpi3.metric("SKUs en Alerta", f"{bajo}", delta=f"-{bajo} SKUs")
+            
+            # Se ajusta a "normal" para que los positivos sean VERDES
+            kpi2.metric("SKUs en Alza", f"{subio}", delta=f"+{subio} SKUs", delta_color="normal")
+            
+            # Se ajusta a "normal" para que los negativos sean ROJOS
+            kpi3.metric("SKUs en Alerta", f"{bajo}", delta=f"-{bajo} SKUs", delta_color="normal")
             
             if tiene_precio:
                 impacto_total = df['Impacto_Mensual_$'].sum()
-                kpi4.metric("Balance Financiero Proyectado", f"${impacto_total:,.2f}", delta="Mensual vs Junio")
+                
+                # --- LÓGICA INTELIGENTE DE FLECHAS PARA BALANCE ---
+                if impacto_total < 0:
+                    # El "-" inicial obliga a la flecha hacia abajo y color rojo
+                    delta_financiero = "- Mensual vs Junio"
+                else:
+                    # Sin el "-", la flecha va hacia arriba y color verde
+                    delta_financiero = "Mensual vs Junio"
+                    
+                kpi4.metric("Balance Financiero Proyectado", f"${impacto_total:,.2f}", delta=delta_financiero, delta_color="normal")
             else:
                 kpi4.metric("Balance Financiero", "Falta Precio Unitario")
                 
