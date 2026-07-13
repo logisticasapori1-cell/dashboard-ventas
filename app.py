@@ -96,7 +96,7 @@ else:
     # =========================================================================
     if modulo_activo == "1. Dashboard Venta Diaria & Forecast":
         st.title("📈 Dashboard Ejecutivo: Pronósticos y Ventas")
-        st.markdown("### Seguimiento de Forecast Efficiency y Ejecución Diaria por SKU")
+        st.markdown("### Seguimiento de Forecast y Venta Diaria por SKU")
         
         file_ventas = "VINCULO VTS BY SKU.xlsx"
         
@@ -144,14 +144,14 @@ else:
                 col_a1, col_a2, col_a3, col_a4, col_a5, col_a6, col_a7 = st.columns(7)
                 col_a1.metric("TOTAL UNITS SALES GROSS", f"{val_gross:,.0f}")
                 col_a2.metric("TOTAL UNITS SALES NET", f"{val_net:,.0f}")
-                col_a3.metric("PROMD VTA DIA", f"{val_prom_dia:,.0f}")
-                col_a4.metric("PRONOST VTA MES", f"{val_pronost_mes:,.0f}")
+                col_a3.metric("PROMEDIO VENTA DIARIA", f"{val_prom_dia:,.0f}")
+                col_a4.metric("PRONOSTICO VENTA MENSUAL", f"{val_pronost_mes:,.0f}")
                 col_a5.metric("FORECAST", f"{val_forecast:,.0f}")
                 col_a6.metric("FORECAST EFFICIENCY", f"{val_efficiency:.1f}%")
                 
                 # Control inteligente de flecha y alertas para la Desviación de Unidades
                 delta_dif = "- Brecha de Cobertura" if val_dif_units < 0 else "+ Superávit Comercial"
-                col_a7.metric("DIF UNITS", f"{val_dif_units:,.0f}", delta=delta_dif, delta_color="normal")
+                col_a7.metric("DIFERENCIA ALCANCE FORCAST", f"{val_dif_units:,.0f}", delta=delta_dif, delta_color="normal")
                 
                 st.markdown("---")
                 
@@ -159,10 +159,9 @@ else:
                 col_b1, col_b2, col_b3, col_b4, col_b5, col_b6 = st.columns(6)
                 col_b1.metric("UNITS RETURN (Devoluciones)", f"{val_return:,.0f}")
                 col_b2.metric("INICIO DE VENTA", "01/07/2026")
-                col_b3.metric("TRANSC. VENTA (Corte)", f"{dias_efectivos} Días Elap.")
                 col_b4.metric("FINAL DE VENTA", "31/07/2026")
-                col_b5.metric("DIAS VENTA EFECT.", f"{dias_efectivos} días")
-                col_b6.metric("DIAS VENTA RESTA.", f"{dias_restantes} días")
+                col_b5.metric("DIAS VENTA EFECTIVOS.", f"{dias_efectivos} días")
+                col_b6.metric("DIAS VENTA RESTANTES.", f"{dias_restantes} días")
                 
                 st.markdown("---")
                 
