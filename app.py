@@ -108,6 +108,14 @@ else:
                 # Lectura de la hoja de cálculo
                 df_vts = pd.read_excel(file_ventas)
                 
+                # =========================================================================
+                # 🛠️ NUEVO: DETECTAR Y REDONDEAR COLUMNAS DE PROMEDIOS EN LA MATRIZ DE SKUS
+                # =========================================================================
+                for col in df_vts.columns:
+                    if 'PROMEDIO' in str(col).upper() or 'PROMD' in str(col).upper():
+                        df_vts[col] = pd.to_numeric(df_vts[col], errors='coerce').round(0).fillna(0).astype(int)
+                # =========================================================================
+                
                 # --- MAPEO INTELIGENTE DE COLUMNAS PARA SOPORTAR CUALQUIER FORMATO ---
                 cols_upper = {col: str(col).upper().strip() for col in df_vts.columns}
                 
