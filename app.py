@@ -200,6 +200,8 @@ else:
                 for col in ['PROMD VTA DIA JUNIO', 'PROMD VTA DIA JULIO']:
                     if df[col].dtype == 'object':
                         df[col] = df[col].astype(str).str.replace('.', '', regex=False).str.replace(',', '.', regex=False).astype(float)
+                    # Forzar redondeo matemático y convertir a entero (sin decimales)
+                    df[col] = df[col].round(0).astype(int)
                 
                 if 'Porcentaje de desviación' in df.columns:
                     df['Desviacion_Num'] = df['Porcentaje de desviación'].astype(str).str.rstrip('%').str.replace(',', '.', regex=False).astype(float)
@@ -276,10 +278,20 @@ else:
                 st.markdown("---")
                 st.markdown("### 📋 Detalle de Desviaciones")
                 
+                # Definir cómo se mostrarán visualmente las columnas numéricas
+                formato_columnas = {
+                    'PROMD VTA DIA JUNIO': '{:,.0f}',
+                    'PROMD VTA DIA JULIO': '{:,.0f}',
+                    'Porcentaje de desviación': '{:.2%}'
+                }
+                
                 if tiene_precio:
-                    columnas_render = ['REFERENCIA INTERNA', 'PRODUCTO', 'CATEGORÍA', 'Clasificación ABC', 'PROMD VTA DIA JUNIO', 'PROMD VTA DIA JULIO', 'Porcentaje de desviación', 'Impacto_Mensual_$', 'Estado de tendencia']
-                else:
-                    columnas_render = ['REFERENCIA INTERNA', 'PRODUCTO', 'CATEGORÍA', 'Clasificación ABC', 'PROMD VTA DIA JUNIO', 'PROMD VTA DIA JULIO', 'Porcentaje de desviación', 'Estado de tendencia']
+                    formato_columnas['Impacto_Mensual_$'] = '${:,.2f}'
+                
+                # Aplicar los colores y el formato de números a la tabla
+                tabla_estilizada = df_filtrado[columnas_render].style.map(
+                    resaltar_tendencia, subset=['Estado de tendencia']
+                ).format(formato_columnas)
                 
                 def resaltar_tendencia(val):
                     if val == 'SUBIÓ': return 'background-color: #e2f0d9; color: #385723; font-weight: bold;'
