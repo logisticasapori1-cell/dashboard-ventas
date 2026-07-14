@@ -278,7 +278,19 @@ else:
                 st.markdown("---")
                 st.markdown("### 📋 Detalle de Desviaciones")
                 
-                # Definir cómo se mostrarán visualmente las columnas numéricas
+                # 1. Definir qué columnas se van a mostrar (AQUÍ ESTÁ LA VARIABLE QUE FALTABA)
+                if tiene_precio:
+                    columnas_render = ['REFERENCIA INTERNA', 'PRODUCTO', 'CATEGORÍA', 'Clasificación ABC', 'PROMD VTA DIA JUNIO', 'PROMD VTA DIA JULIO', 'Porcentaje de desviación', 'Impacto_Mensual_$', 'Estado de tendencia']
+                else:
+                    columnas_render = ['REFERENCIA INTERNA', 'PRODUCTO', 'CATEGORÍA', 'Clasificación ABC', 'PROMD VTA DIA JUNIO', 'PROMD VTA DIA JULIO', 'Porcentaje de desviación', 'Estado de tendencia']
+                
+                # 2. Función de colores para las tendencias
+                def resaltar_tendencia(val):
+                    if val == 'SUBIÓ': return 'background-color: #e2f0d9; color: #385723; font-weight: bold;'
+                    elif val == 'BAJO': return 'background-color: #fce4d6; color: #c65911; font-weight: bold;'
+                    return ''
+                
+                # 3. Diccionario de formatos (Redondeo sin decimales y Porcentaje)
                 formato_columnas = {
                     'PROMD VTA DIA JUNIO': '{:,.0f}',
                     'PROMD VTA DIA JULIO': '{:,.0f}',
@@ -288,21 +300,12 @@ else:
                 if tiene_precio:
                     formato_columnas['Impacto_Mensual_$'] = '${:,.2f}'
                 
-                # Aplicar los colores y el formato de números a la tabla
+                # 4. Aplicar estilos y formatos a la tabla
                 tabla_estilizada = df_filtrado[columnas_render].style.map(
                     resaltar_tendencia, subset=['Estado de tendencia']
                 ).format(formato_columnas)
-                
-                def resaltar_tendencia(val):
-                    if val == 'SUBIÓ': return 'background-color: #e2f0d9; color: #385723; font-weight: bold;'
-                    elif val == 'BAJO': return 'background-color: #fce4d6; color: #c65911; font-weight: bold;'
-                    return ''
-                
-                if tiene_precio:
-                    tabla_estilizada = df_filtrado[columnas_render].style.map(resaltar_tendencia, subset=['Estado de tendencia']).format({'Impacto_Mensual_$': '${:,.2f}'})
-                else:
-                    tabla_estilizada = df_filtrado[columnas_render].style.map(resaltar_tendencia, subset=['Estado de tendencia'])
                     
+                # 5. Mostrar la tabla en pantalla
                 st.dataframe(tabla_estilizada, use_container_width=True, hide_index=True)
 
                 st.markdown("---")
