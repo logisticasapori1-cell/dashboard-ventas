@@ -159,7 +159,7 @@ else:
                 
                 # Control inteligente de flecha y alertas para la Desviación de Unidades
                 delta_dif = "- Brecha de Cobertura" if val_dif_units < 0 else "+ Superávit Comercial"
-                col_a7.metric("DIFERENCIA ALCANCE FORCAST", f"{val_dif_units:,.0f}", delta=delta_dif, delta_color="normal")
+                col_a7.metric("DIFERENCIA ALCANCE FORECAST", f"{val_dif_units:,.0f}", delta=delta_dif, delta_color="normal")
                 
                 st.markdown("---")
                 
