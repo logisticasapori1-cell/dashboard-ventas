@@ -78,15 +78,15 @@ else:
             "Seleccione el área a visualizar:",
             ["1. Dashboard Venta Diaria & Forecast", "2. Control de Desviaciones (Mensual)", "3. Análisis Estratégico y Desviación vs Forecast"],
         )
-        if opcion_modulo == "1. Dashboard Venta Diaria & Forecast":
+        if modulo_activo == "1. Dashboard Venta Diaria & Forecast":
             # Tu código existente para el Módulo 1...
             pass
 
-        elif opcion_modulo == "2. Control de Desviaciones (Mensual)":
+        elif modulo_activo == "2. Control de Desviaciones (Mensual)":
             # Tu código existente para el Módulo 2...
             pass
 
-        elif opcion_modulo == "3. Análisis Estratégico y Desviación vs Forecast":
+        elif modulo_activo == "3. Análisis Estratégico y Desviación vs Forecast":
             # 1. Verificamos que el archivo esté cargado en la aplicación
            if archivo_cargado is not None:
                # 2. Llamamos a nuestra función de una sola línea. 
