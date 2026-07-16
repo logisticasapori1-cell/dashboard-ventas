@@ -74,6 +74,7 @@ else:
         st.markdown("---")
         
         st.markdown("### 📌 Módulos de Operación")
+        Historico_Produccion_CREMIGURT = st.sidebar.file_uploader("📂 Cargar Histórico Producción CREMIGURT", type=["xlsx", "xls"])
         modulo_activo = st.radio(
             "Seleccione el área a visualizar:",
             ["1. Dashboard Venta Diaria & Forecast", "2. Control de Desviaciones (Mensual)", "3. Análisis Estratégico y Desviación vs Forecast"],
