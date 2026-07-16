@@ -327,7 +327,7 @@ else:
 
     # =========================================================================
     # MÓDULO 3: DASHBOARD DE PRODUCCIÓN EJECUTIVO & FORECAST (VERSIÓN ULTRA-ROBUSTA)
-# =========================================================================
+    # =========================================================================
     def render_modulo_3():
         st.title("📊 Módulo 3: Dashboard Ejecutivo de Producción y Forecast")
         st.markdown("---")
@@ -337,7 +337,7 @@ else:
     
         if file_historico is not None:
             # Protegemos únicamente la lectura del archivo físico
-        try:
+            try:
                 excel_file = pd.ExcelFile(file_historico)
             except Exception as e:
                 st.error(f"Error al leer el archivo Excel: {e}")
