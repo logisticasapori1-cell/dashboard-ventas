@@ -663,7 +663,7 @@ else:
                     st.info("ℹ️ No se encontraron datos comparativos históricos.")
 
             except Exception as e:
-            st.error(f"Error crítico al analizar el histórico de producción: {str(e)}")
+                st.error(f"Error crítico al analizar el histórico de producción: {str(e)}")
         else:
             st.info("⚠️ Por favor carga el archivo 'Historico Produccion CREMIGURT.xlsx' para activar la visualización estratégica.")
 
