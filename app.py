@@ -77,6 +77,7 @@ else:
         modulo_activo = st.radio(
             "Seleccione el área a visualizar:",
             ["1. Dashboard Venta Diaria & Forecast", "2. Control de Desviaciones (Mensual)", "3. Análisis Estratégico y Desviación vs Forecast"],
+            archivo_cargado = st.sidebar.file_uploader("📂 Cargar Histórico Producción CREMIGURT", type=["xlsx", "xls"])
         )
         if modulo_activo == "1. Dashboard Venta Diaria & Forecast":
             # Tu código existente para el Módulo 1...
@@ -88,10 +89,10 @@ else:
 
         elif modulo_activo == "3. Análisis Estratégico y Desviación vs Forecast":
             # 1. Verificamos que el archivo esté cargado en la aplicación
-           if archivo_cargado is not None:
+           if Historico_Produccion_CREMIGURT is not None:
                # 2. Llamamos a nuestra función de una sola línea. 
                # ¡Cero problemas de indentación!
-               render_modulo_analisis_produccion(archivo_cargado)
+               render_modulo_analisis_produccion(Historico_Produccion_CREMIGURT)
            else:
                st.info("⚠️ Por favor, carga el archivo 'Historico Produccion CREMIGURT.xlsx' en la barra lateral para activar este análisis.")
 
