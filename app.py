@@ -78,7 +78,7 @@ else:
             "Seleccione el área a visualizar:",
             ["1. Dashboard Venta Diaria & Forecast", "2. Control de Desviaciones (Mensual)", "3. Análisis Estratégico y Desviación vs Forecast"],
         )
-        archivo_cargado = st.sidebar.file_uploader("📂 Cargar Histórico Producción CREMIGURT", type=["xlsx", "xls"])
+        Histórico_Producción_CREMIGURT = st.sidebar.file_uploader("Histórico Producción CREMIGURT", type=["xlsx", "xls"])
         if modulo_activo == "1. Dashboard Venta Diaria & Forecast":
             # Tu código existente para el Módulo 1...
             pass
