@@ -327,7 +327,7 @@ else:
 
     # =========================================================================
     # MÓDULO 3: DASHBOARD DE PRODUCCIÓN EJECUTIVO & FORECAST (VERSIÓN ULTRA-ROBUSTA)
-    # =========================================================================
+# =========================================================================
     def render_modulo_3():
         st.title("📊 Módulo 3: Dashboard Ejecutivo de Producción y Forecast")
         st.markdown("---")
@@ -336,8 +336,12 @@ else:
         file_historico = st.file_uploader("📂 Cargar Histórico de Producción (.xlsx)", type=["xlsx"], key="uploader_m3")
     
         if file_historico is not None:
+            # Protegemos únicamente la lectura del archivo físico
             try:
                 excel_file = pd.ExcelFile(file_historico)
+            except Exception as e:
+                st.error(f"Error al leer el archivo Excel: {e}")
+                return  # Frenamos la ejecución si el archivo está corrupto o dañado
             
             # --- FUNCIÓN AUXILIAR PARA LIMPIAR Y PARSEAR HOJAS DE CATEGORÍAS ---
             def parsear_hoja_categoria(sheet_name):
@@ -358,7 +362,10 @@ else:
                 fechas = pd.to_datetime(df.loc[row_fecha_label], errors='coerce')
                 columnas_validas = fechas[fechas.notna()].index
                 
-                # Buscar fila de total unidades usando etiquetas del índice
+                # Retornamos los datos procesados para su uso en el dashboard
+                return df, fechas, columnas_validas           
+                 
+            # Buscar fila de total unidades usando etiquetas del índice
                 fila_total_label = None
                 for label, row in df.iterrows():
                     row_str = row.astype(str).str.upper()
