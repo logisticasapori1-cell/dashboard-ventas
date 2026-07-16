@@ -76,7 +76,7 @@ else:
         st.markdown("### 📌 Módulos de Operación")
         modulo_activo = st.radio(
             "Seleccione el área a visualizar:",
-            ["Módulo 1: Vista General", "Módulo 2: Desempeño Comercial", "Módulo 3: Análisis Estratégico"]
+            ["1. Dashboard Venta Diaria & Forecast", "2. Control de Desviaciones (Mensual)", "3. Análisis Estratégico y Desviación vs Forecast"],
         )
         if opcion_modulo == "Módulo 1: Vista General":
             # Tu código existente para el Módulo 1...
