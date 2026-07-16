@@ -337,7 +337,7 @@ else:
     
         if file_historico is not None:
             # Protegemos únicamente la lectura del archivo físico
-            try:
+        try:
                 excel_file = pd.ExcelFile(file_historico)
             except Exception as e:
                 st.error(f"Error al leer el archivo Excel: {e}")
@@ -661,7 +661,6 @@ else:
                     st.dataframe(tabla_render, use_container_width=True, hide_index=True)
                 else:
                     st.info("ℹ️ No se encontraron datos comparativos históricos.")
-
         except Exception as e:
             st.error(f"Error crítico al analizar el histórico de producción: {str(e)}")
     else:
