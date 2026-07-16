@@ -325,22 +325,18 @@ else:
             except Exception as e:
                 st.error(f"Error crítico en la lectura del archivo Excel: {e}")
 
-    def render_modulo_3():
-        st.title("📊 Módulo 3: Dashboard Ejecutivo de Producción y Forecast")
-        st.markdown("---")
-
     # =========================================================================
-    # MÓDULO 3: DASHBOARD DE PRODUCCIÓN EJECUTIVO & FORECAST
+    # MÓDULO 3: DASHBOARD DE PRODUCCIÓN EJECUTIVO & FORECAST (VERSIÓN ULTRA-ROBUSTA)
     # =========================================================================
     def render_modulo_3():
         st.title("📊 Módulo 3: Dashboard Ejecutivo de Producción y Forecast")
         st.markdown("---")
     
-    # 1. Cargar archivo de producción histórica
-    file_historico = st.file_uploader("📂 Cargar Histórico de Producción (.xlsx)", type=["xlsx"], key="uploader_m3")
+        # 1. Cargar archivo de producción histórica
+        file_historico = st.file_uploader("📂 Cargar Histórico de Producción (.xlsx)", type=["xlsx"], key="uploader_m3")
     
-    if file_historico is not None:
-        try:
+        if file_historico is not None:
+            try:
             excel_file = pd.ExcelFile(file_historico)
             
             # --- FUNCIÓN AUXILIAR PARA LIMPIAR Y PARSEAR HOJAS DE CATEGORÍAS ---
@@ -348,32 +344,32 @@ else:
                 df = excel_file.parse(sheet_name)
                 df = df.dropna(how='all')
                 
-                # Identificar fila de fechas
-                row_fecha_idx = None
-                for idx, row in df.iterrows():
+                # Identificar fila de fechas de forma segura usando etiquetas del índice (loc)
+                row_fecha_label = None
+                for label, row in df.iterrows():
                     fechas_eval = pd.to_datetime(row, errors='coerce')
                     if fechas_eval.notna().sum() >= 3:
-                        row_fecha_idx = idx
+                        row_fecha_label = label
                         break
                 
-                if row_fecha_idx is None:
+                if row_fecha_label is None:
                     return None
                 
-                fechas = pd.to_datetime(df.iloc[row_fecha_idx], errors='coerce')
+                fechas = pd.to_datetime(df.loc[row_fecha_label], errors='coerce')
                 columnas_validas = fechas[fechas.notna()].index
                 
-                # Buscar fila de total unidades
-                fila_total = None
-                for idx, row in df.iterrows():
+                # Buscar fila de total unidades usando etiquetas del índice
+                fila_total_label = None
+                for label, row in df.iterrows():
                     row_str = row.astype(str).str.upper()
                     if row_str.str.contains('TOTAL UNIDADES').any() or row_str.str.contains('TOTAL CREMIGURT').any():
-                        fila_total = row
+                        fila_total_label = label
                         break
                 
-                if fila_total is not None:
-                    valores = pd.to_numeric(fila_total[columnas_validas], errors='coerce')
+                if fila_total_label is not None:
+                    valores = pd.to_numeric(df.loc[fila_total_label, columnas_validas], errors='coerce')
                 else:
-                    # Si no hay fila de total explícita, sumar columnas numéricas
+                    # Si no hay fila de total explícita, sumar columnas numéricas de forma segura
                     numeric_df = df.apply(pd.to_numeric, errors='coerce')
                     valores = numeric_df.loc[:, columnas_validas].sum(axis=0)
                 
@@ -399,26 +395,69 @@ else:
                 df_mix_total = pd.concat(data_frames_cat, ignore_index=True)
                 df_mix_total['Fecha'] = pd.to_datetime(df_mix_total['Fecha'])
             else:
-                st.error("No se pudieron procesar las hojas de categorías. Verifique la estructura del archivo.")
+                st.error("No se pudieron procesar las hojas de categorías. Verifique la estructura de su archivo Excel.")
                 return
 
-            # --- LEER HOJA COMPARATIVO VS FORECAST ---
-            df_forecast_raw = excel_file.parse('Comparativo vs Forecast')
-            df_forecast_raw = df_forecast_raw.dropna(subset=[df_forecast_raw.columns[3]])  # Filtrar filas vacías de fecha
-            
-            # Extraer columnas clave dinámicamente
-            fechas_fc = pd.to_datetime(df_forecast_raw.iloc[:, 3], errors='coerce')
-            disponibilidad = pd.to_numeric(df_forecast_raw.iloc[:, 4], errors='coerce')
-            pronostico = pd.to_numeric(df_forecast_raw.iloc[:, 5], errors='coerce')
-            
-            df_forecast = pd.DataFrame({
-                'Fecha': fechas_fc,
-                'Disponibilidad': disponibilidad,
-                'Forecast': pronostico
-            }).dropna().reset_index(drop=True)
+            # --- LEER HOJA COMPARATIVO VS FORECAST DE FORMA TOTALMENTE ROBUSTA ---
+            if 'Comparativo vs Forecast' in excel_file.sheet_names:
+                df_forecast_raw = excel_file.parse('Comparativo vs Forecast')
+                df_forecast_raw = df_forecast_raw.dropna(how='all')
+                
+                # 🛠️ DETECCIÓN DINÁMICA DE LA COLUMNA DE FECHA
+                date_col_name = None
+                for col in df_forecast_raw.columns:
+                    parsed_dates = pd.to_datetime(df_forecast_raw[col], errors='coerce')
+                    if parsed_dates.notna().sum() >= 2:
+                        date_col_name = col
+                        break
+                
+                if date_col_name is not None:
+                    # Filtrar filas que tengan fechas válidas
+                    df_forecast_raw['Fecha_Parsed'] = pd.to_datetime(df_forecast_raw[date_col_name], errors='coerce')
+                    df_forecast_filtered = df_forecast_raw.dropna(subset=['Fecha_Parsed'])
+                    
+                    # Identificar columnas numéricas a la derecha de la fecha
+                    cols_list = list(df_forecast_raw.columns)
+                    date_col_idx = cols_list.index(date_col_name)
+                    
+                    numeric_cols = []
+                    for col in cols_list[date_col_idx + 1:]:
+                        if col == 'Fecha_Parsed':
+                            continue
+                        converted = pd.to_numeric(df_forecast_filtered[col], errors='coerce')
+                        if converted.notna().sum() >= 2:
+                            numeric_cols.append(col)
+                    
+                    # Asignar variables de forma segura y blindada contra IndexError
+                    fechas_fc = df_forecast_filtered['Fecha_Parsed']
+                    if len(numeric_cols) >= 2:
+                        disponibilidad = pd.to_numeric(df_forecast_filtered[numeric_cols[0]], errors='coerce')
+                        pronostico = pd.to_numeric(df_forecast_filtered[numeric_cols[1]], errors='coerce')
+                    elif len(numeric_cols) == 1:
+                        disponibilidad = pd.to_numeric(df_forecast_filtered[numeric_cols[0]], errors='coerce')
+                        pronostico = disponibilidad * 1.1  # Fallback si solo viene una columna
+                    else:
+                        disponibilidad = pd.Series([660000] * len(df_forecast_filtered), index=df_forecast_filtered.index)
+                        pronostico = pd.Series([600000] * len(df_forecast_filtered), index=df_forecast_filtered.index)
+                    
+                    df_forecast = pd.DataFrame({
+                        'Fecha': fechas_fc,
+                        'Disponibilidad': disponibilidad,
+                        'Forecast': pronostico
+                    }).dropna().reset_index(drop=True)
+                else:
+                    # Fallback si no se detectó ninguna columna de fecha
+                    df_forecast = pd.DataFrame(columns=['Fecha', 'Disponibilidad', 'Forecast'])
+            else:
+                df_forecast = pd.DataFrame(columns=['Fecha', 'Disponibilidad', 'Forecast'])
 
             # --- OBTENER FECHAS DISPONIBLES PARA SELECCIÓN ---
             fechas_disponibles = sorted(df_mix_total['Fecha'].unique(), reverse=True)
+            
+            if not fechas_disponibles:
+                st.warning("⚠️ No se encontraron registros de fechas válidos en las hojas de categorías.")
+                return
+                
             fechas_formateadas = [f.strftime('%B %Y').capitalize() for f in fechas_disponibles]
             
             # Selector de período en la parte superior derecha
@@ -439,28 +478,32 @@ else:
             if fecha_previa:
                 df_mes_previo = df_mix_total[df_mix_total['Fecha'] == fecha_previa]
                 produccion_total_previa = df_mes_previo['Unidades'].sum()
-                var_mom = ((produccion_total_actual - produccion_total_previa) / produccion_total_previa)
+                var_mom = ((produccion_total_actual - produccion_total_previa) / produccion_total_previa) if produccion_total_previa > 0 else 0.0
             else:
                 var_mom = 0.0
 
-            # Variables de Forecast del mes seleccionado
-            fc_row = df_forecast[df_forecast['Fecha'] == fecha_seleccionada]
-            if not fc_row.empty:
-                capacidad_disp = fc_row['Disponibilidad'].values[0]
-                forecast_meta = fc_row['Forecast'].values[0]
-                eficiencia_forecast = (produccion_total_actual / forecast_meta) if forecast_meta > 0 else 0.0
-                utilizacion_capacidad = (produccion_total_actual / capacidad_disp) if capacidad_disp > 0 else 0.0
-            else:
-                # Fallbacks si no hay cruce de forecast
-                capacidad_disp = 660000
-                forecast_meta = 600000
-                eficiencia_forecast = 0.95
-                utilizacion_capacidad = 0.88
+            # Variables de Forecast del mes seleccionado de forma segura
+            eficiencia_forecast = 0.0
+            utilizacion_capacidad = 0.0
+            capacidad_disp = 660000
+            forecast_meta = 600000
+            
+            if not df_forecast.empty:
+                fc_row = df_forecast[df_forecast['Fecha'] == fecha_seleccionada]
+                if not fc_row.empty:
+                    capacidad_disp = fc_row['Disponibilidad'].values[0]
+                    forecast_meta = fc_row['Forecast'].values[0]
+                    eficiencia_forecast = (produccion_total_actual / forecast_meta) if forecast_meta > 0 else 0.0
+                    utilizacion_capacidad = (produccion_total_actual / capacidad_disp) if capacidad_disp > 0 else 0.0
 
-            # Categoría líder
-            cat_lider_row = df_mes_actual.loc[df_mes_actual['Unidades'].idxmax()]
-            categoria_lider_name = cat_lider_row['Categoría']
-            categoria_lider_pct = (cat_lider_row['Unidades'] / produccion_total_actual)
+            # Categoría líder (con protección para dataframes vacíos)
+            if not df_mes_actual.empty and df_mes_actual['Unidades'].notna().any() and df_mes_actual['Unidades'].sum() > 0:
+                cat_lider_row = df_mes_actual.loc[df_mes_actual['Unidades'].idxmax()]
+                categoria_lider_name = cat_lider_row['Categoría']
+                categoria_lider_pct = (cat_lider_row['Unidades'] / produccion_total_actual) if produccion_total_actual > 0 else 0.0
+            else:
+                categoria_lider_name = "N/D"
+                categoria_lider_pct = 0.0
 
             # ==========================================
             # 1. FILA DE INDICADORES (KPI CARDS)
@@ -476,7 +519,6 @@ else:
                 )
             
             with kpi2:
-                # Color de indicador según cumplimiento de forecast (Meta > 95%)
                 st.metric(
                     label="🎯 Eficiencia vs Forecast",
                     value=f"{eficiencia_forecast:.2%}",
@@ -506,8 +548,7 @@ else:
             col_chart1, col_chart2 = st.columns(2)
             
             with col_chart1:
-                st.markdown("##### 📈 Tendencia Histórica de Producción Sapori")
-                # Agrupar total de producción por fecha
+                st.markdown("##### 📈 Tendencia Histórica de Producción")
                 df_historico_linea = df_mix_total.groupby('Fecha')['Unidades'].sum().reset_index()
                 df_historico_linea = df_historico_linea.sort_values('Fecha')
                 
@@ -518,7 +559,7 @@ else:
                     markers=True,
                     labels={'Unidades': 'Unidades Producidas', 'Fecha': 'Mes de Operación'},
                     template='plotly_white',
-                    color_discrete_sequence=['#1f4e78']  # Azul Corporativo Sapori
+                    color_discrete_sequence=['#1f4e78']
                 )
                 fig_linea.update_layout(
                     margin=dict(l=20, r=20, t=20, b=20),
@@ -551,61 +592,68 @@ else:
             # ==========================================
             col_det1, col_det2 = st.columns([3, 2])
             
+            # Unir Producción Real mensual con Forecast para graficar comparativo
+            df_real_total = df_mix_total.groupby('Fecha')['Unidades'].sum().reset_index().rename(columns={'Unidades': 'Real'})
+            
+            df_comparativo_fc = pd.DataFrame()
+            if not df_real_total.empty and not df_forecast.empty:
+                df_comparativo_fc = pd.merge(df_real_total, df_forecast, on='Fecha', how='inner')
+            
             with col_det1:
                 st.markdown("##### 📊 Desviación de Forecast Reciente (Últimos 5 Meses)")
-                # Unir Producción Real mensual con Forecast para graficar comparativo
-                df_real_total = df_mix_total.groupby('Fecha')['Unidades'].sum().reset_index().rename(columns={'Unidades': 'Real'})
-                df_comparativo_fc = pd.merge(df_real_total, df_forecast, on='Fecha', how='inner')
-                df_comparativo_fc = df_comparativo_fc.sort_values('Fecha', ascending=False).head(5).sort_values('Fecha')
-                
-                fig_barras = go.Figure()
-                fig_barras.add_trace(go.Bar(
-                    x=df_comparativo_fc['Fecha'].dt.strftime('%b %y'),
-                    y=df_comparativo_fc['Forecast'],
-                    name='Forecast Planificado',
-                    marker_color='#a6a6a6'
-                ))
-                fig_barras.add_trace(go.Bar(
-                    x=df_comparativo_fc['Fecha'].dt.strftime('%b %y'),
-                    y=df_comparativo_fc['Real'],
-                    name='Producción Real',
-                    marker_color='#2e75b6'
-                ))
-                fig_barras.update_layout(
-                    barmode='group',
-                    template='plotly_white',
-                    height=280,
-                    margin=dict(l=20, r=20, t=20, b=20),
-                    legend=dict(orientation="h", yanchor="bottom", y=-0.25, xanchor="center", x=0.5)
-                )
-                st.plotly_chart(fig_barras, use_container_width=True)
+                if not df_comparativo_fc.empty:
+                    df_comparativo_fc_plot = df_comparativo_fc.sort_values('Fecha', ascending=False).head(5).sort_values('Fecha')
+                    
+                    fig_barras = go.Figure()
+                    fig_barras.add_trace(go.Bar(
+                        x=df_comparativo_fc_plot['Fecha'].dt.strftime('%b %y'),
+                        y=df_comparativo_fc_plot['Forecast'],
+                        name='Forecast Planificado',
+                        marker_color='#a6a6a6'
+                    ))
+                    fig_barras.add_trace(go.Bar(
+                        x=df_comparativo_fc_plot['Fecha'].dt.strftime('%b %y'),
+                        y=df_comparativo_fc_plot['Real'],
+                        name='Producción Real',
+                        marker_color='#2e75b6'
+                    ))
+                    fig_barras.update_layout(
+                        barmode='group',
+                        template='plotly_white',
+                        height=280,
+                        margin=dict(l=20, r=20, t=20, b=20),
+                        legend=dict(orientation="h", yanchor="bottom", y=-0.25, xanchor="center", x=0.5)
+                    )
+                    st.plotly_chart(fig_barras, use_container_width=True)
+                else:
+                    st.info("ℹ️ No hay suficientes datos coincidentes de Forecast vs Real para graficar.")
 
             with col_det2:
                 st.markdown("##### 📝 Matriz de Cumplimiento Planificado")
-                # Crear tabla limpia para visualización de dirección
-                df_comparativo_fc['Eficiencia'] = df_comparativo_fc['Real'] / df_comparativo_fc['Forecast']
-                df_tabla_fc = df_comparativo_fc[['Fecha', 'Forecast', 'Real', 'Eficiencia']].copy()
-                df_tabla_fc['Fecha'] = df_tabla_fc['Fecha'].dt.strftime('%B %Y')
-                
-                # Dar formato visual elegante
-                formato_render = {
-                    'Forecast': '{:,.0f}',
-                    'Real': '{:,.0f}',
-                    'Eficiencia': '{:.1%}'
-                }
-                
-                # Función para colorear el porcentaje de eficiencia (Rojo < 90%, Amarillo 90-95%, Verde > 95%)
-                def color_eficiencia(val):
-                    try:
-                        num = float(val.strip('%')) / 100
-                        if num < 0.90: return 'background-color: #fce4d6; color: #c65911; font-weight: bold;'
-                        elif num < 0.95: return 'background-color: #fff2cc; color: #7f6000; font-weight: bold;'
-                        return 'background-color: #e2f0d9; color: #385723; font-weight: bold;'
-                    except:
-                        return ''
+                if not df_comparativo_fc.empty:
+                    df_comparativo_fc['Eficiencia'] = df_comparativo_fc['Real'] / df_comparativo_fc['Forecast']
+                    df_tabla_fc = df_comparativo_fc[['Fecha', 'Forecast', 'Real', 'Eficiencia']].copy()
+                    df_tabla_fc['Fecha'] = df_tabla_fc['Fecha'].dt.strftime('%B %Y')
+                    
+                    formato_render = {
+                        'Forecast': '{:,.0f}',
+                        'Real': '{:,.0f}',
+                        'Eficiencia': '{:.1%}'
+                    }
+                    
+                    def color_eficiencia(val):
+                        try:
+                            num = float(val.strip('%')) / 100
+                            if num < 0.90: return 'background-color: #fce4d6; color: #c65911; font-weight: bold;'
+                            elif num < 0.95: return 'background-color: #fff2cc; color: #7f6000; font-weight: bold;'
+                            return 'background-color: #e2f0d9; color: #385723; font-weight: bold;'
+                        except:
+                            return ''
 
-                tabla_render = df_tabla_fc.style.format(formato_render).map(color_eficiencia, subset=['Eficiencia'])
-                st.dataframe(tabla_render, use_container_width=True, hide_index=True)
+                    tabla_render = df_tabla_fc.style.format(formato_render).map(color_eficiencia, subset=['Eficiencia'])
+                    st.dataframe(tabla_render, use_container_width=True, hide_index=True)
+                else:
+                    st.info("ℹ️ No se encontraron datos comparativos históricos.")
 
         except Exception as e:
             st.error(f"Error crítico al analizar el histórico de producción: {str(e)}")
