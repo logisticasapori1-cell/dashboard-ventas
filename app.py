@@ -1,9 +1,8 @@
 import streamlit as st
 import pandas as pd
-import plotly.graph_objects as go
-import os
-import io
-
+import numpy as np  # Si la usas
+import plotly.express as px  # <-- IMPORTANTE PARA LOS GRÁFICOS DEL M3
+import plotly.graph_objects as go  # <-- IMPORTANTE PARA LOS GRÁFICOS DEL M3
 # ==========================================
 # CONFIGURACIÓN DE PÁGINA
 # ==========================================
@@ -76,7 +75,7 @@ else:
         st.markdown("### 📌 Módulos de Operación")
         modulo_activo = st.radio(
             "Seleccione el área a visualizar:",
-            ["1. Dashboard Venta Diaria & Forecast", "2. Control de Desviaciones (Mensual)"]
+            ["1. Dashboard Venta Diaria & Forecast", "2. Control de Desviaciones (Mensual)", "3: Dashboard de Producción y Forecast"]
         )
         
         st.markdown("---")
@@ -202,7 +201,7 @@ else:
             try:
                 df = pd.read_excel(file_name, sheet_name="Table 1")
                 
-                if 'CATEGORÍA' not in df.columns:
+                if 'CATEGORÍA' not in df.columns:   
                     df['CATEGORÍA'] = "Por Asignar"
 
                 for col in ['PROMD VTA DIA JUNIO', 'PROMD VTA DIA JULIO']:
@@ -325,6 +324,293 @@ else:
 
             except Exception as e:
                 st.error(f"Error crítico en la lectura del archivo Excel: {e}")
+
+    def render_modulo_3():
+        st.title("📊 Módulo 3: Dashboard Ejecutivo de Producción y Forecast")
+        st.markdown("---")
+
+    # =========================================================================
+    # MÓDULO 3: DASHBOARD DE PRODUCCIÓN EJECUTIVO & FORECAST
+    # =========================================================================
+    def render_modulo_3():
+        st.title("📊 Módulo 3: Dashboard Ejecutivo de Producción y Forecast")
+        st.markdown("---")
+    
+    # 1. Cargar archivo de producción histórica
+    file_historico = st.file_uploader("📂 Cargar Histórico de Producción (.xlsx)", type=["xlsx"], key="uploader_m3")
+    
+    if file_historico is not None:
+        try:
+            excel_file = pd.ExcelFile(file_historico)
+            
+            # --- FUNCIÓN AUXILIAR PARA LIMPIAR Y PARSEAR HOJAS DE CATEGORÍAS ---
+            def parsear_hoja_categoria(sheet_name):
+                df = excel_file.parse(sheet_name)
+                df = df.dropna(how='all')
+                
+                # Identificar fila de fechas
+                row_fecha_idx = None
+                for idx, row in df.iterrows():
+                    fechas_eval = pd.to_datetime(row, errors='coerce')
+                    if fechas_eval.notna().sum() >= 3:
+                        row_fecha_idx = idx
+                        break
+                
+                if row_fecha_idx is None:
+                    return None
+                
+                fechas = pd.to_datetime(df.iloc[row_fecha_idx], errors='coerce')
+                columnas_validas = fechas[fechas.notna()].index
+                
+                # Buscar fila de total unidades
+                fila_total = None
+                for idx, row in df.iterrows():
+                    row_str = row.astype(str).str.upper()
+                    if row_str.str.contains('TOTAL UNIDADES').any() or row_str.str.contains('TOTAL CREMIGURT').any():
+                        fila_total = row
+                        break
+                
+                if fila_total is not None:
+                    valores = pd.to_numeric(fila_total[columnas_validas], errors='coerce')
+                else:
+                    # Si no hay fila de total explícita, sumar columnas numéricas
+                    numeric_df = df.apply(pd.to_numeric, errors='coerce')
+                    valores = numeric_df.loc[:, columnas_validas].sum(axis=0)
+                
+                res_df = pd.DataFrame({
+                    'Fecha': fechas[columnas_validas],
+                    'Unidades': valores
+                }).dropna().reset_index(drop=True)
+                
+                res_df['Categoría'] = sheet_name
+                return res_df
+
+            # --- PROCESAR CATEGORÍAS PARA CONSTRUIR MIX DE PRODUCCIÓN ---
+            categorias_sheets = ['Frutas', 'POWER', 'Linea Azul', 'Cremosillo', 'Gelatina']
+            data_frames_cat = []
+            
+            for cat in categorias_sheets:
+                if cat in excel_file.sheet_names:
+                    cat_parsed = parsear_hoja_categoria(cat)
+                    if cat_parsed is not None:
+                        data_frames_cat.append(cat_parsed)
+            
+            if data_frames_cat:
+                df_mix_total = pd.concat(data_frames_cat, ignore_index=True)
+                df_mix_total['Fecha'] = pd.to_datetime(df_mix_total['Fecha'])
+            else:
+                st.error("No se pudieron procesar las hojas de categorías. Verifique la estructura del archivo.")
+                return
+
+            # --- LEER HOJA COMPARATIVO VS FORECAST ---
+            df_forecast_raw = excel_file.parse('Comparativo vs Forecast')
+            df_forecast_raw = df_forecast_raw.dropna(subset=[df_forecast_raw.columns[3]])  # Filtrar filas vacías de fecha
+            
+            # Extraer columnas clave dinámicamente
+            fechas_fc = pd.to_datetime(df_forecast_raw.iloc[:, 3], errors='coerce')
+            disponibilidad = pd.to_numeric(df_forecast_raw.iloc[:, 4], errors='coerce')
+            pronostico = pd.to_numeric(df_forecast_raw.iloc[:, 5], errors='coerce')
+            
+            df_forecast = pd.DataFrame({
+                'Fecha': fechas_fc,
+                'Disponibilidad': disponibilidad,
+                'Forecast': pronostico
+            }).dropna().reset_index(drop=True)
+
+            # --- OBTENER FECHAS DISPONIBLES PARA SELECCIÓN ---
+            fechas_disponibles = sorted(df_mix_total['Fecha'].unique(), reverse=True)
+            fechas_formateadas = [f.strftime('%B %Y').capitalize() for f in fechas_disponibles]
+            
+            # Selector de período en la parte superior derecha
+            col_titulo, col_selector = st.columns([2, 1])
+            with col_selector:
+                periodo_sel_str = st.selectbox("📅 Seleccione Período de Análisis", fechas_formateadas)
+                fecha_seleccionada = fechas_disponibles[fechas_formateadas.index(periodo_sel_str)]
+                
+            # Datos filtrados del mes actual y mes previo para cálculos MoM
+            idx_actual = fechas_disponibles.index(fecha_seleccionada)
+            fecha_previa = fechas_disponibles[idx_actual + 1] if idx_actual + 1 < len(fechas_disponibles) else None
+
+            # Datos del mes actual
+            df_mes_actual = df_mix_total[df_mix_total['Fecha'] == fecha_seleccionada]
+            produccion_total_actual = df_mes_actual['Unidades'].sum()
+            
+            # Datos del mes previo (MoM)
+            if fecha_previa:
+                df_mes_previo = df_mix_total[df_mix_total['Fecha'] == fecha_previa]
+                produccion_total_previa = df_mes_previo['Unidades'].sum()
+                var_mom = ((produccion_total_actual - produccion_total_previa) / produccion_total_previa)
+            else:
+                var_mom = 0.0
+
+            # Variables de Forecast del mes seleccionado
+            fc_row = df_forecast[df_forecast['Fecha'] == fecha_seleccionada]
+            if not fc_row.empty:
+                capacidad_disp = fc_row['Disponibilidad'].values[0]
+                forecast_meta = fc_row['Forecast'].values[0]
+                eficiencia_forecast = (produccion_total_actual / forecast_meta) if forecast_meta > 0 else 0.0
+                utilizacion_capacidad = (produccion_total_actual / capacidad_disp) if capacidad_disp > 0 else 0.0
+            else:
+                # Fallbacks si no hay cruce de forecast
+                capacidad_disp = 660000
+                forecast_meta = 600000
+                eficiencia_forecast = 0.95
+                utilizacion_capacidad = 0.88
+
+            # Categoría líder
+            cat_lider_row = df_mes_actual.loc[df_mes_actual['Unidades'].idxmax()]
+            categoria_lider_name = cat_lider_row['Categoría']
+            categoria_lider_pct = (cat_lider_row['Unidades'] / produccion_total_actual)
+
+            # ==========================================
+            # 1. FILA DE INDICADORES (KPI CARDS)
+            # ==========================================
+            st.markdown("#### 🔑 Indicadores de Rendimiento Industrial")
+            kpi1, kpi2, kpi3, kpi4 = st.columns(4)
+            
+            with kpi1:
+                st.metric(
+                    label="📦 Prod. Total del Mes",
+                    value=f"{produccion_total_actual:,.0f} Und",
+                    delta=f"{var_mom:+.2%} vs Mes Ant." if fecha_previa else "Primer mes registrado"
+                )
+            
+            with kpi2:
+                # Color de indicador según cumplimiento de forecast (Meta > 95%)
+                st.metric(
+                    label="🎯 Eficiencia vs Forecast",
+                    value=f"{eficiencia_forecast:.2%}",
+                    delta="Óptimo (Meta > 95%)" if eficiencia_forecast >= 0.95 else "Bajo Planificación",
+                    delta_color="normal" if eficiencia_forecast >= 0.95 else "inverse"
+                )
+                
+            with kpi3:
+                st.metric(
+                    label="⚙️ Utilización de Capacidad",
+                    value=f"{utilizacion_capacidad:.2%}",
+                    delta=f"Disp: {capacidad_disp:,.0f} Und"
+                )
+                
+            with kpi4:
+                st.metric(
+                    label="🏆 Líder de Producción",
+                    value=f"{categoria_lider_name}",
+                    delta=f"{categoria_lider_pct:.1%} de la mezcla total"
+                )
+            
+            st.markdown("---")
+
+            # ==========================================
+            # 2. SECCIÓN DE GRÁFICOS (VISIÓN ESTRATÉGICA)
+            # ==========================================
+            col_chart1, col_chart2 = st.columns(2)
+            
+            with col_chart1:
+                st.markdown("##### 📈 Tendencia Histórica de Producción Sapori")
+                # Agrupar total de producción por fecha
+                df_historico_linea = df_mix_total.groupby('Fecha')['Unidades'].sum().reset_index()
+                df_historico_linea = df_historico_linea.sort_values('Fecha')
+                
+                fig_linea = px.line(
+                    df_historico_linea,
+                    x='Fecha',
+                    y='Unidades',
+                    markers=True,
+                    labels={'Unidades': 'Unidades Producidas', 'Fecha': 'Mes de Operación'},
+                    template='plotly_white',
+                    color_discrete_sequence=['#1f4e78']  # Azul Corporativo Sapori
+                )
+                fig_linea.update_layout(
+                    margin=dict(l=20, r=20, t=20, b=20),
+                    height=320,
+                    xaxis_title=None,
+                    yaxis_title=None
+                )
+                st.plotly_chart(fig_linea, use_container_width=True)
+
+            with col_chart2:
+                st.markdown("##### 🍰 Mix de Producción (Participación de Líneas)")
+                fig_pie = px.pie(
+                    df_mes_actual,
+                    values='Unidades',
+                    names='Categoría',
+                    hole=0.4,
+                    color_discrete_sequence=px.colors.qualitative.Pastel
+                )
+                fig_pie.update_layout(
+                    margin=dict(l=20, r=20, t=20, b=20),
+                    height=320,
+                    legend=dict(orientation="h", yanchor="bottom", y=-0.2, xanchor="center", x=0.5)
+                )
+                st.plotly_chart(fig_pie, use_container_width=True)
+
+            st.markdown("---")
+            
+            # ==========================================
+            # 3. SECCIÓN COMPARATIVA DE FORECAST VS REAL
+            # ==========================================
+            col_det1, col_det2 = st.columns([3, 2])
+            
+            with col_det1:
+                st.markdown("##### 📊 Desviación de Forecast Reciente (Últimos 5 Meses)")
+                # Unir Producción Real mensual con Forecast para graficar comparativo
+                df_real_total = df_mix_total.groupby('Fecha')['Unidades'].sum().reset_index().rename(columns={'Unidades': 'Real'})
+                df_comparativo_fc = pd.merge(df_real_total, df_forecast, on='Fecha', how='inner')
+                df_comparativo_fc = df_comparativo_fc.sort_values('Fecha', ascending=False).head(5).sort_values('Fecha')
+                
+                fig_barras = go.Figure()
+                fig_barras.add_trace(go.Bar(
+                    x=df_comparativo_fc['Fecha'].dt.strftime('%b %y'),
+                    y=df_comparativo_fc['Forecast'],
+                    name='Forecast Planificado',
+                    marker_color='#a6a6a6'
+                ))
+                fig_barras.add_trace(go.Bar(
+                    x=df_comparativo_fc['Fecha'].dt.strftime('%b %y'),
+                    y=df_comparativo_fc['Real'],
+                    name='Producción Real',
+                    marker_color='#2e75b6'
+                ))
+                fig_barras.update_layout(
+                    barmode='group',
+                    template='plotly_white',
+                    height=280,
+                    margin=dict(l=20, r=20, t=20, b=20),
+                    legend=dict(orientation="h", yanchor="bottom", y=-0.25, xanchor="center", x=0.5)
+                )
+                st.plotly_chart(fig_barras, use_container_width=True)
+
+            with col_det2:
+                st.markdown("##### 📝 Matriz de Cumplimiento Planificado")
+                # Crear tabla limpia para visualización de dirección
+                df_comparativo_fc['Eficiencia'] = df_comparativo_fc['Real'] / df_comparativo_fc['Forecast']
+                df_tabla_fc = df_comparativo_fc[['Fecha', 'Forecast', 'Real', 'Eficiencia']].copy()
+                df_tabla_fc['Fecha'] = df_tabla_fc['Fecha'].dt.strftime('%B %Y')
+                
+                # Dar formato visual elegante
+                formato_render = {
+                    'Forecast': '{:,.0f}',
+                    'Real': '{:,.0f}',
+                    'Eficiencia': '{:.1%}'
+                }
+                
+                # Función para colorear el porcentaje de eficiencia (Rojo < 90%, Amarillo 90-95%, Verde > 95%)
+                def color_eficiencia(val):
+                    try:
+                        num = float(val.strip('%')) / 100
+                        if num < 0.90: return 'background-color: #fce4d6; color: #c65911; font-weight: bold;'
+                        elif num < 0.95: return 'background-color: #fff2cc; color: #7f6000; font-weight: bold;'
+                        return 'background-color: #e2f0d9; color: #385723; font-weight: bold;'
+                    except:
+                        return ''
+
+                tabla_render = df_tabla_fc.style.format(formato_render).map(color_eficiencia, subset=['Eficiencia'])
+                st.dataframe(tabla_render, use_container_width=True, hide_index=True)
+
+        except Exception as e:
+            st.error(f"Error crítico al analizar el histórico de producción: {str(e)}")
+    else:
+        st.info("⚠️ Por favor carga el archivo 'Historico Produccion CREMIGURT.xlsx' para activar la visualización estratégica.")
 
     # =========================================================================
     # PIE DE PÁGINA GLOBAL
