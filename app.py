@@ -3,7 +3,7 @@ import pandas as pd
 import plotly.graph_objects as go
 import os
 import io
-
+render_modulo_analisis_produccion(Historico_Produccion_CREMIGURT)
 # ==========================================
 # CONFIGURACIÓN DE PÁGINA
 # ==========================================
@@ -90,7 +90,8 @@ else:
         elif modulo_activo == "3. Análisis Estratégico y Desviación vs Forecast":
             # 1. Verificamos que el archivo esté cargado en la aplicación
            if Historico_Produccion_CREMIGURT is not None:
-               render_modulo_analisis_produccion(Historico_Produccion_CREMIGURT)
+               st.write("Cargando el Módulo 3...")
+               
            else:
                st.info("⚠️ Por favor, carga el archivo 'Historico Produccion CREMIGURT.xlsx' en la barra lateral para activar este análisis.")
 
