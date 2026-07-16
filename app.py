@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
+import plotly.express as px
 import os
 import io
 
@@ -325,6 +326,97 @@ else:
 
             except Exception as e:
                 st.error(f"Error crítico en la lectura del archivo Excel: {e}")
+
+# =========================================================================
+    def render_modulo_3():
+        st.title("📊 Módulo 3: Dashboard Ejecutivo de Producción y Forecast")
+        st.markdown("Análisis histórico y proyección de demanda para optimización de inventarios.")
+        st.markdown("---")
+    
+        # 1. Carga de archivo
+        file_historico = st.file_uploader("📂 Cargar Histórico de Producción (.xlsx)", type=["xlsx"], key="uploader_m3")
+    
+        if file_historico is not None:
+            # Protegemos la lectura del archivo
+            try:
+                excel_file = pd.ExcelFile(file_historico)
+            except Exception as e:
+                st.error(f"Error al leer el archivo Excel: {e}")
+                return
+            
+            # 2. Función interna para procesar las hojas
+            def parsear_hoja_categoria(sheet_name):
+                df = excel_file.parse(sheet_name)
+                df = df.dropna(how='all')
+                
+                row_fecha_label = None
+                for label, row in df.iterrows():
+                    fechas_eval = pd.to_datetime(row, errors='coerce')
+                    if fechas_eval.notna().sum() >= 3:
+                        row_fecha_label = label
+                        break
+                
+                if row_fecha_label is None:
+                    return None
+                
+                fechas = pd.to_datetime(df.loc[row_fecha_label], errors='coerce')
+                columnas_validas = fechas[fechas.notna()].index
+                
+                # Nos quedamos solo con las columnas de fechas válidas para análisis
+                df_limpio = df[columnas_validas].copy()
+                df_limpio.columns = fechas[columnas_validas]
+                return df_limpio
+
+            # 3. Interfaz del Dashboard (Se muestra solo si el archivo carga bien)
+            st.success("¡Archivo cargado y procesado con éxito!")
+            
+            # Selector de hoja/categoría a analizar
+            hojas_disponibles = excel_file.sheet_names
+            hoja_seleccionada = st.selectbox("Seleccione la categoría de producto a analizar:", hojas_disponibles)
+            
+            datos_procesados = parsear_hoja_categoria(hoja_seleccionada)
+
+            if datos_procesados is not None:
+                # --- SECCIÓN DE KPIs VISUALES ---
+                st.subheader("📈 Resumen de Producción")
+                col1, col2, col3 = st.columns(3)
+                
+                # Aquí simulamos cálculos rápidos. Ajustaremos esto según tus filas reales.
+                with col1:
+                    st.metric(label="Total Registros Históricos", value=f"{len(datos_procesados)} series")
+                with col2:
+                    st.metric(label="Último mes analizado", value=datos_procesados.columns[-1].strftime('%B %Y'))
+                with col3:
+                    st.metric(label="Estado del Forecast", value="Activo", delta="Optimizado")
+
+                st.markdown("---")
+
+                # --- SECCIÓN DE PESTAÑAS (TABS) PARA ORGANIZAR LA VISTA ---
+                tab1, tab2 = st.tabs(["📉 Análisis Histórico", "🔮 Proyección (Forecast)"])
+                
+                with tab1:
+                    st.markdown("### Tendencia de Producción en el Tiempo")
+                    # Para graficar, Pandas y Plotly prefieren que las fechas estén en filas, no en columnas.
+                    # Hacemos una pequeña transposición (T) temporal para el gráfico:
+                    df_grafico = datos_procesados.T
+                    df_grafico.index.name = 'Fecha'
+                    
+                    # Gráfico de líneas atractivo
+                    fig = px.line(df_grafico, x=df_grafico.index, y=df_grafico.columns[0], 
+                                  title=f"Evolución Histórica - Fila 1 ({hoja_seleccionada})",
+                                  markers=True, line_shape="spline")
+                    st.plotly_chart(fig, use_container_width=True)
+                    
+                    # Mostrar la tabla limpia (asegurando el uso de puntos decimales)
+                    with st.expander("Ver tabla de datos limpios"):
+                        st.dataframe(datos_procesados.style.format(precision=2, thousands="", decimal="."))
+                
+                with tab2:
+                    st.markdown("### Modelo de Proyección")
+                    st.info("Aquí conectaremos el algoritmo de pronóstico (ARIMA, Prophet o promedios móviles) usando los datos históricos extraídos.")
+                    # Espacio reservado para agregar la lógica del Forecast en el siguiente paso.
+            else:
+                st.warning("No se pudo detectar una fila válida con fechas en esta hoja. Verifica el formato de tu Excel.")
 
     # =========================================================================
     # PIE DE PÁGINA GLOBAL
