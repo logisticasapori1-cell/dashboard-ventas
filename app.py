@@ -661,10 +661,11 @@ else:
                     st.dataframe(tabla_render, use_container_width=True, hide_index=True)
                 else:
                     st.info("ℹ️ No se encontraron datos comparativos históricos.")
-        except Exception as e:
+
+            except Exception as e:
             st.error(f"Error crítico al analizar el histórico de producción: {str(e)}")
-    else:
-        st.info("⚠️ Por favor carga el archivo 'Historico Produccion CREMIGURT.xlsx' para activar la visualización estratégica.")
+        else:
+            st.info("⚠️ Por favor carga el archivo 'Historico Produccion CREMIGURT.xlsx' para activar la visualización estratégica.")
 
     # =========================================================================
     # PIE DE PÁGINA GLOBAL
