@@ -337,7 +337,7 @@ else:
     
         if file_historico is not None:
             try:
-            excel_file = pd.ExcelFile(file_historico)
+                excel_file = pd.ExcelFile(file_historico)
             
             # --- FUNCIÓN AUXILIAR PARA LIMPIAR Y PARSEAR HOJAS DE CATEGORÍAS ---
             def parsear_hoja_categoria(sheet_name):
