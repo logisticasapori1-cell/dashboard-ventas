@@ -336,3 +336,179 @@ else:
         "</div>", 
         unsafe_allow_html=True
     )
+    def render_modulo_analisis_produccion(file_historico):
+        """
+        Renderiza el Módulo 3: Análisis Estratégico y Desviaciones vs Forecast.
+        Este bloque es independiente y evita errores de indentación en cascada.
+        """
+        st.markdown("## 📊 Módulo 3: Análisis Estratégico y Desviación vs Forecast")
+        st.markdown("Monitoreo de la eficiencia productiva, cumplimiento de metas mensuales y comportamiento por líneas de producto.")
+
+        try:
+            # ==========================================
+            # 1. CARGA Y LIMPIEZA DE DATOS (FORECAST)
+            # ==========================================
+            df_raw = pd.read_excel(file_historico, sheet_name='Comparativo vs Forecast')
+        
+            # Encontrar dinámicamente la fila de cabecera que contiene "Disponibilidad Productiva"
+            header_row_idx = None
+            for idx, row in df_raw.iterrows():
+                if 'Disponibilidad Productiva' in row.values:
+                    header_row_idx = idx
+                    break
+        
+            if header_row_idx is None:
+                st.warning("⚠️ No se pudo localizar la estructura estándar en la hoja 'Comparativo vs Forecast'.")
+                return
+
+            # Limpiar dataframe basándonos en la cabecera encontrada
+            df_clean = df_raw.iloc[header_row_idx+1:].copy()
+        
+            # Identificamos las columnas útiles por su posición relativa
+            # Columna 3: Fecha, Columna 4: Disponibilidad (Meta), Columna 5: Real, Columna 6: Var vs Forecast, Columna 7: Var vs Mes Previo
+            df_clean = df_clean.dropna(subset=[df_clean.columns[3]])  # Eliminar filas sin fecha
+        
+            # Renombrar columnas para facilitar el manejo de datos
+            df_clean.columns = ['_c0', '_c1', '_c2', 'Fecha', 'Meta_Produccion', 'Produccion_Real', 'Var_Forecast', 'Var_Mes_Previo'] + list(df_clean.columns[8:])
+        
+            # Convertir y limpiar tipos de datos (forzar separador decimal de punto)
+            df_clean['Fecha'] = pd.to_datetime(df_clean['Fecha']).dt.strftime('%Y-%m-%d')
+            df_clean['Meta_Produccion'] = pd.to_numeric(df_clean['Meta_Produccion'], errors='coerce')
+            df_clean['Produccion_Real'] = pd.to_numeric(df_clean['Produccion_Real'], errors='coerce')
+            df_clean['Var_Forecast'] = pd.to_numeric(df_clean['Var_Forecast'], errors='coerce')
+            df_clean['Var_Mes_Previo'] = pd.to_numeric(df_clean['Var_Mes_Previo'], errors='coerce')
+        
+            # Eliminar posibles filas de totales o nulas acumuladas al final
+            df_clean = df_clean.dropna(subset=['Meta_Produccion', 'Produccion_Real'])
+
+            # Obtener datos del último período registrado para las tarjetas KPI
+            ultimo_registro = df_clean.iloc[-1]
+            fecha_act = ultimo_registro['Fecha']
+            real_act = ultimo_registro['Produccion_Real']
+            meta_act = ultimo_registro['Meta_Produccion']
+            var_fc = ultimo_registro['Var_Forecast']
+            var_mp = ultimo_registro['Var_Mes_Previo']
+
+            # ==========================================
+            # 2. SECCIÓN DE MÉTRICAS KPI (Tarjetas visuales)
+            # ==========================================
+            st.markdown(f"#### 📈 Estado de Situación (Cierre al: `{fecha_act}`)")
+        
+            col1, col2, col3 = st.columns(3)
+        
+            with col1:
+                st.metric(
+                    label="Producción Real del Mes", 
+                    value=f"{real_act:,.0f} Und",
+                    delta=f"Meta: {meta_act:,.0f} Und",
+                    delta_color="off"
+                )
+            
+            with col2:
+                color_fc = "normal" if var_fc >= 0 else "inverse"
+                st.metric(
+                    label="Cumplimiento vs Forecast (Meta)", 
+                    value=f"{var_fc * 100:+.2f}%",
+                    delta="Sobre la meta" if var_fc >= 0 else "Por debajo de la meta",
+                    delta_color=color_fc
+                )
+            
+            with col3:
+                color_mp = "normal" if var_mp >= 0 else "inverse"
+                st.metric(
+                    label="Variación vs Mes Anterior", 
+                    value=f"{var_mp * 100:+.2f}%",
+                    delta="Incremento" if var_mp >= 0 else "Decrecimiento",
+                    delta_color=color_mp
+                )
+
+            st.markdown("---")
+
+            # ==========================================
+            # 3. GRÁFICO COMPARATIVO HISTÓRICO
+            # ==========================================
+            st.markdown("#### 📉 Evolución Mensual: Producción Real vs Meta")
+        
+            # Crear un gráfico de líneas limpio y profesional
+            chart_data = df_clean[['Fecha', 'Meta_Produccion', 'Produccion_Real']].set_index('Fecha')
+            chart_data.columns = ['Meta de Producción', 'Producción Real']
+        
+            st.line_chart(chart_data, height=350)
+
+            st.markdown("---")
+
+            # ==========================================
+            # 4. EXPLORADOR POR LÍNEAS DE PRODUCTO (TABS)
+            # ==========================================
+            st.markdown("#### 🏷️ Análisis Detallado por Línea de Negocio")
+            st.caption("Selecciona una pestaña para ver el comportamiento histórico de producción por presentación.")
+
+            tab1, tab2, tab3, tab4, tab5 = st.tabs(["🍓 Frutas", "⚡ Power", "🔵 Línea Azul", "🥛 Cremosillo", "🍮 Gelatina"])
+
+            # Función auxiliar para leer y graficar hojas de categorías
+            def render_category_tab(sheet_name, title_prefix):
+                try:
+                    df_cat = pd.read_excel(file_historico, sheet_name=sheet_name)
+                    # Localizar fila de fechas (ej. '2026-02-01')
+                    date_row_idx = None
+                    for idx, row in df_cat.iterrows():
+                        # Buscamos alguna celda con fecha o texto de fecha
+                        if any(isinstance(val, str) and '2026' in val for val in row.values) or any(isinstance(val, pd.Timestamp) for val in row.values):
+                            date_row_idx = idx
+                            break
+                
+                    if date_row_idx is not None:
+                        # Limpiar y reestructurar
+                        df_tab = df_cat.iloc[date_row_idx:].copy()
+                        df_tab.columns = df_tab.iloc[0]
+                        df_tab = df_tab[1:]
+                        df_tab = df_tab.dropna(how='all')
+                    
+                        # Renombrar primera columna descriptiva
+                        df_tab.rename(columns={df_tab.columns[3]: 'Producto'}, inplace=True)
+                        # Quedarse con filas de productos reales (evitando vacíos y totales generales)
+                        df_tab = df_tab[df_tab['Producto'].notna() & ~df_tab['Producto'].str.contains('TOTAL|TREND', case=False, na=False)]
+                    
+                        # Columnas de fechas para graficar
+                        cols_fechas = [c for c in df_tab.columns if isinstance(c, (pd.Timestamp, str)) and ('2026' in str(c) or '2025' in str(c))]
+                    
+                        if cols_fechas:
+                            # Reestructurar datos para graficar
+                            df_melted = df_tab.melt(id_vars=['Producto'], value_vars=cols_fechas, var_name='Fecha', value_name='Unidades')
+                            df_melted['Fecha'] = pd.to_datetime(df_melted['Fecha']).dt.strftime('%b %Y')
+                            df_melted['Unidades'] = pd.to_numeric(df_melted['Unidades'], errors='coerce').fillna(0)
+                        
+                            # Pivotar para el formato del gráfico de Streamlit
+                            df_chart = df_melted.pivot(index='Fecha', columns='Producto', values='Unidades')
+                        
+                            col_left, col_right = st.columns([2, 1])
+                            with col_left:
+                                st.markdown(f"##### Volumen de Producción - {title_prefix}")
+                                st.bar_chart(df_chart, height=280)
+                            with col_right:
+                                st.markdown("##### Resumen de Unidades")
+                                # Formatear números con punto como decimal y comas para miles
+                                st.dataframe(
+                                    df_tab[['Producto'] + cols_fechas].set_index('Producto').style.format("{:,.0f}"),
+                                    use_container_width=True
+                                )
+                        else:
+                            st.info("No se encontraron columnas de fecha válidas para graficar en esta pestaña.")
+                    else:
+                        st.info("La estructura de fechas de esta hoja no es compatible con el lector automático.")
+                except Exception as e:
+                    st.error(f"Error al procesar la línea {sheet_name}: {str(e)}")
+
+            with tab1:
+                render_category_tab('Frutas', 'Línea de Frutas (150g / 700g)')
+            with tab2:
+                render_category_tab('POWER', 'Yogurt Power y Sabores Especiales')
+            with tab3:
+                render_category_tab('Linea Azul', 'Yogurt Griego Línea Azul')
+            with tab4:
+                render_category_tab('Cremosillo', 'Línea Cremosillo')
+            with tab5:
+                render_category_tab('Gelatina', 'Línea Gelatinas')
+
+        except Exception as e:
+            st.error(f"Ocurrió un inconveniente al construir el Módulo 3: {str(e)}")
