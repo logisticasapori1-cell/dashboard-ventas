@@ -1,6 +1,8 @@
 import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
+import os
+import io
 
 # ==========================================
 # CONFIGURACIÓN DE PÁGINA
@@ -330,7 +332,7 @@ else:
     st.markdown("---")
     st.markdown(
         "<div style='text-align: center; color: gray; font-family: Arial;'>"
-        "Sistema Operativo Realizado por: Jair Ramos <b>Dirección de Supply Chain Sapori</b>"
+        "📝 Sistema Operativo Realizado por: <b>Dirección de Supply Chain Sapori</b>"
         "</div>", 
         unsafe_allow_html=True
     )
