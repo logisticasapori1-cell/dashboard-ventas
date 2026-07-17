@@ -76,7 +76,7 @@ else:
         st.markdown("### 📌 Módulos de Operación")
         modulo_activo = st.radio(
             "Seleccione el área a visualizar:",
-            ["1. Dashboard Venta Diaria & Forecast", "2. Control de Desviaciones (Mensual)"]
+            ["1. Dashboard Venta Diaria & Forecast", "2. Control de Desviaciones (Mensual)", "3. Análisis Estratégico y Desviaciones vs Forecast"]
         )
         
         st.markdown("---")
