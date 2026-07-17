@@ -326,98 +326,99 @@ else:
             except Exception as e:
                 st.error(f"Error crítico en la lectura del archivo Excel: {e}")
 
-    def render_modulo_analisis_produccion(file_historico):
-        st.markdown("## 📊 Módulo 3: Análisis Estratégico y Desviación vs Forecast")
-    
-        try:
-            # 1. Leer la hoja 'Comparativo vs Forecast'
-            df = pd.read_excel(file_historico, sheet_name='Comparativo vs Forecast')
+    elif modulo_activo == "3. Análisis Estratégico y Desviación vs Forecast":
+        def render_modulo_analisis_produccion(file_historico):
+            st.markdown("## 📊 Módulo 3: Análisis Estratégico y Desviación vs Forecast")
         
-            # Copiamos para no alterar el original durante la limpieza
-            df_datos = df.copy()
-        
-            # 2. Limpieza de filas y columnas completamente vacías
-            df_datos = df_datos.dropna(how='all')
-        
-            # 3. Extraer los datos por posición física de las columnas:
-            # En tu archivo:
-            # - La columna de fechas (índice 3 / Columna D) contiene '2026-03-01', etc.
-            # - La columna de Forecast (índice 4 / Columna E) contiene los valores planificados.
-            # - La columna de Producción Real (índice 5 / Columna F) contiene los valores reales.
-        
-            # Convertimos la columna de fecha a texto para limpiarla de espacios
-            df_datos.iloc[:, 3] = df_datos.iloc[:, 3].astype(str).str.strip()
-        
-            # Filtramos para quedarnos únicamente con las filas que tengan una fecha válida (formato AAAA-MM-DD)
-            df_datos = df_datos[df_datos.iloc[:, 3].str.match(r'\d{4}-\d{2}-\d{2}', na=False)]
-        
-            if df_datos.empty:
-                st.warning("⚠️ No se encontraron datos de producción válidos en la hoja 'Comparativo vs Forecast'.")
-                return
+            try:
+                # 1. Leer la hoja 'Comparativo vs Forecast'
+                df = pd.read_excel(file_historico, sheet_name='Comparativo vs Forecast')
             
-            # 4. Construimos un DataFrame limpio y estandarizado
-            df_final = pd.DataFrame({
-                'Fecha': pd.to_datetime(df_datos.iloc[:, 3]),
-                'Forecast': pd.to_numeric(df_datos.iloc[:, 4], errors='coerce'),
-                'Real': pd.to_numeric(df_datos.iloc[:, 5], errors='coerce')
-            })
-        
-            # Ordenamos cronológicamente
-            df_final = df_final.sort_values(by='Fecha').reset_index(drop=True)
-        
-            # 5. Cálculos métricos
-            df_final['Desviación'] = df_final['Real'] - df_final['Forecast']
-            df_final['% Desviación'] = (df_final['Desviación'] / df_final['Forecast']) * 100
-        
-            # 6. Visualización de métricas clave en Streamlit
-            col1, col2, col3 = st.columns(3)
-            with col1:
-                total_forecast = df_final['Forecast'].sum()
-                st.metric("Total Forecast Planificado", f"{total_forecast:,.0f}".replace(",", "."))
-            with col2:
-                total_real = df_final['Real'].sum()
-                st.metric("Total Producción Real", f"{total_real:,.0f}".replace(",", "."))
-            with col3:
-                desv_global = total_real - total_forecast
-                porcentaje_global = (desv_global / total_forecast) * 100 if total_forecast != 0 else 0
-                st.metric(
-                    "Desviación Acumulada", 
-                    f"{desv_global:+,.0f}".replace(",", "."), 
-                    f"{porcentaje_global:+.2f}%"
-                )
+                # Copiamos para no alterar el original durante la limpieza
+                df_datos = df.copy()
             
-            # 7. Gráfico de líneas interactivo
-            st.subheader("Tendencia: Producción Real vs Forecast")
-            df_grafico = df_final.set_index('Fecha')[['Forecast', 'Real']]
-            st.line_chart(df_grafico)
-        
-            # 8. Tabla de datos estilizada
-            st.subheader("Tabla Comparativa Mensual")
-        
-            # Formateamos los números de la tabla usando el punto como separador decimal
-            df_tabla = df_final.copy()
-            df_tabla['Fecha'] = df_tabla['Fecha'].dt.strftime('%Y-%m')
-        
-            st.dataframe(df_tabla.style.format({
-                'Forecast': lambda x: f"{x:,.0f}".replace(",", "."),
-                'Real': lambda x: f"{x:,.0f}".replace(",", "."),
-                'Desviación': lambda x: f"{x:+,.0f}".replace(",", "."),
-                '% Desviación': lambda x: f"{x:+.2f}%"
-            }))
-        
-        except ValueError as ve:
-            st.error(f"Error de lectura: Asegúrate de que el archivo cargado sea el correcto. Detalles: {ve}")
-        except Exception as e:
-            st.error(f"Ocurrió un error inesperado al procesar los datos: {e}")
+                # 2. Limpieza de filas y columnas completamente vacías
+                df_datos = df_datos.dropna(how='all')
+            
+                # 3. Extraer los datos por posición física de las columnas:
+                # En tu archivo:
+                # - La columna de fechas (índice 3 / Columna D) contiene '2026-03-01', etc.
+                # - La columna de Forecast (índice 4 / Columna E) contiene los valores planificados.
+                # - La columna de Producción Real (índice 5 / Columna F) contiene los valores reales.
+            
+                # Convertimos la columna de fecha a texto para limpiarla de espacios
+                df_datos.iloc[:, 3] = df_datos.iloc[:, 3].astype(str).str.strip()
+            
+                # Filtramos para quedarnos únicamente con las filas que tengan una fecha válida (formato AAAA-MM-DD)
+                df_datos = df_datos[df_datos.iloc[:, 3].str.match(r'\d{4}-\d{2}-\d{2}', na=False)]
+            
+                if df_datos.empty:
+                    st.warning("⚠️ No se encontraron datos de producción válidos en la hoja 'Comparativo vs Forecast'.")
+                    return
+                
+                # 4. Construimos un DataFrame limpio y estandarizado
+                df_final = pd.DataFrame({
+                    'Fecha': pd.to_datetime(df_datos.iloc[:, 3]),
+                    'Forecast': pd.to_numeric(df_datos.iloc[:, 4], errors='coerce'),
+                    'Real': pd.to_numeric(df_datos.iloc[:, 5], errors='coerce')
+                })
+            
+                # Ordenamos cronológicamente
+                df_final = df_final.sort_values(by='Fecha').reset_index(drop=True)
+            
+                # 5. Cálculos métricos
+                df_final['Desviación'] = df_final['Real'] - df_final['Forecast']
+                df_final['% Desviación'] = (df_final['Desviación'] / df_final['Forecast']) * 100
+            
+                # 6. Visualización de métricas clave en Streamlit
+                col1, col2, col3 = st.columns(3)
+                with col1:
+                    total_forecast = df_final['Forecast'].sum()
+                    st.metric("Total Forecast Planificado", f"{total_forecast:,.0f}".replace(",", "."))
+                with col2:
+                    total_real = df_final['Real'].sum()
+                    st.metric("Total Producción Real", f"{total_real:,.0f}".replace(",", "."))
+                with col3:
+                    desv_global = total_real - total_forecast
+                    porcentaje_global = (desv_global / total_forecast) * 100 if total_forecast != 0 else 0
+                    st.metric(
+                        "Desviación Acumulada", 
+                        f"{desv_global:+,.0f}".replace(",", "."), 
+                        f"{porcentaje_global:+.2f}%"
+                    )
+                
+                # 7. Gráfico de líneas interactivo
+                st.subheader("Tendencia: Producción Real vs Forecast")
+                df_grafico = df_final.set_index('Fecha')[['Forecast', 'Real']]
+                st.line_chart(df_grafico)
+            
+                # 8. Tabla de datos estilizada
+                st.subheader("Tabla Comparativa Mensual")
+            
+                # Formateamos los números de la tabla usando el punto como separador decimal
+                df_tabla = df_final.copy()
+                df_tabla['Fecha'] = df_tabla['Fecha'].dt.strftime('%Y-%m')
+            
+                st.dataframe(df_tabla.style.format({
+                    'Forecast': lambda x: f"{x:,.0f}".replace(",", "."),
+                    'Real': lambda x: f"{x:,.0f}".replace(",", "."),
+                    'Desviación': lambda x: f"{x:+,.0f}".replace(",", "."),
+                    '% Desviación': lambda x: f"{x:+.2f}%"
+                }))
+            
+            except ValueError as ve:
+                st.error(f"Error de lectura: Asegúrate de que el archivo cargado sea el correcto. Detalles: {ve}")
+            except Exception as e:
+                st.error(f"Ocurrió un error inesperado al procesar los datos: {e}")
 
-    # =========================================================================
-    # PIE DE PÁGINA GLOBAL
-    # =========================================================================
-    st.markdown("---")
-    st.markdown(
-        "<div style='text-align: center; color: gray; font-family: Arial;'>"
-        "📝 Sistema Operativo Realizado por: <b>Dirección de Supply Chain Sapori</b>"
-        "</div>", 
-        unsafe_allow_html=True
-    )
+        # =========================================================================
+        # PIE DE PÁGINA GLOBAL
+        # =========================================================================
+        st.markdown("---")
+        st.markdown(
+            "<div style='text-align: center; color: gray; font-family: Arial;'>"
+            "📝 Sistema Operativo Realizado por: <b>Dirección de Supply Chain Sapori</b>"
+            "</div>", 
+            unsafe_allow_html=True
+        )
     
