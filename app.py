@@ -411,14 +411,14 @@ else:
             except Exception as e:
                 st.error(f"Ocurrió un error inesperado al procesar los datos: {e}")
 
-        # =========================================================================
-        # PIE DE PÁGINA GLOBAL
-        # =========================================================================
-        st.markdown("---")
-        st.markdown(
-            "<div style='text-align: center; color: gray; font-family: Arial;'>"
-            "📝 Sistema Operativo Realizado por: <b>Dirección de Supply Chain Sapori</b>"
-            "</div>", 
-            unsafe_allow_html=True
-        )
+    # =========================================================================
+    # PIE DE PÁGINA GLOBAL
+    # =========================================================================
+    st.markdown("---")
+    st.markdown(
+        "<div style='text-align: center; color: gray; font-family: Arial;'>"
+        "📝 Sistema Operativo Realizado por: <b>Dirección de Supply Chain Sapori</b>"
+        "</div>", 
+        unsafe_allow_html=True
+    )
     
