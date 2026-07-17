@@ -335,7 +335,7 @@ else:
         "📝 Sistema Operativo Realizado por: <b>Dirección de Supply Chain Sapori</b>"
         "</div>", 
         unsafe_allow_html=True
-    )
+    
     # =========================================================================
     def render_modulo_3():
         st.title("📊 Módulo 3: Dashboard Ejecutivo de Producción y Forecast")
@@ -426,3 +426,4 @@ else:
                     # Espacio reservado para agregar la lógica del Forecast en el siguiente paso.
             else:
                 st.warning("No se pudo detectar una fila válida con fechas en esta hoja. Verifica el formato de tu Excel.")
+            
