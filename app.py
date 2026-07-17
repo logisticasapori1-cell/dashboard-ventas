@@ -326,16 +326,6 @@ else:
             except Exception as e:
                 st.error(f"Error crítico en la lectura del archivo Excel: {e}")
 
-    # =========================================================================
-    # PIE DE PÁGINA GLOBAL
-    # =========================================================================
-    st.markdown("---")
-    st.markdown(
-        "<div style='text-align: center; color: gray; font-family: Arial;'>"
-        "📝 Sistema Operativo Realizado por: <b>Dirección de Supply Chain Sapori</b>"
-        "</div>", 
-        unsafe_allow_html=True
-    )
     def render_modulo_analisis_produccion(file_historico):
         st.markdown("## 📊 Módulo 3: Análisis Estratégico y Desviación vs Forecast")
     
@@ -419,3 +409,15 @@ else:
             st.error(f"Error de lectura: Asegúrate de que el archivo cargado sea el correcto. Detalles: {ve}")
         except Exception as e:
             st.error(f"Ocurrió un error inesperado al procesar los datos: {e}")
+
+    # =========================================================================
+    # PIE DE PÁGINA GLOBAL
+    # =========================================================================
+    st.markdown("---")
+    st.markdown(
+        "<div style='text-align: center; color: gray; font-family: Arial;'>"
+        "📝 Sistema Operativo Realizado por: <b>Dirección de Supply Chain Sapori</b>"
+        "</div>", 
+        unsafe_allow_html=True
+    )
+    
