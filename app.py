@@ -79,7 +79,7 @@ else:
             [
                 "1. Dashboard Venta Diaria & Forecast", 
                 "2. Control de Desviaciones (Mensual)", 
-                "3. Control de Producción Mensual" # TEXTO EXACTO (Con "s")
+                "3. Análisis Estratégico y Desviaciones vs Forecast" # TEXTO EXACTO (Con "s")
             ]
         )
         
