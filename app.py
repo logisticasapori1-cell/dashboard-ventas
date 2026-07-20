@@ -351,40 +351,51 @@ else:
                 # Intento 1: Lectura nativa (Si Excel ya lo guarda como Fecha internamente)
                 fechas_validas = pd.to_datetime(col_original, errors='coerce')
                 
-                # Intento 2: Si quedaron nulos, traducimos los que se escribieron como texto puro ("feb-26")
+                # Intento 2: Si quedaron nulos, traducimos texto puro ("feb-26")
                 filtro_nulos = fechas_validas.isna()
                 if filtro_nulos.any():
                     col_texto = col_original[filtro_nulos].astype(str).str.strip().str.lower()
-                    meses = {
+                    meses_espanol = {
                         'ene': '01', 'feb': '02', 'mar': '03', 'abr': '04', 
                         'may': '05', 'jun': '06', 'jul': '07', 'ago': '08', 
                         'sep': '09', 'oct': '10', 'nov': '11', 'dic': '12'
                     }
-                    for m_letra, m_num in meses.items():
+                    for m_letra, m_num in meses_espanol.items():
                         col_texto = col_texto.str.replace(m_letra, m_num, regex=False)
                     
                     fechas_traducidas = pd.to_datetime(col_texto, format='%m-%y', errors='coerce')
                     fechas_validas = fechas_validas.fillna(fechas_traducidas)
                 
+                # Acoplamos temporalmente la fecha procesada al DataFrame original para no perder la alineación
+                df_datos['Fecha_Procesada'] = fechas_validas
+                
                 # Nos quedamos solo con las filas que SÍ tienen una fecha válida
-                df_datos = df_datos[fechas_validas.notna()].copy()
+                df_datos = df_datos[df_datos['Fecha_Procesada'].notna()].copy()
                 
                 if df_datos.empty:
-                    st.warning("⚠️ No se encontraron datos válidos. Verifica la columna de fechas.")
+                    st.warning("⚠️ No se encontraron fechas válidas en la 4ta columna del Excel.")
                     return
                 
-                # 4. Construimos un DataFrame limpio y estandarizado
+                # 4. Construimos un DataFrame limpio usando ".values" para romper desalineaciones de índice
                 df_final = pd.DataFrame({
-                    'Fecha': fechas_validas.loc[df_datos.index], # Aseguramos alineación exacta
-                    'Forecast': pd.to_numeric(df_datos.iloc[:, 4], errors='coerce').fillna(0),
-                    'Real': pd.to_numeric(df_datos.iloc[:, 5], errors='coerce').fillna(0)
+                    'Fecha': df_datos['Fecha_Procesada'].values,
+                    'Forecast': pd.to_numeric(df_datos.iloc[:, 4], errors='coerce').fillna(0).values,
+                    'Real': pd.to_numeric(df_datos.iloc[:, 5], errors='coerce').fillna(0).values
                 })
                 
                 df_final = df_final.sort_values(by='Fecha').reset_index(drop=True)
                 
-                # 5. Crear columna de "Mes" para nuestro segundo filtro
-                df_final['Mes_Filtro'] = df_final['Fecha'].dt.strftime('%Y-%m')
-                meses_disponibles = ["Todos los meses"] + sorted(df_final['Mes_Filtro'].unique().tolist())
+                # 5. Crear columna de "Mes" vistosa y en español para el selector (Ej: Feb-2026)
+                meses_display = {
+                    1: 'Ene', 2: 'Feb', 3: 'Mar', 4: 'Abr', 5: 'May', 6: 'Jun',
+                    7: 'Jul', 8: 'Ago', 9: 'Sep', 10: 'Oct', 11: 'Nov', 12: 'Dic'
+                }
+                
+                # Armamos el texto del filtro combinando el mes traducido y el año completo
+                df_final['Mes_Filtro'] = df_final['Fecha'].dt.month.map(meses_display) + "-" + df_final['Fecha'].dt.strftime('%Y')
+                
+                # Extraemos las opciones asegurando orden cronológico real (no alfabético)
+                meses_disponibles = ["Todos los meses"] + df_final.sort_values(by='Fecha')['Mes_Filtro'].unique().tolist()
                 
                 with col_filtro2:
                     mes_seleccionado = st.selectbox(
