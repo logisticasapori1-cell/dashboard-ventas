@@ -83,12 +83,6 @@ else:
             ]
         )
         
-        # --- AQUÍ AGREGAMOS EL BOTÓN DE SUBIDA PARA EL MÓDULO 3 ---
-        Historico_Produccion_CREMIGURT = None
-        if modulo_activo == "3. Análisis Estratégico y Desviaciones vs Forecast":
-            st.markdown("### 📁 Cargar Histórico")
-            Historico_Produccion_CREMIGURT = st.file_uploader("Producción CREMIGURT", type=['xlsx'])
-            
         st.markdown("---")
         # --- PARÁMETROS CRÍTICOS DE TIEMPO PARA EL FORECAST ---
         st.markdown("### ⏱️ Control de Tiempos del Mes")
