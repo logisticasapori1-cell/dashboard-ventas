@@ -346,24 +346,33 @@ else:
                 df_datos = df_datos.dropna(how='all')
                 
                 # 3. Identificar y filtrar únicamente las fechas válidas
-                # Convertimos la columna a texto y eliminamos espacios extra
-                col_fecha_raw = df_datos.iloc[:, 3].astype(str).str.strip()
+                # Extraemos la columna, la pasamos a texto, quitamos espacios y la ponemos en minúsculas
+                col_fecha_raw = df_datos.iloc[:, 3].astype(str).str.strip().str.lower()
                 
-                # INTENTA ESTO: Si tu excel dice "07-2026", usa '%m-%Y'. 
-                # Si dice "2026-07", cambia a '%Y-%m'.
-                # Si dice "Julio-2026", tendrías que normalizarlo primero.
-                fechas_validas = pd.to_datetime(col_fecha_raw, format='%m-%Y', errors='coerce')
+                # Diccionario para traducir los meses en español a números
+                meses_espanol = {
+                    'ene': '01', 'feb': '02', 'mar': '03', 'abr': '04',
+                    'may': '05', 'jun': '06', 'jul': '07', 'ago': '08',
+                    'sep': '09', 'oct': '10', 'nov': '11', 'dic': '12'
+                }
+                
+                # Reemplazamos las letras por los números de mes (ej. "feb-26" -> "02-26")
+                for mes_letra, mes_num in meses_espanol.items():
+                    col_fecha_raw = col_fecha_raw.str.replace(mes_letra, mes_num, regex=False)
+                
+                # Ahora le decimos que el formato es '%m-%y' (la "y" minúscula significa año de 2 dígitos)
+                fechas_validas = pd.to_datetime(col_fecha_raw, format='%m-%y', errors='coerce')
                 
                 # Nos quedamos solo con las filas donde sí hay una fecha válida
                 df_datos = df_datos[fechas_validas.notna()].copy()
                 
                 if df_datos.empty:
-                    st.warning("⚠️ No se encontraron datos válidos. Verifica que el formato de fecha sea 'MM-AAAA' (ej. 07-2026).")
+                    st.warning("⚠️ No se encontraron datos válidos. Verifica que las fechas estén en la 4ta columna.")
                     return
                 
                 # 4. Construimos un DataFrame limpio y estandarizado
                 df_final = pd.DataFrame({
-                    'Fecha': fechas_validas, # Usamos las fechas que ya validamos arriba
+                    'Fecha': fechas_validas.dropna(), # Usamos las fechas ya traducidas y convertidas
                     'Forecast': pd.to_numeric(df_datos.iloc[:, 4], errors='coerce').fillna(0),
                     'Real': pd.to_numeric(df_datos.iloc[:, 5], errors='coerce').fillna(0)
                 })
