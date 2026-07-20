@@ -317,117 +317,94 @@ else:
     # =========================================================================
     # MÓDULO 3: ANÁLISIS ESTRATÉGICO Y FORECAST
     # =========================================================================
-    def render_modulo_3():
-        st.title("📊 Módulo 3: Dashboard Ejecutivo de Producción y Forecast")
-        st.markdown("Análisis histórico y proyección de demanda para optimización de inventarios.")
-        st.markdown("---")
-    
-        # 1. Carga de archivo
-        file_historico = st.file_uploader("📂 Cargar Histórico de Producción (.xlsx)", type=["xlsx"], key="uploader_m3")
-    
-        if file_historico is not None:
+    elif modulo_activo == "3. Análisis Estratégico y Desviaciones vs Forecast": # <--- AHORA SÍ COINCIDE EXACTAMENTE
+        
+        # Primero definimos la función...
+        def render_modulo_analisis_produccion(file_historico):
+            st.markdown("## 📊 Módulo 3: Análisis Estratégico y Desviación vs Forecast")
+        
             try:
-                excel_file = pd.ExcelFile(file_historico)
-            except Exception as e:
-                st.error(f"Error al leer el archivo Excel: {e}")
-                return
+                # 1. Leer la hoja 'Comparativo vs Forecast'
+                df = pd.read_excel(file_historico, sheet_name='Comparativo vs Forecast')
             
-            # 2. FUNCIÓN MEJORADA: Captura productos y convierte fechas a texto
-            def parsear_hoja_categoria(sheet_name):
-                df = excel_file.parse(sheet_name)
-                df = df.dropna(how='all')
-                
-                row_fecha_label = None
-                for label, row in df.iterrows():
-                    fechas_eval = pd.to_datetime(row, errors='coerce')
-                    if fechas_eval.notna().sum() >= 3:
-                        row_fecha_label = label
-                        break
-                
-                if row_fecha_label is None:
-                    return None
-                
-                # Extraemos las fechas válidas
-                fechas = pd.to_datetime(df.loc[row_fecha_label], errors='coerce')
-                columnas_validas = fechas[fechas.notna()].index
-                
-                # --- AQUÍ ESTÁ LA CORRECCIÓN DEL ERROR ---
-                # 1. Tomamos la primera columna (índice 0) asumiendo que ahí están los nombres de los productos
-                columna_productos = df.columns[0]
-                
-                # 2. Armamos el nuevo dataframe con los productos y las fechas
-                columnas_finales = [columna_productos] + list(columnas_validas)
-                df_limpio = df[columnas_finales].copy()
-                
-                # 3. CONVERTIMOS LAS FECHAS A TEXTO (String) para evitar el error 'datetime64'
-                nombres_fechas = fechas[columnas_validas].dt.strftime('%Y-%m-%d').tolist()
-                df_limpio.columns = ['Producto'] + nombres_fechas
-                
-                # Limpieza final para el Dashboard
-                df_limpio = df_limpio.drop(index=row_fecha_label) # Quitamos la fila que tenía las fechas
-                df_limpio = df_limpio.dropna(subset=['Producto']) # Quitamos filas sin nombre
-                df_limpio = df_limpio.set_index('Producto')       # Ponemos el producto como eje de la tabla
-                
-                # Aseguramos que todo lo demás sean números válidos
-                df_limpio = df_limpio.apply(pd.to_numeric, errors='coerce').fillna(0)
-                
-                return df_limpio
-
-            # 3. Interfaz del Dashboard
-            st.success("¡Archivo cargado y procesado con éxito!")
+                # Copiamos para no alterar el original durante la limpieza
+                df_datos = df.copy()
             
-            hojas_disponibles = excel_file.sheet_names
-            hoja_seleccionada = st.selectbox("Seleccione la categoría de producto a analizar:", hojas_disponibles)
+                # 2. Limpieza de filas y columnas completamente vacías
+                df_datos = df_datos.dropna(how='all')
             
-            datos_procesados = parsear_hoja_categoria(hoja_seleccionada)
-
-            if datos_procesados is not None and not datos_procesados.empty:
-                # --- SECCIÓN DE KPIs VISUALES ---
-                st.subheader("📈 Resumen de Producción")
+                # 3. Identificar y filtrar únicamente las fechas válidas
+                # Convertimos a fecha; lo que sea texto (ej. encabezados) se vuelve NaT (Not a Time/Nulo)
+                fechas_validas = pd.to_datetime(df_datos.iloc[:, 3], errors='coerce')
+                
+                # Nos quedamos solo con las filas donde sí hay una fecha válida
+                df_datos = df_datos[fechas_validas.notna()].copy()
+            
+                if df_datos.empty:
+                    st.warning("⚠️ No se encontraron datos de producción válidos en la hoja 'Comparativo vs Forecast'.")
+                    return
+                
+                # 4. Construimos un DataFrame limpio y estandarizado
+                df_final = pd.DataFrame({
+                    'Fecha': pd.to_datetime(df_datos.iloc[:, 3], errors='coerce'),
+                    'Forecast': pd.to_numeric(df_datos.iloc[:, 4], errors='coerce').fillna(0),
+                    'Real': pd.to_numeric(df_datos.iloc[:, 5], errors='coerce').fillna(0)
+                })
+            
+                # Ordenamos cronológicamente
+                df_final = df_final.sort_values(by='Fecha').reset_index(drop=True)
+            
+                # 5. Cálculos métricos
+                df_final['Desviación'] = df_final['Real'] - df_final['Forecast']
+                df_final['% Desviación'] = (df_final['Desviación'] / df_final['Forecast']) * 100
+            
+                # 6. Visualización de métricas clave en Streamlit
                 col1, col2, col3 = st.columns(3)
-                
                 with col1:
-                    st.metric(label="Total SKUs / Productos", value=f"{len(datos_procesados)}")
+                    total_forecast = df_final['Forecast'].sum()
+                    st.metric("Total Forecast Planificado", f"{total_forecast:,.0f}".replace(",", "."))
                 with col2:
-                    st.metric(label="Meses Analizados", value=f"{len(datos_procesados.columns)}")
+                    total_real = df_final['Real'].sum()
+                    st.metric("Total Producción Real", f"{total_real:,.0f}".replace(",", "."))
                 with col3:
-                    st.metric(label="Última fecha registrada", value=datos_procesados.columns[-1])
+                    desv_global = total_real - total_forecast
+                    porcentaje_global = (desv_global / total_forecast) * 100 if total_forecast != 0 else 0
+                    st.metric(
+                        "Desviación Acumulada", 
+                        f"{desv_global:+,.0f}".replace(",", "."), 
+                        f"{porcentaje_global:+.2f}%"
+                    )
+                
+                # 7. Gráfico de líneas interactivo
+                st.subheader("Tendencia: Producción Real vs Forecast")
+                df_grafico = df_final.set_index('Fecha')[['Forecast', 'Real']]
+                st.line_chart(df_grafico)
+            
+                # 8. Tabla de datos estilizada
+                st.subheader("Tabla Comparativa Mensual")
+            
+                df_tabla = df_final.copy()
+                df_tabla['Fecha'] = df_tabla['Fecha'].dt.strftime('%Y-%m')
+            
+                st.dataframe(df_tabla.style.format({
+                    'Forecast': lambda x: f"{x:,.0f}".replace(",", "."),
+                    'Real': lambda x: f"{x:,.0f}".replace(",", "."),
+                    'Desviación': lambda x: f"{x:+,.0f}".replace(",", "."),
+                    '% Desviación': lambda x: f"{x:+.2f}%"
+                }))
+            
+            except ValueError as ve:
+                st.error(f"Error de lectura: Asegúrate de que el archivo cargado sea el correcto. Detalles: {ve}")
+            except Exception as e:
+                st.error(f"Ocurrió un error inesperado al procesar los datos: {e}")
 
-                st.markdown("---")
+        # ...¡Y AHORA SÍ LE DAMOS "PLAY" A LA FUNCIÓN!
+        if Historico_Produccion_CREMIGURT is not None:
+            render_modulo_analisis_produccion(Historico_Produccion_CREMIGURT)
+        else:
+            # Si el usuario hace clic en el Módulo 3 pero aún no sube el archivo, ve este mensaje
+            st.info("👋 ¡Hola! Para ver los gráficos del Módulo 3, por favor sube el archivo de Excel usando el botón **'Upload'** que acaba de aparecer en el menú lateral izquierdo.")
 
-                # --- SECCIÓN DE PESTAÑAS (TABS) ---
-                tab1, tab2 = st.tabs(["📉 Análisis Histórico", "🔮 Proyección (Forecast)"])
-                
-                with tab1:
-                    st.markdown("### Tendencia de Producción en el Tiempo")
-                    
-                    # Transponemos para que las fechas sean el eje X
-                    df_grafico = datos_procesados.T
-                    df_grafico.index.name = 'Fecha'
-                    
-                    # Ahora te permitimos elegir qué producto exacto quieres graficar
-                    lista_productos = df_grafico.columns.tolist()
-                    producto_a_graficar = st.selectbox("🔍 Selecciona un producto para visualizar:", lista_productos)
-                    
-                    # Gráfico Interactivo
-                    fig = px.line(df_grafico, x=df_grafico.index, y=producto_a_graficar, 
-                                  title=f"Evolución Histórica: {producto_a_graficar}",
-                                  markers=True, line_shape="spline", 
-                                  template="plotly_white") # Diseño más limpio
-                    
-                    # Cambiar color de la línea
-                    fig.update_traces(line_color='#2E86C1', marker=dict(size=8))
-                    st.plotly_chart(fig, use_container_width=True)
-                    
-                    with st.expander("Ver tabla de datos consolidada"):
-                        st.dataframe(datos_procesados.style.format(precision=2, thousands=""))
-                
-                with tab2:
-                    st.markdown("### Modelo de Proyección")
-                    st.info("La estructura de datos ya está limpia y lista. En el siguiente paso activaremos el motor matemático (ej. Promedios Móviles o ARIMA) para calcular la demanda futura basándonos en esta curva.")
-            else:
-                st.warning("No se pudo detectar una estructura válida en esta hoja. Asegúrate de que la primera columna tenga los nombres y exista una fila con fechas.")
-                
     # =========================================================================
     # PIE DE PÁGINA GLOBAL
     # =========================================================================
