@@ -345,34 +345,37 @@ else:
                 df_datos = df.copy()
                 df_datos = df_datos.dropna(how='all')
                 
-                # 3. Identificar y filtrar únicamente las fechas válidas
-                # Extraemos la columna, la pasamos a texto, quitamos espacios y la ponemos en minúsculas
-                col_fecha_raw = df_datos.iloc[:, 3].astype(str).str.strip().str.lower()
+                # 3. Identificar y filtrar fechas válidas (Lógica Híbrida)
+                col_original = df_datos.iloc[:, 3]
                 
-                # Diccionario para traducir los meses en español a números
-                meses_espanol = {
-                    'ene': '01', 'feb': '02', 'mar': '03', 'abr': '04',
-                    'may': '05', 'jun': '06', 'jul': '07', 'ago': '08',
-                    'sep': '09', 'oct': '10', 'nov': '11', 'dic': '12'
-                }
+                # Intento 1: Lectura nativa (Si Excel ya lo guarda como Fecha internamente)
+                fechas_validas = pd.to_datetime(col_original, errors='coerce')
                 
-                # Reemplazamos las letras por los números de mes (ej. "feb-26" -> "02-26")
-                for mes_letra, mes_num in meses_espanol.items():
-                    col_fecha_raw = col_fecha_raw.str.replace(mes_letra, mes_num, regex=False)
+                # Intento 2: Si quedaron nulos, traducimos los que se escribieron como texto puro ("feb-26")
+                filtro_nulos = fechas_validas.isna()
+                if filtro_nulos.any():
+                    col_texto = col_original[filtro_nulos].astype(str).str.strip().str.lower()
+                    meses = {
+                        'ene': '01', 'feb': '02', 'mar': '03', 'abr': '04', 
+                        'may': '05', 'jun': '06', 'jul': '07', 'ago': '08', 
+                        'sep': '09', 'oct': '10', 'nov': '11', 'dic': '12'
+                    }
+                    for m_letra, m_num in meses.items():
+                        col_texto = col_texto.str.replace(m_letra, m_num, regex=False)
+                    
+                    fechas_traducidas = pd.to_datetime(col_texto, format='%m-%y', errors='coerce')
+                    fechas_validas = fechas_validas.fillna(fechas_traducidas)
                 
-                # Ahora le decimos que el formato es '%m-%y' (la "y" minúscula significa año de 2 dígitos)
-                fechas_validas = pd.to_datetime(col_fecha_raw, format='%m-%y', errors='coerce')
-                
-                # Nos quedamos solo con las filas donde sí hay una fecha válida
+                # Nos quedamos solo con las filas que SÍ tienen una fecha válida
                 df_datos = df_datos[fechas_validas.notna()].copy()
                 
                 if df_datos.empty:
-                    st.warning("⚠️ No se encontraron datos válidos. Verifica que las fechas estén en la 4ta columna.")
+                    st.warning("⚠️ No se encontraron datos válidos. Verifica la columna de fechas.")
                     return
                 
                 # 4. Construimos un DataFrame limpio y estandarizado
                 df_final = pd.DataFrame({
-                    'Fecha': fechas_validas.dropna(), # Usamos las fechas ya traducidas y convertidas
+                    'Fecha': fechas_validas.loc[df_datos.index], # Aseguramos alineación exacta
                     'Forecast': pd.to_numeric(df_datos.iloc[:, 4], errors='coerce').fillna(0),
                     'Real': pd.to_numeric(df_datos.iloc[:, 5], errors='coerce').fillna(0)
                 })
