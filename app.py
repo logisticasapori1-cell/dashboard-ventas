@@ -342,38 +342,48 @@ else:
                 # Cargar la hoja seleccionada
                 df = pd.read_excel(xls, sheet_name=categoria_seleccionada)
                 
-                # --- LÓGICA DE EXTRACCIÓN HORIZONTAL (Melt automático) ---
+                # --- LÓGICA DE EXTRACCIÓN HORIZONTAL INTELIGENTE ---
                 meses_patrones = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic']
                 pairs = []
                 
-                # Caso A: Los meses están directo en los encabezados de las columnas
-                for col in df.columns:
-                    col_str = str(col).lower().strip()
-                    if any(m in col_str for m in meses_patrones):
-                        for val in df[col]:
-                            val_num = pd.to_numeric(val, errors='coerce')
-                            if pd.notna(val_num) and val_num > 0:
-                                pairs.append((col_str, val_num))
-                                break
+                # Función para comprobar si una celda contiene o es una fecha
+                def es_celda_fecha(val):
+                    if hasattr(val, 'strftime'): # Verdadero si Excel ya lo lee como objeto de fecha nativo
+                        return True
+                    val_str = str(val).lower().strip()
+                    return any(m in val_str for m in meses_patrones)
+
+                # Escenario A: Las fechas quedaron en los encabezados de las columnas (df.columns)
+                conteo_cols = sum(1 for col in df.columns if es_celda_fecha(col))
+                if conteo_cols >= 2:
+                    for idx, row in df.iterrows():
+                        fila_pairs = []
+                        for i, col in enumerate(df.columns):
+                            if es_celda_fecha(col):
+                                val_num = pd.to_numeric(row.iloc[i], errors='coerce')
+                                if pd.notna(val_num) and val_num > 0:
+                                    fila_pairs.append((col, val_num))
+                        if len(fila_pairs) >= 2:
+                            pairs = fila_pairs
+                            break
                                 
-                # Caso B: Los meses están en una fila interna (por culpa de celdas combinadas de título)
+                # Escenario B: Las fechas están en una fila interna del archivo Excel
                 if len(pairs) == 0:
                     for idx, row in df.iterrows():
-                        row_str = [str(v).lower().strip() for v in row]
-                        # Si encontramos una fila que contenga al menos 2 nombres de meses
-                        if sum(1 for s in row_str if any(m in s for m in meses_patrones)) >= 2:
+                        conteo_fila = sum(1 for val in row if es_celda_fecha(val))
+                        if conteo_fila >= 2:
                             if idx + 1 < len(df):
                                 fila_valores = df.iloc[idx + 1]
-                                for c_idx in range(len(row)):
-                                    m_str = str(row.iloc[c_idx]).lower().strip()
-                                    if any(m in m_str for m in meses_patrones):
-                                        val_num = pd.to_numeric(fila_valores.iloc[c_idx], errors='coerce')
-                                        if pd.notna(val_num):
-                                            pairs.append((m_str, val_num))
+                                for i in range(len(row)):
+                                    f_val = row.iloc[i]
+                                    if es_celda_fecha(f_val):
+                                        val_num = pd.to_numeric(fila_valores.iloc[i], errors='coerce')
+                                        if pd.notna(val_num) and val_num > 0:
+                                            pairs.append((f_val, val_num))
                             break
                             
                 if len(pairs) == 0:
-                    st.warning("⚠️ No se detectó la secuencia horizontal de meses o valores en esta hoja.")
+                    st.warning("⚠️ No se detectó la secuencia horizontal de meses o valores en esta hoja. Verifica la estructura.")
                     return
                     
                 # --- TRADUCCIÓN Y FORMATEO DE FECHAS ---
@@ -385,20 +395,30 @@ else:
                 }
                 
                 clean_data = []
-                for m_str, val in pairs:
-                    for m_letra, m_num in meses_espanol.items():
-                        if m_letra in m_str:
-                            year_match = re.search(r'(\d{2,4})$', m_str)
-                            if year_match:
-                                year_part = year_match.group(1)
-                                m_str_numeric = f"{m_num}-{year_part}"
-                                fmt = '%m-%y' if len(year_part) == 2 else '%m-%Y'
-                                dt = pd.to_datetime(m_str_numeric, format=fmt, errors='coerce')
-                                if pd.notna(dt):
-                                    clean_data.append({'Fecha': dt, 'Real': val})
-                            break
+                for f_val, val in pairs:
+                    if hasattr(f_val, 'strftime'): # Si ya es un objeto de tiempo, lo procesamos directo
+                        dt = pd.to_datetime(f_val)
+                        if pd.notna(dt):
+                            clean_data.append({'Fecha': dt, 'Real': val})
+                    else: # Si viene como texto puro (ej. "feb-26"), lo traducimos
+                        m_str = str(f_val).lower().strip()
+                        for m_letra, m_num in meses_espanol.items():
+                            if m_letra in m_str:
+                                year_match = re.search(r'(\d{2,4})$', m_str)
+                                if year_match:
+                                    year_part = year_match.group(1)
+                                    m_str_numeric = f"{m_num}-{year_part}"
+                                    fmt = '%m-%y' if len(year_part) == 2 else '%m-%Y'
+                                    dt = pd.to_datetime(m_str_numeric, format=fmt, errors='coerce')
+                                    if pd.notna(dt):
+                                        clean_data.append({'Fecha': dt, 'Real': val})
+                                break
                             
                 df_final = pd.DataFrame(clean_data)
+                if df_final.empty:
+                    st.warning("⚠️ Las celdas de fecha detectadas no pudieron ser procesadas correctamente.")
+                    return
+                    
                 df_final = df_final.sort_values(by='Fecha').reset_index(drop=True)
                 
                 # Formato visual para el selector (Ej: Feb-2026)
@@ -424,7 +444,7 @@ else:
                     st.info("No hay registros para mostrar con el filtro seleccionado.")
                     return
                     
-                # --- KPI CARDS (Formato limpio con puntos para Sapori) ---
+                # --- KPI CARDS (Formato limpio con puntos) ---
                 st.markdown("---")
                 col1, col2, col3 = st.columns(3)
                 
