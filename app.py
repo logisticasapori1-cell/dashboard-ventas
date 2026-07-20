@@ -429,6 +429,12 @@ else:
                 st.error(f"Error de lectura: Asegúrate de que el archivo cargado sea el correcto. Detalles: {ve}")
             except Exception as e:
                 st.error(f"Ocurrió un error inesperado al procesar los datos: {e}")
+        if Historico_Produccion_CREMIGURT is not None:
+            # Si el archivo está cargado, ejecutamos la función pasándole el archivo
+            render_modulo_analisis_produccion(Historico_Produccion_CREMIGURT)
+        else:
+            # Si no hay archivo, mostramos un mensaje amigable
+            st.info("👈 Por favor, carga el archivo Excel 'Producción CREMIGURT' en la barra lateral para inicializar el dashboard.")
     # =========================================================================
     # PIE DE PÁGINA GLOBAL
     # =========================================================================
