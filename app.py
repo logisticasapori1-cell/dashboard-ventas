@@ -315,16 +315,16 @@ else:
                 st.error(f"Error crítico en la lectura del archivo Excel: {e}")
 
     # =========================================================================
-    # MÓDULO 3: ANÁLISIS ESTRATÉGICO Y FORECAST
+    # MÓDULO 3: DASHBOARD DE CONTROL DE PRODUCCIÓN (Estructura Horizontal)
     # =========================================================================
-    elif modulo_activo == "3. Análisis Estratégico y Desviaciones vs Forecast": # <--- AHORA SÍ COINCIDE EXACTAMENTE
+    elif modulo_activo == "3. Análisis Estratégico y Desviaciones vs Forecast":
         
-        # Primero definimos la función...
         def render_modulo_analisis_produccion(file_historico):
-            st.markdown("## 📊 Módulo 3: Análisis Estratégico y Desviación vs Forecast")
+            st.title("🏭 Tablero de Control de Producción Mensual")
+            st.markdown("### Monitoreo de Volúmenes de Producción por Categoría")
         
             try:
-                # 1. Leer el archivo Excel completo para obtener los nombres de todas las hojas (categorías)
+                # 1. Leer archivo Excel completo para listar las hojas (categorías)
                 xls = pd.ExcelFile(file_historico)
                 nombres_hojas = xls.sheet_names
                 
@@ -333,135 +333,155 @@ else:
                 col_filtro1, col_filtro2 = st.columns(2)
                 
                 with col_filtro1:
-                    # El usuario elige la categoría, que corresponde a una hoja específica del Excel
                     categoria_seleccionada = st.selectbox(
                         "🏷️ Seleccione la Categoría (Hoja):", 
                         options=nombres_hojas,
                         index=0
                     )
                 
-                # 2. Cargar los datos ÚNICAMENTE de la hoja (categoría) seleccionada
+                # Cargar la hoja seleccionada
                 df = pd.read_excel(xls, sheet_name=categoria_seleccionada)
-                df_datos = df.copy()
-                df_datos = df_datos.dropna(how='all')
                 
-                # 3. Identificar y filtrar fechas válidas (Lógica Híbrida)
-                col_original = df_datos.iloc[:, 3]
+                # --- LÓGICA DE EXTRACCIÓN HORIZONTAL (Melt automático) ---
+                meses_patrones = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic']
+                pairs = []
                 
-                # Intento 1: Lectura nativa (Si Excel ya lo guarda como Fecha internamente)
-                fechas_validas = pd.to_datetime(col_original, errors='coerce')
-                
-                # Intento 2: Si quedaron nulos, traducimos texto puro ("feb-26")
-                filtro_nulos = fechas_validas.isna()
-                if filtro_nulos.any():
-                    col_texto = col_original[filtro_nulos].astype(str).str.strip().str.lower()
-                    meses_espanol = {
-                        'ene': '01', 'feb': '02', 'mar': '03', 'abr': '04', 
-                        'may': '05', 'jun': '06', 'jul': '07', 'ago': '08', 
-                        'sep': '09', 'oct': '10', 'nov': '11', 'dic': '12'
-                    }
-                    for m_letra, m_num in meses_espanol.items():
-                        col_texto = col_texto.str.replace(m_letra, m_num, regex=False)
-                    
-                    fechas_traducidas = pd.to_datetime(col_texto, format='%m-%y', errors='coerce')
-                    fechas_validas = fechas_validas.fillna(fechas_traducidas)
-                
-                # Acoplamos temporalmente la fecha procesada al DataFrame original para no perder la alineación
-                df_datos['Fecha_Procesada'] = fechas_validas
-                
-                # Nos quedamos solo con las filas que SÍ tienen una fecha válida
-                df_datos = df_datos[df_datos['Fecha_Procesada'].notna()].copy()
-                
-                if df_datos.empty:
-                    st.warning("⚠️ No se encontraron fechas válidas en la 4ta columna del Excel.")
+                # Caso A: Los meses están directo en los encabezados de las columnas
+                for col in df.columns:
+                    col_str = str(col).lower().strip()
+                    if any(m in col_str for m in meses_patrones):
+                        for val in df[col]:
+                            val_num = pd.to_numeric(val, errors='coerce')
+                            if pd.notna(val_num) and val_num > 0:
+                                pairs.append((col_str, val_num))
+                                break
+                                
+                # Caso B: Los meses están en una fila interna (por culpa de celdas combinadas de título)
+                if len(pairs) == 0:
+                    for idx, row in df.iterrows():
+                        row_str = [str(v).lower().strip() for v in row]
+                        # Si encontramos una fila que contenga al menos 2 nombres de meses
+                        if sum(1 for s in row_str if any(m in s for m in meses_patrones)) >= 2:
+                            if idx + 1 < len(df):
+                                fila_valores = df.iloc[idx + 1]
+                                for c_idx in range(len(row)):
+                                    m_str = str(row.iloc[c_idx]).lower().strip()
+                                    if any(m in m_str for m in meses_patrones):
+                                        val_num = pd.to_numeric(fila_valores.iloc[c_idx], errors='coerce')
+                                        if pd.notna(val_num):
+                                            pairs.append((m_str, val_num))
+                            break
+                            
+                if len(pairs) == 0:
+                    st.warning("⚠️ No se detectó la secuencia horizontal de meses o valores en esta hoja.")
                     return
+                    
+                # --- TRADUCCIÓN Y FORMATEO DE FECHAS ---
+                import re
+                meses_espanol = {
+                    'ene': '01', 'feb': '02', 'mar': '03', 'abr': '04', 
+                    'may': '05', 'jun': '06', 'jul': '07', 'ago': '08', 
+                    'sep': '09', 'oct': '10', 'nov': '11', 'dic': '12'
+                }
                 
-                # 4. Construimos un DataFrame limpio usando ".values" para romper desalineaciones de índice
-                df_final = pd.DataFrame({
-                    'Fecha': df_datos['Fecha_Procesada'].values,
-                    'Forecast': pd.to_numeric(df_datos.iloc[:, 4], errors='coerce').fillna(0).values,
-                    'Real': pd.to_numeric(df_datos.iloc[:, 5], errors='coerce').fillna(0).values
-                })
-                
+                clean_data = []
+                for m_str, val in pairs:
+                    for m_letra, m_num in meses_espanol.items():
+                        if m_letra in m_str:
+                            year_match = re.search(r'(\d{2,4})$', m_str)
+                            if year_match:
+                                year_part = year_match.group(1)
+                                m_str_numeric = f"{m_num}-{year_part}"
+                                fmt = '%m-%y' if len(year_part) == 2 else '%m-%Y'
+                                dt = pd.to_datetime(m_str_numeric, format=fmt, errors='coerce')
+                                if pd.notna(dt):
+                                    clean_data.append({'Fecha': dt, 'Real': val})
+                            break
+                            
+                df_final = pd.DataFrame(clean_data)
                 df_final = df_final.sort_values(by='Fecha').reset_index(drop=True)
                 
-                # 5. Crear columna de "Mes" vistosa y en español para el selector (Ej: Feb-2026)
+                # Formato visual para el selector (Ej: Feb-2026)
                 meses_display = {
                     1: 'Ene', 2: 'Feb', 3: 'Mar', 4: 'Abr', 5: 'May', 6: 'Jun',
                     7: 'Jul', 8: 'Ago', 9: 'Sep', 10: 'Oct', 11: 'Nov', 12: 'Dic'
                 }
-                
-                # Armamos el texto del filtro combinando el mes traducido y el año completo
                 df_final['Mes_Filtro'] = df_final['Fecha'].dt.month.map(meses_display) + "-" + df_final['Fecha'].dt.strftime('%Y')
                 
-                # Extraemos las opciones asegurando orden cronológico real (no alfabético)
-                meses_disponibles = ["Todos los meses"] + df_final.sort_values(by='Fecha')['Mes_Filtro'].unique().tolist()
+                meses_disponibles = ["Todos los meses"] + df_final['Mes_Filtro'].unique().tolist()
                 
                 with col_filtro2:
                     mes_seleccionado = st.selectbox(
                         "📅 Seleccione el Mes:", 
                         options=meses_disponibles
                     )
-                
-                # --- APLICAR FILTRO DE MES ---
+                    
+                # Aplicar filtro de tiempo si aplica
                 if mes_seleccionado != "Todos los meses":
                     df_final = df_final[df_final['Mes_Filtro'] == mes_seleccionado]
                     
                 if df_final.empty:
-                    st.warning(f"No hay datos registrados para el mes de {mes_seleccionado} en esta categoría.")
+                    st.info("No hay registros para mostrar con el filtro seleccionado.")
                     return
-                
-                # 6. Cálculos métricos posteriores a los filtros
-                df_final['Desviación'] = df_final['Real'] - df_final['Forecast']
-                df_final['% Desviación'] = (df_final['Desviación'] / df_final['Forecast']) * 100
-                
-                # 7. Visualización de métricas clave (Aplicando formato con puntos)
+                    
+                # --- KPI CARDS (Formato limpio con puntos para Sapori) ---
                 st.markdown("---")
                 col1, col2, col3 = st.columns(3)
+                
+                total_prod = df_final['Real'].sum()
+                promedio_prod = df_final['Real'].mean()
+                max_idx = df_final['Real'].idxmax()
+                max_row = df_final.loc[max_idx]
+                
                 with col1:
-                    total_forecast = df_final['Forecast'].sum()
-                    st.metric("Total Forecast Planificado", f"{total_forecast:,.0f}".replace(",", "."))
+                    st.metric("Total Volumen Producido", f"{total_prod:,.0f}".replace(",", "."))
                 with col2:
-                    total_real = df_final['Real'].sum()
-                    st.metric("Total Producción Real", f"{total_real:,.0f}".replace(",", "."))
+                    st.metric("Promedio de Producción Mensual", f"{promedio_prod:,.0f}".replace(",", "."))
                 with col3:
-                    desv_global = total_real - total_forecast
-                    porcentaje_global = (desv_global / total_forecast) * 100 if total_forecast != 0 else 0
-                    st.metric(
-                        "Desviación Acumulada", 
-                        f"{desv_global:+,.0f}".replace(",", "."), 
-                        f"{porcentaje_global:+.2f}%".replace(",", ".")
-                    )
+                    st.metric("Pico Más Alto de Producción", f"{max_row['Real']:,.0f}".replace(",", "."), f"Mes: {max_row['Mes_Filtro']}")
+                    
+                # --- GRÁFICO DE BARRAS DE TENDENCIA ---
+                st.markdown("---")
+                st.subheader(f"Tendencia de Producción: Período Actual ({categoria_seleccionada})")
                 
-                # 8. Gráfico de líneas interactivo
-                st.subheader(f"Tendencia: Producción Real vs Forecast ({categoria_seleccionada})")
-                df_grafico = df_final.set_index('Fecha')[['Forecast', 'Real']]
-                st.line_chart(df_grafico)
+                fig = go.Figure()
+                fig.add_trace(go.Bar(
+                    x=df_final['Mes_Filtro'],
+                    y=df_final['Real'],
+                    name='Producción (Unidades)',
+                    marker_color='#1f4e79',
+                    text=[f"{v:,.0f}".replace(",", ".") for v in df_final['Real']],
+                    textposition='auto'
+                ))
+                fig.update_layout(
+                    height=450,
+                    margin=dict(l=20, r=20, t=20, b=20),
+                    hovermode="x unified",
+                    yaxis=dict(title="Unidades"),
+                    xaxis=dict(title="Meses")
+                )
+                st.plotly_chart(fig, use_container_width=True)
                 
-                # 9. Tabla de datos estilizada
-                st.subheader("Tabla Comparativa Detallada")
+                # --- TABLA DETALLADA ---
+                st.subheader("📋 Resumen de Datos Analizados")
+                df_tabla = df_final[['Mes_Filtro', 'Real']].copy()
+                df_tabla.columns = ['Mes / Período', 'Producción Real (Unidades)']
                 
-                # Dejamos la fecha en formato YYYY-MM-DD para mayor claridad en la tabla
-                df_tabla_mostrar = df_final[['Fecha', 'Forecast', 'Real', 'Desviación', '% Desviación']].copy()
-                df_tabla_mostrar['Fecha'] = df_tabla_mostrar['Fecha'].dt.strftime('%Y-%m-%d')
+                st.dataframe(
+                    df_tabla.style.format({
+                        'Producción Real (Unidades)': lambda x: f"{x:,.0f}".replace(",", ".")
+                    }),
+                    use_container_width=True,
+                    hide_index=True
+                )
                 
-                # Aplicamos formato asegurando que los separadores sean puntos
-                st.dataframe(df_tabla_mostrar.style.format({
-                    'Forecast': lambda x: f"{x:,.0f}".replace(",", "."),
-                    'Real': lambda x: f"{x:,.0f}".replace(",", "."),
-                    'Desviación': lambda x: f"{x:+,.0f}".replace(",", "."),
-                    '% Desviación': lambda x: f"{x:+.2f}%".replace(",", ".")
-                }), use_container_width=True, hide_index=True)
-            
-            except ValueError as ve:
-                st.error(f"Error de lectura: Asegúrate de que el archivo cargado sea el correcto. Detalles: {ve}")
             except Exception as e:
-                st.error(f"Ocurrió un error inesperado al procesar los datos: {e}")
+                st.error(f"Error analítico durante el procesamiento horizontal: {e}")
+
+        # --- ORDEN DE EJECUCIÓN DEL MÓDULO ---
         if Historico_Produccion_CREMIGURT is not None:
-            # Si el archivo está cargado, ejecutamos la función pasándole el archivo
             render_modulo_analisis_produccion(Historico_Produccion_CREMIGURT)
         else:
-            # Si no hay archivo, mostramos un mensaje amigable
             st.info("👈 Por favor, carga el archivo Excel 'Producción CREMIGURT' en la barra lateral para inicializar el dashboard.")
     # =========================================================================
     # PIE DE PÁGINA GLOBAL
