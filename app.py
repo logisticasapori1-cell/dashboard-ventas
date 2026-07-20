@@ -498,11 +498,16 @@ else:
             except Exception as e:
                 st.error(f"Error analítico durante el procesamiento horizontal: {e}")
 
-        # --- ORDEN DE EJECUCIÓN DEL MÓDULO ---
-        if Historico_Produccion_CREMIGURT is not None:
-            render_modulo_analisis_produccion(Historico_Produccion_CREMIGURT)
+        ## --- ORDEN DE EJECUCIÓN DEL MÓDULO ---
+        file_historico_path = "Historico_Produccion_CREMIGURT.xlsx"
+        
+        if os.path.exists(file_historico_path):
+            # Si el archivo existe en GitHub/carpeta local, ejecuta el dashboard automáticamente
+            render_modulo_analisis_produccion(file_historico_path)
         else:
-            st.info("👈 Por favor, carga el archivo Excel 'Producción CREMIGURT' en la barra lateral para inicializar el dashboard.")
+            # Si no lo encuentra, mostramos un error estilizado igual que en el Módulo 1 y 2
+            st.error(f"❌ **Archivo requerido no encontrado:** '{file_historico_path}'")
+            st.info("💡 Asegúrate de que el archivo 'Historico_Produccion_CREMIGURT.xlsx' esté guardado en el repositorio (raíz) junto a tu código.")
     # =========================================================================
     # PIE DE PÁGINA GLOBAL
     # =========================================================================
