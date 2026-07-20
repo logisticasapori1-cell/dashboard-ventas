@@ -79,7 +79,7 @@ else:
             [
                 "1. Dashboard Venta Diaria & Forecast", 
                 "2. Control de Desviaciones (Mensual)", 
-                "3. Análisis Estratégico y Desviaciones vs Forecast" # TEXTO EXACTO (Con "s")
+                "3. Control de Producción Mensual" # TEXTO EXACTO (Con "s")
             ]
         )
         
@@ -311,7 +311,7 @@ else:
     # =========================================================================
     # MÓDULO 3: DASHBOARD DE CONTROL DE PRODUCCIÓN (Estructura Horizontal)
     # =========================================================================
-    elif modulo_activo == "3. Análisis Estratégico y Desviaciones vs Forecast":
+    elif modulo_activo == "3. Control de Producción Mensual":
         
         def render_modulo_analisis_produccion(file_historico):
             st.title("🏭 Tablero de Control de Producción Mensual")
