@@ -346,11 +346,14 @@ else:
                 df_datos = df_datos.dropna(how='all')
                 
                 # 3. Identificar y filtrar únicamente las fechas válidas
+                # Convertimos a fecha; lo que sea texto (ej. encabezados) se vuelve NaT (Not a Time/Nulo)
                 fechas_validas = pd.to_datetime(df_datos.iloc[:, 3], errors='coerce')
-                df_datos = df_datos[fechas_validas.notna()].copy()
                 
+                # Nos quedamos solo con las filas donde sí hay una fecha válida
+                df_datos = df_datos[fechas_validas.notna()].copy()
+            
                 if df_datos.empty:
-                    st.warning(f"⚠️ No se encontraron datos de producción válidos en la categoría '{categoria_seleccionada}'.")
+                    st.warning("⚠️ No se encontraron datos de producción válidos en la hoja 'Comparativo vs Forecast'.")
                     return
                 
                 # 4. Construimos un DataFrame limpio y estandarizado
