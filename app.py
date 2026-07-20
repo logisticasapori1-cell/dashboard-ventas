@@ -346,19 +346,24 @@ else:
                 df_datos = df_datos.dropna(how='all')
                 
                 # 3. Identificar y filtrar únicamente las fechas válidas
-                # Convertimos a fecha; lo que sea texto (ej. encabezados) se vuelve NaT (Not a Time/Nulo)
-                fechas_validas = pd.to_datetime(df_datos.iloc[:, 3], errors='coerce')
+                # Convertimos la columna a texto y eliminamos espacios extra
+                col_fecha_raw = df_datos.iloc[:, 3].astype(str).str.strip()
+                
+                # INTENTA ESTO: Si tu excel dice "07-2026", usa '%m-%Y'. 
+                # Si dice "2026-07", cambia a '%Y-%m'.
+                # Si dice "Julio-2026", tendrías que normalizarlo primero.
+                fechas_validas = pd.to_datetime(col_fecha_raw, format='%m-%Y', errors='coerce')
                 
                 # Nos quedamos solo con las filas donde sí hay una fecha válida
                 df_datos = df_datos[fechas_validas.notna()].copy()
-            
+                
                 if df_datos.empty:
-                    st.warning("⚠️ No se encontraron datos de producción válidos en la hoja 'Comparativo vs Forecast'.")
+                    st.warning("⚠️ No se encontraron datos válidos. Verifica que el formato de fecha sea 'MM-AAAA' (ej. 07-2026).")
                     return
                 
                 # 4. Construimos un DataFrame limpio y estandarizado
                 df_final = pd.DataFrame({
-                    'Fecha': pd.to_datetime(df_datos.iloc[:, 3], errors='coerce'),
+                    'Fecha': fechas_validas, # Usamos las fechas que ya validamos arriba
                     'Forecast': pd.to_numeric(df_datos.iloc[:, 4], errors='coerce').fillna(0),
                     'Real': pd.to_numeric(df_datos.iloc[:, 5], errors='coerce').fillna(0)
                 })
