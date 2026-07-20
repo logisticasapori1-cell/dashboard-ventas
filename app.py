@@ -79,7 +79,7 @@ else:
             [
                 "1. Dashboard Venta Diaria & Forecast", 
                 "2. Control de Desviaciones (Mensual)", 
-                "3. Análisis Estratégico y Desviaciones vs Forecast" # TEXTO EXACTO (Con "s")
+                "3. Control de Producción Mensual" # TEXTO EXACTO (Con "s")
             ]
         )
         
@@ -315,7 +315,7 @@ else:
         
         def render_modulo_analisis_produccion(file_historico):
             st.title("🏭 Tablero de Control de Producción Mensual")
-            st.markdown("### Monitoreo de Volúmenes de Producción por Categoría")
+            st.markdown("### Monitoreo de Volúmenes de Producción por Categoría Feb-26 hasta Mes Actual")
         
             try:
                 # 1. Leer archivo Excel completo para listar las hojas (categorías)
