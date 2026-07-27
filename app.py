@@ -45,11 +45,21 @@ if not st.session_state['autenticado']:
             usuario = st.text_input("Usuario o Correo Institucional", placeholder="ej. gerencia.operaciones")
             contrasena = st.text_input("Contraseña del Sistema", type="password", placeholder="••••••••")
             
+            # ... (código anterior del formulario)
             st.markdown("<br>", unsafe_allow_html=True)
             boton_ingresar = st.form_submit_button("Acceder al Sistema", type="primary", use_container_width=True)
             
             if boton_ingresar:
-                if usuario == "admin" and contrasena == "sapori2026":
+                # 1. Creamos un diccionario con las credenciales { "usuario": "contraseña" }
+                usuarios_autorizados = {
+                    "admin": "sapori2026",
+                    "Jair Ramos": "1402", 
+                    "Romulo Delgado": "gerencia123",
+                    "logistica": "logistica2026"
+                }
+                
+                # 2. Validamos si el usuario existe en el diccionario y si la contraseña es correcta
+                if usuario in usuarios_autorizados and usuarios_autorizados[usuario] == contrasena:
                     st.session_state['autenticado'] = True
                     st.success("✅ Acceso concedido. Inicializando entorno...")
                     st.rerun()
