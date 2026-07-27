@@ -109,29 +109,42 @@ else:
             st.info("💡 Por favor, guarde la matriz con el nombre exacto de **'VINCULO VTS BY SKU.xlsx'** en la raíz de la carpeta.")
         else:
             try:
-                df_vts = pd.read_excel(file_ventas)
-                for col in df_vts.columns:
-                    if 'PROMEDIO' in str(col).upper() or 'PROMD' in str(col).upper():
-                        df_vts[col] = pd.to_numeric(df_vts[col], errors='coerce').round(0).fillna(0).astype(int)
+                # 1. Leemos las primeras filas sin encabezado para extraer las coordenadas exactas de tus KPIs
+                df_kpis = pd.read_excel(file_ventas, header=None, nrows=10)
                 
-                cols_upper = {col: str(col).upper().strip() for col in df_vts.columns}
-                col_gross = next((c for c, m in cols_upper.items() if 'GROSS' in m or 'BRUTA' in m or 'VENTA_BRUTA' in m), None)
-                col_return = next((c for c, m in cols_upper.items() if 'RETURN' in m or 'DEVOL' in m or 'RECHAZO' in m), None)
-                col_forecast = next((c for c, m in cols_upper.items() if 'FORECAST' in m or 'META' in m or 'OBJETIVO' in m), None)
+                # Extracción directa según las coordenadas de la imagen (Fila 3 y Fila 5 en Excel equivalen a índice 2 y 4 en Python)
+                val_gross = pd.to_numeric(df_kpis.iloc[2, 0], errors='coerce')       # Columna A, Fila 3
+                val_net = pd.to_numeric(df_kpis.iloc[2, 1], errors='coerce')         # Columna B, Fila 3
+                val_prom_dia = pd.to_numeric(df_kpis.iloc[2, 2], errors='coerce')    # Columna C, Fila 3
+                val_pronost_mes = pd.to_numeric(df_kpis.iloc[2, 3], errors='coerce') # Columna D, Fila 3
+                val_forecast = pd.to_numeric(df_kpis.iloc[2, 4], errors='coerce')    # Columna E, Fila 3
+                val_efficiency = df_kpis.iloc[2, 5]                                  # Columna F, Fila 3
+                val_dif_units = pd.to_numeric(df_kpis.iloc[2, 6], errors='coerce')   # Columna G, Fila 3
                 
-                val_gross = df_vts[col_gross].sum() if col_gross else 171575
-                val_return = df_vts[col_return].sum() if col_return else 2145
-                val_forecast = df_vts[col_forecast].sum() if col_forecast else 696207
+                val_return = pd.to_numeric(df_kpis.iloc[4, 0], errors='coerce')      # Columna A, Fila 5
+                fecha_inicio = df_kpis.iloc[4, 1]                                    # Columna B, Fila 5
+                fecha_final = df_kpis.iloc[4, 3]                                     # Columna D, Fila 5
                 
-                val_net = val_gross - val_return
-                val_prom_dia = val_gross / dias_efectivos if dias_efectivos > 0 else 0
-                val_pronost_mes = val_prom_dia * (dias_efectivos + dias_restantes)
-                val_dif_units = val_gross - val_forecast
-                val_efficiency = (val_gross / val_forecast) * 100 if val_forecast > 0 else 0
+                # Limpieza de valores nulos (por seguridad de cálculo)
+                val_gross = val_gross if pd.notna(val_gross) else 0
+                val_net = val_net if pd.notna(val_net) else 0
+                val_prom_dia = val_prom_dia if pd.notna(val_prom_dia) else 0
+                val_pronost_mes = val_pronost_mes if pd.notna(val_pronost_mes) else 0
+                val_forecast = val_forecast if pd.notna(val_forecast) else 0
+                val_dif_units = val_dif_units if pd.notna(val_dif_units) else 0
+                val_return = val_return if pd.notna(val_return) else 0
+
+                # Formateo del porcentaje de eficiencia
+                if isinstance(val_efficiency, str):
+                    val_efficiency = float(val_efficiency.replace('%', '').replace(',', '.').strip())
+                elif isinstance(val_efficiency, (int, float)):
+                    val_efficiency = val_efficiency * 100 if val_efficiency <= 1.0 else val_efficiency
+                val_efficiency = val_efficiency if pd.notna(val_efficiency) else 0
                 
-                if not col_gross or not col_forecast:
-                    st.sidebar.warning("⚠️ Columnas no detectadas textualmente en Excel. Mostrando plantilla base estándar.")
-                
+                # Formateo dinámico de fechas
+                fecha_inicio_str = pd.to_datetime(fecha_inicio).strftime('%d/%m/%Y') if pd.notna(pd.to_datetime(fecha_inicio, errors='coerce')) else "01/07/2026"
+                fecha_final_str = pd.to_datetime(fecha_final).strftime('%d/%m/%Y') if pd.notna(pd.to_datetime(fecha_final, errors='coerce')) else "31/07/2026"
+
                 st.markdown(
                     """
                     <div style="background-color: #a9cce3; padding: 10px; text-align: center; font-weight: bold; font-size: 20px; color: #1f4e79; border-radius: 5px; margin-bottom: 20px;">
@@ -140,32 +153,47 @@ else:
                     """, unsafe_allow_html=True
                 )
                 
+                # Renderizado de Tarjetas (Aplicando estandarización de punto decimal)
                 col_a1, col_a2, col_a3, col_a4, col_a5, col_a6, col_a7 = st.columns(7)
-                col_a1.metric("TOTAL UNITS SALES GROSS", f"{val_gross:,.0f}")
-                col_a2.metric("TOTAL UNITS SALES NET", f"{val_net:,.0f}")
-                col_a3.metric("PROMEDIO VENTA DIARIA", f"{val_prom_dia:,.0f}")
-                col_a4.metric("PRONOSTICO VENTA MENSUAL", f"{val_pronost_mes:,.0f}")
-                col_a5.metric("FORECAST", f"{val_forecast:,.0f}")
-                col_a6.metric("FORECAST EFFICIENCY", f"{val_efficiency:.1f}%")
+                col_a1.metric("TOTAL UNITS SALES GROSS", f"{val_gross:,.0f}".replace(",", "."))
+                col_a2.metric("TOTAL UNITS SALES NET", f"{val_net:,.0f}".replace(",", "."))
+                col_a3.metric("PROMEDIO VENTA DIARIA", f"{val_prom_dia:,.0f}".replace(",", "."))
+                col_a4.metric("PRONOSTICO VENTA MENSUAL", f"{val_pronost_mes:,.0f}".replace(",", "."))
+                col_a5.metric("FORECAST", f"{val_forecast:,.0f}".replace(",", "."))
+                col_a6.metric("FORECAST EFFICIENCY", f"{val_efficiency:,.0f}%")
                 
                 delta_dif = "- Brecha de Cobertura" if val_dif_units < 0 else "+ Superávit Comercial"
-                col_a7.metric("DIFERENCIA ALCANCE FORECAST", f"{val_dif_units:,.0f}", delta=delta_dif, delta_color="normal")
+                col_a7.metric("DIFERENCIA ALCANCE FORECAST", f"{val_dif_units:,.0f}".replace(",", "."), delta=delta_dif, delta_color="normal")
                 
                 st.markdown("---")
                 
                 col_b1, col_b2, col_b3, col_b4, col_b5, col_b6 = st.columns(6)
-                col_b1.metric("UNITS RETURN (Devoluciones)", f"{val_return:,.0f}")
-                col_b2.metric("INICIO DE VENTA", "01/07/2026")
-                col_b4.metric("FINAL DE VENTA", "31/07/2026")
-                col_b5.metric("DIAS VENTA EFECTIVOS.", f"{dias_efectivos} días")
-                col_b6.metric("DIAS VENTA RESTANTES.", f"{dias_restantes} días")
+                col_b1.metric("UNITS RETURN (Devoluciones)", f"{val_return:,.0f}".replace(",", "."))
+                col_b2.metric("INICIO DE VENTA", fecha_inicio_str)
+                col_b4.metric("FINAL DE VENTA", fecha_final_str)
+                col_b5.metric("DIAS VENTA EFECTIVOS", f"{dias_efectivos} días")
+                col_b6.metric("DIAS VENTA RESTANTES", f"{dias_restantes} días")
                 
                 st.markdown("---")
                 
+                # 2. Carga Inteligente de la Matriz de SKUs
                 st.markdown("### 📋 Desglose Operativo: Matriz de Ventas por SKU")
                 busqueda_sku = st.text_input("🔍 Filtrar tabla por Nombre de Producto o SKU de Producción:")
                 
+                # Escaneo para detectar dónde termina el dashboard e inician los SKUs
+                df_completo = pd.read_excel(file_ventas, header=None)
+                fila_header = 0
+                for idx, row in df_completo.iterrows():
+                    row_str = " ".join([str(v).upper() for v in row if pd.notna(v)])
+                    # Busca palabras clave que indiquen el inicio de los datos de tabla
+                    if "SKU" in row_str or "PRODUCTO" in row_str or "CATEGORIA" in row_str or "DESCRIPCION" in row_str:
+                        fila_header = idx
+                        break
+                        
+                # Lee la tabla saltándose el dashboard superior
+                df_vts = pd.read_excel(file_ventas, skiprows=fila_header)
                 df_vts_filtrado = df_vts.copy()
+                
                 if busqueda_sku:
                     mask = df_vts_filtrado.astype(str).apply(lambda x: x.str.contains(busqueda_sku, case=False, na=False)).any(axis=1)
                     df_vts_filtrado = df_vts_filtrado[mask]
