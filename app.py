@@ -109,22 +109,39 @@ else:
             st.info("💡 Por favor, guarde la matriz con el nombre exacto de **'VINCULO VTS BY SKU.xlsx'** en la raíz de la carpeta.")
         else:
             try:
-                # 1. Leemos las primeras filas sin encabezado para extraer las coordenadas exactas de tus KPIs
-                df_kpis = pd.read_excel(file_ventas, header=None, nrows=10)
+                # 1. Leemos las primeras 15 filas sin encabezado para buscar los KPIs
+                df_kpis = pd.read_excel(file_ventas, header=None, nrows=15)
                 
-                # Extracción directa según las coordenadas de la imagen (Fila 3 y Fila 5 en Excel equivalen a índice 2 y 4 en Python)
-                val_gross = pd.to_numeric(df_kpis.iloc[2, 0], errors='coerce')       # Columna A, Fila 3
-                val_net = pd.to_numeric(df_kpis.iloc[2, 1], errors='coerce')         # Columna B, Fila 3
-                val_prom_dia = pd.to_numeric(df_kpis.iloc[2, 2], errors='coerce')    # Columna C, Fila 3
-                val_pronost_mes = pd.to_numeric(df_kpis.iloc[2, 3], errors='coerce') # Columna D, Fila 3
-                val_forecast = pd.to_numeric(df_kpis.iloc[2, 4], errors='coerce')    # Columna E, Fila 3
-                val_efficiency = df_kpis.iloc[2, 5]                                  # Columna F, Fila 3
-                val_dif_units = pd.to_numeric(df_kpis.iloc[2, 6], errors='coerce')   # Columna G, Fila 3
+                # Variables con valores por defecto por seguridad
+                val_gross = val_net = val_prom_dia = val_pronost_mes = 0
+                val_forecast = val_dif_units = val_return = 0
+                val_efficiency = 0
+                fecha_inicio, fecha_final = "01/07/2026", "31/07/2026"
                 
-                val_return = pd.to_numeric(df_kpis.iloc[4, 0], errors='coerce')      # Columna A, Fila 5
-                fecha_inicio = df_kpis.iloc[4, 1]                                    # Columna B, Fila 5
-                fecha_final = df_kpis.iloc[4, 3]                                     # Columna D, Fila 5
-                
+                # Escaneo dinámico para encontrar las filas correctas
+                for idx, row in df_kpis.iterrows():
+                    row_str = " ".join([str(v).upper() for v in row if pd.notna(v)])
+                    
+                    # Si encontramos la fila con los títulos principales, extraemos la fila de ABAJO (idx + 1)
+                    if "VENTA BRUTA" in row_str or "VENTA NETA" in row_str or "FORECAST" in row_str:
+                        if idx + 1 < len(df_kpis):
+                            fila_valores = df_kpis.iloc[idx + 1]
+                            val_gross = pd.to_numeric(fila_valores[0], errors='coerce')
+                            val_net = pd.to_numeric(fila_valores[1], errors='coerce')
+                            val_prom_dia = pd.to_numeric(fila_valores[2], errors='coerce')
+                            val_pronost_mes = pd.to_numeric(fila_valores[3], errors='coerce')
+                            val_forecast = pd.to_numeric(fila_valores[4], errors='coerce')
+                            val_efficiency = fila_valores[5]
+                            val_dif_units = pd.to_numeric(fila_valores[6], errors='coerce')
+                            
+                    # Si encontramos la fila con los títulos de devoluciones, extraemos la fila de ABAJO
+                    if "DEVOLUCION" in row_str or "INICIO DE VENTA" in row_str:
+                        if idx + 1 < len(df_kpis):
+                            fila_valores_sec = df_kpis.iloc[idx + 1]
+                            val_return = pd.to_numeric(fila_valores_sec[0], errors='coerce')
+                            fecha_inicio = fila_valores_sec[1]
+                            fecha_final = fila_valores_sec[3]
+                            
                 # Limpieza de valores nulos (por seguridad de cálculo)
                 val_gross = val_gross if pd.notna(val_gross) else 0
                 val_net = val_net if pd.notna(val_net) else 0
@@ -153,7 +170,7 @@ else:
                     """, unsafe_allow_html=True
                 )
                 
-                # Renderizado de Tarjetas (Aplicando estandarización de punto decimal)
+                # Renderizado de Tarjetas (Formato numérico con punto decimal)
                 col_a1, col_a2, col_a3, col_a4, col_a5, col_a6, col_a7 = st.columns(7)
                 col_a1.metric("TOTAL UNITS SALES GROSS", f"{val_gross:,.0f}".replace(",", "."))
                 col_a2.metric("TOTAL UNITS SALES NET", f"{val_net:,.0f}".replace(",", "."))
@@ -185,8 +202,7 @@ else:
                 fila_header = 0
                 for idx, row in df_completo.iterrows():
                     row_str = " ".join([str(v).upper() for v in row if pd.notna(v)])
-                    # Busca palabras clave que indiquen el inicio de los datos de tabla
-                    if "SKU" in row_str or "PRODUCTO" in row_str or "CATEGORIA" in row_str or "DESCRIPCION" in row_str:
+                    if "SKU" in row_str or "PRODUCTO" in row_str or "CATEGORIA" in row_str or "DESCRIPCION" in row_str or "REFERENCIA" in row_str:
                         fila_header = idx
                         break
                         
