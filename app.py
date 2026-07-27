@@ -543,12 +543,34 @@ else:
             st.error(f"❌ **Archivo requerido no encontrado:** '{file_historico_path}'")
             st.info("💡 Asegúrate de que el archivo 'Historico_Produccion_CREMIGURT.xlsx' esté guardado en el repositorio (raíz) junto a tu código.")
     # =========================================================================
-    # PIE DE PÁGINA GLOBAL
+    # PIE DE PÁGINA GLOBAL (CORPORATIVO)
     # =========================================================================
-    st.markdown("---")
+    st.markdown("<br><br>", unsafe_allow_html=True) # Espaciado para que no quede pegado a las tablas
+    
+    # Línea separadora con degradado elegante
     st.markdown(
-        "<div style='text-align: center; color: gray; font-family: Arial;'>"
-        "📝 Sistema Operativo Realizado por: Jair Ramos  <b>Dirección de Supply Chain Sapori</b>"
-        "</div>", 
+        """
+        <hr style="border: 0; height: 1px; background-image: linear-gradient(to right, rgba(0, 0, 0, 0), rgba(31, 78, 121, 0.4), rgba(0, 0, 0, 0)); margin-bottom: 20px;">
+        """, 
+        unsafe_allow_html=True
+    )
+    
+    # Firma con estructura Flexbox (Izquierda: Sistema / Derecha: Autor)
+    st.markdown(
+        """
+        <div style="display: flex; justify-content: space-between; align-items: center; padding: 0px 10px; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+            
+            <div style="color: #666; font-size: 13px;">
+                <strong>Plataforma de Inteligencia Operativa</strong><br>
+                <span style="font-size: 11.5px; color: #999;">Versión 3.1 • Entorno Seguro</span>
+            </div>
+            
+            <div style="text-align: right; font-size: 13px; color: #555;">
+                Desarrollado por <strong>Jair Ramos</strong><br>
+                <span style="color: #1f4e79; font-weight: 600; font-size: 12px;">Dirección de Supply Chain Sapori</span>
+            </div>
+            
+        </div>
+        """, 
         unsafe_allow_html=True
     )
