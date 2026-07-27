@@ -109,42 +109,23 @@ else:
             st.info("💡 Por favor, guarde la matriz con el nombre exacto de **'VINCULO VTS BY SKU.xlsx'** en la raíz de la carpeta.")
         else:
             try:
-                # 1. Leemos obligando a Pandas a respetar el ancho hasta la columna H (8 columnas)
-                df_kpis = pd.read_excel(file_ventas, header=None, nrows=15, usecols="A:H")
+                # 1. Leer ESPECÍFICAMENTE la pestaña "DASHBOARD" para extraer los KPIs
+                df_kpis = pd.read_excel(file_ventas, sheet_name="DASHBOARD", header=None)
                 
-                # Variables con valores por defecto por seguridad
-                val_gross = val_net = val_prom_dia = val_pronost_mes = 0
-                val_forecast = val_dif_units = val_return = 0
-                val_efficiency = 0
-                fecha_inicio, fecha_final = "01/07/2026", "31/07/2026"
+                # Extracción directa según coordenadas (Fila 3 es índice 2, Fila 5 es índice 4)
+                val_gross = pd.to_numeric(df_kpis.iloc[2, 0], errors='coerce')       # Columna A, Fila 3
+                val_net = pd.to_numeric(df_kpis.iloc[2, 1], errors='coerce')         # Columna B, Fila 3
+                val_prom_dia = pd.to_numeric(df_kpis.iloc[2, 2], errors='coerce')    # Columna C, Fila 3
+                val_pronost_mes = pd.to_numeric(df_kpis.iloc[2, 3], errors='coerce') # Columna D, Fila 3
+                val_forecast = pd.to_numeric(df_kpis.iloc[2, 4], errors='coerce')    # Columna E, Fila 3
+                val_efficiency = df_kpis.iloc[2, 5]                                  # Columna F, Fila 3
+                val_dif_units = pd.to_numeric(df_kpis.iloc[2, 6], errors='coerce')   # Columna G, Fila 3
                 
-                # Escaneo dinámico para encontrar las filas correctas
-                for idx, row in df_kpis.iterrows():
-                    # Unimos los valores de la fila en un solo texto para buscar palabras clave
-                    row_str = " ".join([str(v).upper() for v in row if pd.notna(v)])
-                    
-                    # KPIs Principales
-                    if "VENTA BRUTA" in row_str or "VENTA NETA" in row_str or "FORECAST" in row_str:
-                        if idx + 1 < len(df_kpis):
-                            fila_valores = df_kpis.iloc[idx + 1]
-                            # Usamos .get() para evitar errores si la columna está vacía
-                            val_gross = pd.to_numeric(fila_valores.get(0, 0), errors='coerce')
-                            val_net = pd.to_numeric(fila_valores.get(1, 0), errors='coerce')
-                            val_prom_dia = pd.to_numeric(fila_valores.get(2, 0), errors='coerce')
-                            val_pronost_mes = pd.to_numeric(fila_valores.get(3, 0), errors='coerce')
-                            val_forecast = pd.to_numeric(fila_valores.get(4, 0), errors='coerce')
-                            val_efficiency = fila_valores.get(5, 0)
-                            val_dif_units = pd.to_numeric(fila_valores.get(6, 0), errors='coerce')
-                            
-                    # KPIs Logística Inversa y Tiempos
-                    if "DEVOLUCION" in row_str or "INICIO DE VENTA" in row_str:
-                        if idx + 1 < len(df_kpis):
-                            fila_valores_sec = df_kpis.iloc[idx + 1]
-                            val_return = pd.to_numeric(fila_valores_sec.get(0, 0), errors='coerce')
-                            fecha_inicio = fila_valores_sec.get(1, "01/07/2026")
-                            fecha_final = fila_valores_sec.get(3, "31/07/2026")
-                            
-                # Limpieza de valores nulos finales
+                val_return = pd.to_numeric(df_kpis.iloc[4, 0], errors='coerce')      # Columna A, Fila 5
+                fecha_inicio = df_kpis.iloc[4, 1]                                    # Columna B, Fila 5
+                fecha_final = df_kpis.iloc[4, 3]                                     # Columna D, Fila 5
+                
+                # Limpieza de nulos (por seguridad)
                 val_gross = val_gross if pd.notna(val_gross) else 0
                 val_net = val_net if pd.notna(val_net) else 0
                 val_prom_dia = val_prom_dia if pd.notna(val_prom_dia) else 0
@@ -153,14 +134,14 @@ else:
                 val_dif_units = val_dif_units if pd.notna(val_dif_units) else 0
                 val_return = val_return if pd.notna(val_return) else 0
 
-                # Formateo del porcentaje de eficiencia
+                # Formato del porcentaje de eficiencia
                 if isinstance(val_efficiency, str):
                     val_efficiency = float(val_efficiency.replace('%', '').replace(',', '.').strip())
                 elif isinstance(val_efficiency, (int, float)):
                     val_efficiency = val_efficiency * 100 if val_efficiency <= 1.0 else val_efficiency
                 val_efficiency = val_efficiency if pd.notna(val_efficiency) else 0
                 
-                # Formateo dinámico de fechas
+                # Formato de fechas
                 fecha_inicio_str = pd.to_datetime(fecha_inicio).strftime('%d/%m/%Y') if pd.notna(pd.to_datetime(fecha_inicio, errors='coerce')) else "01/07/2026"
                 fecha_final_str = pd.to_datetime(fecha_final).strftime('%d/%m/%Y') if pd.notna(pd.to_datetime(fecha_final, errors='coerce')) else "31/07/2026"
 
@@ -172,7 +153,7 @@ else:
                     """, unsafe_allow_html=True
                 )
                 
-                # Renderizado de Tarjetas
+                # Renderizado de Tarjetas (Manteniendo el punto como separador de miles)
                 col_a1, col_a2, col_a3, col_a4, col_a5, col_a6, col_a7 = st.columns(7)
                 col_a1.metric("TOTAL UNITS SALES GROSS", f"{val_gross:,.0f}".replace(",", "."))
                 col_a2.metric("TOTAL UNITS SALES NET", f"{val_net:,.0f}".replace(",", "."))
@@ -195,21 +176,12 @@ else:
                 
                 st.markdown("---")
                 
-                # 2. Carga Inteligente de la Matriz de SKUs
+                # 2. Leer ESPECÍFICAMENTE la pestaña "file_ventas" para la tabla de SKUs
                 st.markdown("### 📋 Desglose Operativo: Matriz de Ventas por SKU")
                 busqueda_sku = st.text_input("🔍 Filtrar tabla por Nombre de Producto o SKU de Producción:")
                 
-                # Escaneo para detectar dónde termina el dashboard e inician los SKUs
-                df_completo = pd.read_excel(file_ventas, header=None)
-                fila_header = 0
-                for idx, row in df_completo.iterrows():
-                    row_str = " ".join([str(v).upper() for v in row if pd.notna(v)])
-                    if "SKU" in row_str or "PRODUCTO" in row_str or "CATEGORIA" in row_str or "DESCRIPCION" in row_str or "REFERENCIA" in row_str:
-                        fila_header = idx
-                        break
-                        
-                # Lee la tabla saltándose el dashboard superior
-                df_vts = pd.read_excel(file_ventas, skiprows=fila_header)
+                # Aquí leemos la otra pestaña, por lo que queda la tabla limpia y perfecta a la primera
+                df_vts = pd.read_excel(file_ventas, sheet_name="file_ventas")
                 df_vts_filtrado = df_vts.copy()
                 
                 if busqueda_sku:
