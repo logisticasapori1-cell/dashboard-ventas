@@ -188,12 +188,18 @@ else:
                 formatos_columnas = {}
                 for col in df_vts_filtrado.columns:
                     col_str = str(col).upper()
-                    # Detectamos si es la columna de promedio o cualquier otra de venta
-                    if 'PROMEDIO' in col_str or 'PROMD' in col_str or 'VENTA BRUTA' in col_str:
-                        # 1. Forzamos la conversión a números enteros para erradicar los decimales
+                    
+                    # 1. Códigos e IDs (sin separador de miles ni decimales)
+                    if 'REFERENCIA' in col_str:
+                        # Forzamos a entero para matar el decimal y luego a texto para que sea inmutable
+                        df_vts_filtrado[col] = pd.to_numeric(df_vts_filtrado[col], errors='coerce').fillna(0).astype(int).astype(str)
+                        df_vts_filtrado[col] = df_vts_filtrado[col].replace('0', '') # Limpia si había celdas vacías
+                        
+                    # 2. Métricas de venta (Cantidades enteras con separador de punto)
+                    elif 'PROMEDIO' in col_str or 'PROMD' in col_str or 'VENTA' in col_str:
                         df_vts_filtrado[col] = pd.to_numeric(df_vts_filtrado[col], errors='coerce').fillna(0).astype(int)
-                        # 2. Aplicamos el formato de separador de miles con punto (.)
                         formatos_columnas[col] = lambda x: f"{x:,.0f}".replace(",", ".")
+                # =======================================
                 # =======================================
                 
                 if busqueda_sku:
