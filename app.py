@@ -180,15 +180,31 @@ else:
                 st.markdown("### 📋 Desglose Operativo: Matriz de Ventas por SKU")
                 busqueda_sku = st.text_input("🔍 Filtrar tabla por Nombre de Producto o SKU de Producción:")
                 
-                # Aquí leemos la otra pestaña, por lo que queda la tabla limpia y perfecta a la primera
+                # Aquí leemos la pestaña de la tabla
                 df_vts = pd.read_excel(file_ventas, sheet_name="file_ventas")
                 df_vts_filtrado = df_vts.copy()
+                
+                # === LIMPIEZA DE DECIMALES Y FORMATO ===
+                formatos_columnas = {}
+                for col in df_vts_filtrado.columns:
+                    col_str = str(col).upper()
+                    # Detectamos si es la columna de promedio o cualquier otra de venta
+                    if 'PROMEDIO' in col_str or 'PROMD' in col_str or 'VENTA BRUTA' in col_str:
+                        # 1. Forzamos la conversión a números enteros para erradicar los decimales
+                        df_vts_filtrado[col] = pd.to_numeric(df_vts_filtrado[col], errors='coerce').fillna(0).astype(int)
+                        # 2. Aplicamos el formato de separador de miles con punto (.)
+                        formatos_columnas[col] = lambda x: f"{x:,.0f}".replace(",", ".")
+                # =======================================
                 
                 if busqueda_sku:
                     mask = df_vts_filtrado.astype(str).apply(lambda x: x.str.contains(busqueda_sku, case=False, na=False)).any(axis=1)
                     df_vts_filtrado = df_vts_filtrado[mask]
                 
-                st.dataframe(df_vts_filtrado, use_container_width=True, hide_index=True)
+                # Renderizamos la tabla aplicando los estilos (si encontró columnas para formatear)
+                if formatos_columnas:
+                    st.dataframe(df_vts_filtrado.style.format(formatos_columnas), use_container_width=True, hide_index=True)
+                else:
+                    st.dataframe(df_vts_filtrado, use_container_width=True, hide_index=True)
                 
             except Exception as e:
                 st.error(f"Error analítico durante el procesamiento del archivo: {e}")
