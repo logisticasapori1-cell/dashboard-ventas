@@ -7,7 +7,7 @@ import io
 # ==========================================
 # CONFIGURACIÓN DE PÁGINA
 # ==========================================
-st.set_page_config(layout="wide", page_title="Portal de Supply Chain & S&OP - Sapori (Sales and Operations Planning)", page_icon="🔒")
+st.set_page_config(layout="wide", page_title="Portal de Supply Chain & S&OP - Sapori (Sales and Operations Planning)", page_icon="🟢")
 
 if 'autenticado' not in st.session_state:
     st.session_state['autenticado'] = False
