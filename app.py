@@ -7,7 +7,7 @@ import io
 # ==========================================
 # CONFIGURACIÓN DE PÁGINA
 # ==========================================
-st.set_page_config(layout="wide", page_title="Portal Analítico - Sapori", page_icon="🔒")
+st.set_page_config(layout="wide", page_title="Portal de Supply Chain & S&OP - Sapori (Sales and Operations Planning)", page_icon="🔒")
 
 if 'autenticado' not in st.session_state:
     st.session_state['autenticado'] = False
@@ -36,7 +36,7 @@ if not st.session_state['autenticado']:
         else:
             st.markdown("<h1 style='text-align: center; color: #1f4e79; font-family: Arial;'>SAPORI</h1>", unsafe_allow_html=True)
             
-        st.markdown("<h2 style='text-align: center; color: #2b2b2b; font-family: Arial; margin-top:0px;'>Portal Oficial de Operaciones</h2>", unsafe_allow_html=True)
+        st.markdown("<h2 style='text-align: center; color: #2b2b2b; font-family: Arial; margin-top:0px;'>Portal de Supply Chain & S&OP</h2>", unsafe_allow_html=True)
         st.markdown("<p style='text-align: center; color: #666; font-size: 14px;'>Supply Chain, Ventas y Pronósticos</p>", unsafe_allow_html=True)
         st.markdown("<br>", unsafe_allow_html=True)
         
@@ -77,9 +77,9 @@ else:
         modulo_activo = st.radio(
             "Seleccione el área a visualizar:",
             [
-                "1. Dashboard Venta Diaria & Forecast", 
-                "2. Control de Desviaciones (Mensual)", 
-                "3. Control de Producción Mensual" # TEXTO EXACTO (Con "s")
+                "1. Control Operativo de Ventas y Forecast", 
+                "2. Tablero de Desviaciones y Tendencias", 
+                "3. Control y Análisis de Producción Mensual" # TEXTO EXACTO (Con "s")
             ]
         )
         
@@ -98,9 +98,9 @@ else:
     # =========================================================================
     # MÓDULO 1: VENTA DIARIA Y FORECAST (CÁLCULO DINÁMICO)
     # =========================================================================
-    if modulo_activo == "1. Dashboard Venta Diaria & Forecast":
-        st.title("📈 Dashboard Ejecutivo: Pronósticos y Ventas")
-        st.markdown("### Seguimiento de Forecast y Venta Diaria por SKU")
+    if modulo_activo == "1. Control Operativo de Ventas y Forecast":
+        st.title("📈 Dashboard Ejecutivo: Rendimiento Comercial y Proyecciones de Demanda")
+        st.markdown("### Cubre ventas diarias, forecast y alcance")
         
         file_ventas = "VINCULO VTS BY SKU.xlsx"
         
@@ -218,8 +218,8 @@ else:
     # =========================================================================
     # MÓDULO 2: CONTROL DE DESVIACIONES (MÓDULO MENSUAL)
     # =========================================================================
-    elif modulo_activo == "2. Control de Desviaciones (Mensual)":
-        st.title("📊 Tablero de Control de Desviaciones")
+    elif modulo_activo == "2. Tablero de Desviaciones y Tendencias":
+        st.title("📊 Impacto Financiero y Desviaciones Estratégicas")
         st.markdown("### Análisis Comparativo, Financiero y Pareto (ABC) por SKU")
 
         file_name = "Comparación de Venta Diaria por SKU (Junio vs Julio).xlsx"
@@ -351,7 +351,7 @@ else:
     # =========================================================================
     # MÓDULO 3: DASHBOARD DE CONTROL DE PRODUCCIÓN (Estructura Horizontal)
     # =========================================================================
-    elif modulo_activo == "3. Control de Producción Mensual":
+    elif modulo_activo == "3. Control y Análisis de Producción Mensual":
         
         def render_modulo_analisis_produccion(file_historico):
             st.title("🏭 Tablero de Control de Producción Mensual")
