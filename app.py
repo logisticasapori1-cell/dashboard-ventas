@@ -280,8 +280,8 @@ else:
                 kpi3.metric("SKUs en Alerta", f"{bajo}", delta=f"-{bajo} SKUs", delta_color="normal")
                 
                 if tiene_precio:
-                    impacto_total = df['Impacto_Mensual_$'].sum()
-                    delta_financiero = "- Mensual vs Julio" if impacto_total < 0 else "Mensual vs Julio"
+                    impacto_total = df['Impacto Mensual $'].sum()
+                    delta_financiero = "- Mensual vs Agosto" if impacto_total < 0 else "Mensual vs Agosto"
                     kpi4.metric("Balance Financiero Proyectado", f"${impacto_total:,.2f}", delta=delta_financiero, delta_color="normal")
                 else:
                     kpi4.metric("Balance", "Falta Precio Unitario")
@@ -324,7 +324,7 @@ else:
                 st.markdown("### 📋 Detalle de Desviaciones")
                 
                 if tiene_precio:
-                    columnas_render = ['REFERENCIA INTERNA', 'PRODUCTO', 'CATEGORÍA', 'Clasificación ABC', 'PROMD VTA DIA JULIO', 'PROMD VTA DIA AGOSTO', 'Porcentaje de desviación', 'Impacto_Mensual_$', 'Estado de tendencia']
+                    columnas_render = ['REFERENCIA INTERNA', 'PRODUCTO', 'CATEGORÍA', 'Clasificación ABC', 'PROMD VTA DIA JULIO', 'PROMD VTA DIA AGOSTO', 'Porcentaje de desviación', 'Impacto Mensual $', 'Estado de tendencia']
                 else:
                     columnas_render = ['REFERENCIA INTERNA', 'PRODUCTO', 'CATEGORÍA', 'Clasificación ABC', 'PROMD VTA DIA JULIO', 'PROMD VTA DIA AGOSTO', 'Porcentaje de desviación', 'Estado de tendencia']
                 
@@ -340,7 +340,7 @@ else:
                 }
                 
                 if tiene_precio:
-                    formato_columnas['Impacto_Mensual_$'] = '${:,.2f}'
+                    formato_columnas['Impacto Mensual $'] = '${:,.2f}'
                 
                 tabla_estilizada = df_filtrado[columnas_render].style.map(
                     resaltar_tendencia, subset=['Estado de tendencia']
