@@ -255,7 +255,7 @@ else:
 
                 tiene_precio = 'PRECIO UNITARIO' in df.columns
                 if tiene_precio:
-                    df['Dif_Unidades_Diarias'] = df['PROMD VTA DIA JULIO'] - df['PROMD VTA DIA AGOSTO']
+                    df['Dif_Unidades_Diarias'] = df['PROMD VTA DIA AGOSTO'] - df['PROMD VTA DIA JULIO']
                     df['Impacto_Diario_$'] = df['Dif_Unidades_Diarias'] * df['PRECIO UNITARIO']
                     df['Impacto Mensual $'] = df['Impacto_Diario_$'] * 30
 
@@ -281,7 +281,7 @@ else:
                 
                 if tiene_precio:
                     impacto_total = df['Impacto Mensual $'].sum()
-                    delta_financiero = "- Mensual vs Julio" if impacto_total < 0 else "Mensual vs Julio"
+                    delta_financiero = "- Mensual (Agosto) vs Julio" if impacto_total < 0 else "Mensual (Agosto) vs Julio"
                     kpi4.metric("Balance Financiero Proyectado", f"${impacto_total:,.2f}", delta=delta_financiero, delta_color="normal")
                 else:
                     kpi4.metric("Balance", "Falta Precio Unitario")
