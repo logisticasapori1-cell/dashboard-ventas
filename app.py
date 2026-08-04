@@ -282,6 +282,7 @@ else:
                 if tiene_precio:
                     impacto_total = df['Impacto Mensual $'].sum()
                     delta_financiero = "- Mensual (Agosto) vs Julio" if impacto_total < 0 else "Mensual (Agosto) vs Julio"
+                    impacto_formateado = f"${impacto_total:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
                     kpi4.metric("Balance Financiero Proyectado", f"${impacto_total:,.2f}", delta=delta_financiero, delta_color="normal")
                 else:
                     kpi4.metric("Balance", "Falta Precio Unitario")
@@ -340,7 +341,7 @@ else:
                 }
                 
                 if tiene_precio:
-                    formato_columnas['Impacto Mensual $'] = '${:,.2f}'
+                    formato_columnas['Impacto Mensual $'] = lambda x: f"${x:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
                 
                 tabla_estilizada = df_filtrado[columnas_render].style.map(
                     resaltar_tendencia, subset=['Estado de tendencia']
