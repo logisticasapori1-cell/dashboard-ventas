@@ -281,7 +281,7 @@ else:
                 
                 if tiene_precio:
                     impacto_total = df['Impacto Mensual $'].sum()
-                    delta_financiero = "- Mensual vs Agosto" if impacto_total < 0 else "Mensual vs Agosto"
+                    delta_financiero = "- Mensual vs Julio" if impacto_total < 0 else "Mensual vs Julio"
                     kpi4.metric("Balance Financiero Proyectado", f"${impacto_total:,.2f}", delta=delta_financiero, delta_color="normal")
                 else:
                     kpi4.metric("Balance", "Falta Precio Unitario")
