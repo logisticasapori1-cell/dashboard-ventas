@@ -257,7 +257,7 @@ else:
                 if tiene_precio:
                     df['Dif_Unidades_Diarias'] = df['PROMD VTA DIA JULIO'] - df['PROMD VTA DIA AGOSTO']
                     df['Impacto_Diario_$'] = df['Dif_Unidades_Diarias'] * df['PRECIO UNITARIO']
-                    df['Impacto_Mensual_$'] = df['Impacto_Diario_$'] * 30
+                    df[' Impacto Mensual $'] = df['Impacto Diario $'] * 30
 
                 df = df.sort_values(by='PROMD VTA DIA JULIO', ascending=False).reset_index(drop=True)
                 volumen_total_julio = df['PROMD VTA DIA JULIO'].sum()
