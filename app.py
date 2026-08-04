@@ -232,7 +232,7 @@ else:
         st.title("📊 Impacto Financiero y Desviaciones Estratégicas")
         st.markdown("### Análisis Comparativo, Financiero y Pareto (ABC) por SKU")
 
-        file_name = "Comparación de Venta Diaria por SKU (Junio vs Julio).xlsx"
+        file_name = "Comparación de Venta Diaria por SKU (Julio vs Agosto).xlsx"
 
         if not os.path.exists(file_name):
             st.error(f"❌ **No se encontró el archivo de datos:** '{file_name}'")
@@ -243,7 +243,7 @@ else:
                 if 'CATEGORÍA' not in df.columns:
                     df['CATEGORÍA'] = "Por Asignar"
 
-                for col in ['PROMD VTA DIA JUNIO', 'PROMD VTA DIA JULIO']:
+                for col in ['PROMD VTA DIA JULIO', 'PROMD VTA DIA AGOSTO']:
                     if df[col].dtype == 'object':
                         df[col] = df[col].astype(str).str.replace('.', '', regex=False).str.replace(',', '.', regex=False).astype(float)
                     df[col] = df[col].round(0).astype(int)
@@ -251,11 +251,11 @@ else:
                 if 'Porcentaje de desviación' in df.columns:
                     df['Desviacion_Num'] = df['Porcentaje de desviación'].astype(str).str.rstrip('%').str.replace(',', '.', regex=False).astype(float)
                 else:
-                    df['Desviacion_Num'] = ((df['PROMD VTA DIA JULIO'] - df['PROMD VTA DIA JUNIO']) / df['PROMD VTA DIA JUNIO']) * 100
+                    df['Desviacion_Num'] = ((df['PROMD VTA DIA JULIO'] - df['PROMD VTA DIA AGOSTO']) / df['PROMD VTA DIA AGOSTO']) * 100
 
                 tiene_precio = 'PRECIO UNITARIO' in df.columns
                 if tiene_precio:
-                    df['Dif_Unidades_Diarias'] = df['PROMD VTA DIA JULIO'] - df['PROMD VTA DIA JUNIO']
+                    df['Dif_Unidades_Diarias'] = df['PROMD VTA DIA JULIO'] - df['PROMD VTA DIA AGOSTO']
                     df['Impacto_Diario_$'] = df['Dif_Unidades_Diarias'] * df['PRECIO UNITARIO']
                     df['Impacto_Mensual_$'] = df['Impacto_Diario_$'] * 30
 
@@ -281,7 +281,7 @@ else:
                 
                 if tiene_precio:
                     impacto_total = df['Impacto_Mensual_$'].sum()
-                    delta_financiero = "- Mensual vs Junio" if impacto_total < 0 else "Mensual vs Junio"
+                    delta_financiero = "- Mensual vs Julio" if impacto_total < 0 else "Mensual vs Julio"
                     kpi4.metric("Balance Financiero Proyectado", f"${impacto_total:,.2f}", delta=delta_financiero, delta_color="normal")
                 else:
                     kpi4.metric("Balance", "Falta Precio Unitario")
@@ -312,11 +312,11 @@ else:
                         df_filtrado['REFERENCIA INTERNA'].astype(str).str.contains(busqueda, na=False)
                     ]
                 
-                df_grafico = df_filtrado.sort_values(by='PROMD VTA DIA JUNIO', ascending=False)
+                df_grafico = df_filtrado.sort_values(by='PROMD VTA DIA AGOSTO', ascending=False)
                 if not df_grafico.empty:
                     fig = go.Figure()
-                    fig.add_trace(go.Bar(x=df_grafico['PRODUCTO'], y=df_grafico['PROMD VTA DIA JUNIO'], name='Junio', marker_color='#1f4e79'))
-                    fig.add_trace(go.Bar(x=df_grafico['PRODUCTO'], y=df_grafico['PROMD VTA DIA JULIO'], name='Julio', marker_color='#d95f02'))
+                    fig.add_trace(go.Bar(x=df_grafico['PRODUCTO'], y=df_grafico['PROMD VTA DIA JULIO'], name='Julio', marker_color='#1f4e79'))
+                    fig.add_trace(go.Bar(x=df_grafico['PRODUCTO'], y=df_grafico['PROMD VTA DIA AGOSTO'], name='Agosto', marker_color='#d95f02'))
                     fig.update_layout(barmode='group', height=500, hovermode="x unified", legend=dict(orientation="h", yanchor="bottom", y=1.02, x=0.01))
                     st.plotly_chart(fig, use_container_width=True)
                 
@@ -324,9 +324,9 @@ else:
                 st.markdown("### 📋 Detalle de Desviaciones")
                 
                 if tiene_precio:
-                    columnas_render = ['REFERENCIA INTERNA', 'PRODUCTO', 'CATEGORÍA', 'Clasificación ABC', 'PROMD VTA DIA JUNIO', 'PROMD VTA DIA JULIO', 'Porcentaje de desviación', 'Impacto_Mensual_$', 'Estado de tendencia']
+                    columnas_render = ['REFERENCIA INTERNA', 'PRODUCTO', 'CATEGORÍA', 'Clasificación ABC', 'PROMD VTA DIA JULIO', 'PROMD VTA DIA AGOSTO', 'Porcentaje de desviación', 'Impacto_Mensual_$', 'Estado de tendencia']
                 else:
-                    columnas_render = ['REFERENCIA INTERNA', 'PRODUCTO', 'CATEGORÍA', 'Clasificación ABC', 'PROMD VTA DIA JUNIO', 'PROMD VTA DIA JULIO', 'Porcentaje de desviación', 'Estado de tendencia']
+                    columnas_render = ['REFERENCIA INTERNA', 'PRODUCTO', 'CATEGORÍA', 'Clasificación ABC', 'PROMD VTA DIA JULIO', 'PROMD VTA DIA AGOSTO', 'Porcentaje de desviación', 'Estado de tendencia']
                 
                 def resaltar_tendencia(val):
                     if val == 'SUBIÓ': return 'background-color: #e2f0d9; color: #385723; font-weight: bold;'
@@ -334,8 +334,8 @@ else:
                     return ''
                 
                 formato_columnas = {
-                    'PROMD VTA DIA JUNIO': '{:,.0f}',
                     'PROMD VTA DIA JULIO': '{:,.0f}',
+                    'PROMD VTA DIA AGOSTO': '{:,.0f}',
                     'Porcentaje de desviación': '{:.2%}'
                 }
                 
