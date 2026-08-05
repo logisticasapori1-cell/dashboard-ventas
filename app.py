@@ -135,24 +135,6 @@ st.markdown("""
         border: 1px solid var(--border);
     }
 
-    /* Login card */
-    .login-wrapper {
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        min-height: 85vh;
-    }
-    .login-card {
-        background: white;
-        border-radius: 16px;
-        padding: 2.5rem 2.2rem;
-        box-shadow: 0 12px 40px rgba(26,58,92,0.12);
-        border: 1px solid #e2e8f0;
-        max-width: 420px;
-        width: 100%;
-        margin: 0 auto;
-    }
-
     /* Header de módulo */
     .module-header {
         background: linear-gradient(135deg, #1a3a5c 0%, #2c5a8a 100%);
@@ -199,13 +181,14 @@ if not st.session_state['autenticado']:
     <style>
         [data-testid="stSidebar"] {display: none;}
         [data-testid="collapsedControl"] {display: none;}
+        /* Espacio superior para centrar verticalmente el login */
+        .block-container { padding-top: 4rem !important; max-width: 480px !important; }
     </style>
     """, unsafe_allow_html=True)
 
-    st.markdown('<div class="login-wrapper"><div class="login-card">', unsafe_allow_html=True)
-
+    # Logo centrado y compacto
     if os.path.exists("logo_empresa.png"):
-        col_l, col_c, col_r = st.columns([1.2, 1.6, 1.2])
+        col_l, col_c, col_r = st.columns([1.4, 1.2, 1.4])
         with col_c:
             st.image("logo_empresa.png", use_container_width=True)
     else:
@@ -215,7 +198,7 @@ if not st.session_state['autenticado']:
         )
 
     st.markdown("""
-        <p style='text-align:center; color:#64748b; margin:0.4rem 0 1.6rem 0; font-size:0.95rem;'>
+        <p style='text-align:center; color:#64748b; margin:0.3rem 0 1.4rem 0; font-size:0.95rem;'>
             Portal de Supply Chain &amp; S&amp;OP
         </p>
     """, unsafe_allow_html=True)
@@ -224,7 +207,7 @@ if not st.session_state['autenticado']:
         st.markdown("##### 🔐 Credenciales corporativas")
         usuario = st.text_input("Usuario o Correo Institucional", placeholder="ej. gerencia.operaciones")
         contrasena = st.text_input("Contraseña del Sistema", type="password", placeholder="••••••••")
-        st.markdown("<div style='height:0.6rem'></div>", unsafe_allow_html=True)
+        st.markdown("<div style='height:0.5rem'></div>", unsafe_allow_html=True)
         boton_ingresar = st.form_submit_button("Acceder al Sistema", type="primary", use_container_width=True)
 
         if boton_ingresar:
@@ -242,13 +225,11 @@ if not st.session_state['autenticado']:
                 st.error("❌ Credenciales incorrectas. Verifique e intente de nuevo.")
 
     st.markdown("""
-        <p style='text-align:center; color:#94a3b8; font-size:0.75rem; margin-top:1.6rem; line-height:1.5;'>
+        <p style='text-align:center; color:#94a3b8; font-size:0.75rem; margin-top:1.8rem; line-height:1.5;'>
             © 2026 Sapori · Dirección de Supply Chain &amp; Operaciones<br>
             Versión 3.1 (Lógica Dinámica)
         </p>
     """, unsafe_allow_html=True)
-
-    st.markdown('</div></div>', unsafe_allow_html=True)
 
 # ==========================================
 # ENTORNO DEL SISTEMA AUTENTICADO
