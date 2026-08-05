@@ -205,7 +205,9 @@ if not st.session_state['autenticado']:
     st.markdown('<div class="login-wrapper"><div class="login-card">', unsafe_allow_html=True)
 
     if os.path.exists("logo_empresa.png"):
-        st.image("logo_empresa.png", width=500)
+        col_l, col_c, col_r = st.columns([1.2, 1.6, 1.2])
+        with col_c:
+            st.image("logo_empresa.png", use_container_width=True)
     else:
         st.markdown(
             "<h1 style='text-align:center; color:#1a3a5c; margin:0; font-size:2rem; letter-spacing:0.04em;'>SAPORI</h1>",
