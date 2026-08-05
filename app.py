@@ -188,7 +188,7 @@ if not st.session_state['autenticado']:
 
     # Logo centrado y compacto
     if os.path.exists("logo_empresa.png"):
-        col_l, col_c, col_r = st.columns([1.4, 1.2, 1.4])
+        col_l, col_c, col_r = st.columns([1.2, 1.6, 1.2])
         with col_c:
             st.image("logo_empresa.png", use_container_width=True)
     else:
