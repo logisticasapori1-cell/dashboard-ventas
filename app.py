@@ -188,7 +188,7 @@ if not st.session_state['autenticado']:
 
     # Logo centrado y compacto
     if os.path.exists("logo_empresa.png"):
-        col_l, col_c, col_r = st.columns([0.8, 2.4, 0.8])
+        col_l, col_c, col_r = st.columns([1.4, 1.2, 1.4])
         with col_c:
             st.image("logo_empresa.png", use_container_width=True)
     else:
@@ -774,20 +774,23 @@ else:
                 st.subheader(f"Tendencia de Producción · {categoria_seleccionada}")
 
                 fig = go.Figure()
-                fig.add_trace(go.Bar(
+                fig.add_trace(go.Scatter(
                     x=df_final['Mes_Filtro'],
                     y=df_final['Real'],
                     name='Producción (Unidades)',
-                    marker_color='#1a3a5c',
+                    mode='lines+markers+text',
+                    line=dict(color='#1a3a5c', width=3),
+                    marker=dict(size=9, color='#1a3a5c', line=dict(width=2, color='white')),
                     text=[f"{v:,.0f}".replace(",", ".") for v in df_final['Real']],
-                    textposition='auto'
+                    textposition='top center',
+                    textfont=dict(size=11, color='#1a3a5c')
                 ))
                 fig.update_layout(
                     height=450,
-                    margin=dict(l=20, r=20, t=20, b=20),
+                    margin=dict(l=20, r=20, t=30, b=20),
                     hovermode="x unified",
-                    yaxis=dict(title="Unidades"),
-                    xaxis=dict(title="Meses"),
+                    yaxis=dict(title="Unidades", gridcolor='#e2e8f0', zeroline=False),
+                    xaxis=dict(title="Meses", gridcolor='#f1f5f9'),
                     plot_bgcolor='rgba(0,0,0,0)',
                     paper_bgcolor='rgba(0,0,0,0)'
                 )
