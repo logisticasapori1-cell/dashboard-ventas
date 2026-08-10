@@ -839,29 +839,60 @@ else:
             unsafe_allow_html=True
         )
 
-        # --- Clave API (Groq gratuito) ---
+        # --- Clave API permanente: secrets.toml > variable de entorno > sesión ---
+        def obtener_groq_api_key():
+            # 1) Streamlit secrets (permanente y recomendado)
+            try:
+                if "GROQ_API_KEY" in st.secrets:
+                    return st.secrets["GROQ_API_KEY"]
+            except Exception:
+                pass
+            # 2) Variable de entorno del sistema
+            env_key = os.environ.get("GROQ_API_KEY", "").strip()
+            if env_key:
+                return env_key
+            # 3) Sesión temporal (fallback)
+            return st.session_state.get("groq_api_key", "")
+
         if "groq_api_key" not in st.session_state:
             st.session_state["groq_api_key"] = ""
         if "chat_messages" not in st.session_state:
             st.session_state["chat_messages"] = []
 
-        with st.expander("🔑 Configurar API de IA (Groq — gratuita)", expanded=not bool(st.session_state["groq_api_key"])):
-            st.markdown("""
-**Cómo obtener tu clave gratis (2 minutos):**
+        groq_api_key = obtener_groq_api_key()
+        clave_desde_secrets = False
+        try:
+            clave_desde_secrets = "GROQ_API_KEY" in st.secrets and bool(st.secrets["GROQ_API_KEY"])
+        except Exception:
+            clave_desde_secrets = False
+
+        if clave_desde_secrets or os.environ.get("GROQ_API_KEY"):
+            st.success("🔑 API Key cargada de forma permanente (secrets / variable de entorno).")
+        else:
+            with st.expander("🔑 Configurar API de IA (Groq — gratuita)", expanded=True):
+                st.markdown("""
+**Opción recomendada (permanente):** crea el archivo `.streamlit/secrets.toml` junto a tu proyecto:
+
+```toml
+GROQ_API_KEY = "gsk_tu_clave_aqui"
+```
+
+**Cómo obtener la clave gratis:**
 1. Entra a [https://console.groq.com](https://console.groq.com) y crea una cuenta.
 2. Ve a **API Keys** → **Create API Key**.
-3. Copia la clave y pégala abajo.
-            """)
-            api_key_input = st.text_input(
-                "API Key de Groq",
-                value=st.session_state["groq_api_key"],
-                type="password",
-                placeholder="gsk_..."
-            )
-            if st.button("Guardar clave", type="primary"):
-                st.session_state["groq_api_key"] = api_key_input.strip()
-                st.success("Clave guardada en esta sesión.")
-                st.rerun()
+3. Copia la clave y colócala en `secrets.toml` (o pégala abajo solo para esta sesión).
+                """)
+                api_key_input = st.text_input(
+                    "API Key temporal (solo esta sesión)",
+                    value=st.session_state["groq_api_key"],
+                    type="password",
+                    placeholder="gsk_..."
+                )
+                if st.button("Usar clave temporal", type="primary"):
+                    st.session_state["groq_api_key"] = api_key_input.strip()
+                    st.success("Clave temporal guardada en esta sesión.")
+                    st.rerun()
+                groq_api_key = obtener_groq_api_key()
 
         # --- Construir contexto con todos los datos del dashboard ---
         def construir_contexto_dashboard():
@@ -994,8 +1025,11 @@ else:
             return data["choices"][0]["message"]["content"]
 
         # --- UI del chat ---
-        if not st.session_state["groq_api_key"]:
-            st.warning("⚠️ Configura tu API Key de Groq en el panel de arriba para empezar a consultar.")
+        if not groq_api_key:
+            st.warning(
+                "⚠️ Configura tu API Key de forma permanente en `.streamlit/secrets.toml` "
+                "o usa una clave temporal en el panel de arriba."
+            )
         else:
             st.info(
                 "Puedes preguntar, por ejemplo: "
@@ -1022,7 +1056,7 @@ else:
                             respuesta = consultar_groq(
                                 pregunta,
                                 contexto,
-                                st.session_state["groq_api_key"]
+                                groq_api_key
                             )
                         except Exception as e:
                             respuesta = f"❌ No se pudo obtener respuesta: {e}"
