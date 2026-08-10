@@ -839,60 +839,71 @@ else:
             unsafe_allow_html=True
         )
 
-        # --- Clave API permanente: secrets.toml > variable de entorno > sesión ---
-        def obtener_groq_api_key():
-            # 1) Streamlit secrets (permanente y recomendado)
+        # --- Claves API: secrets.toml > env > sesión ---
+        def leer_secreto(nombre):
             try:
-                if "GROQ_API_KEY" in st.secrets:
-                    return st.secrets["GROQ_API_KEY"]
+                if nombre in st.secrets and st.secrets[nombre]:
+                    return str(st.secrets[nombre]).strip()
             except Exception:
                 pass
-            # 2) Variable de entorno del sistema
-            env_key = os.environ.get("GROQ_API_KEY", "").strip()
-            if env_key:
-                return env_key
-            # 3) Sesión temporal (fallback)
-            return st.session_state.get("groq_api_key", "")
+            env_val = os.environ.get(nombre, "").strip()
+            if env_val:
+                return env_val
+            return st.session_state.get(nombre.lower(), "")
 
+        if "gemini_api_key" not in st.session_state:
+            st.session_state["gemini_api_key"] = ""
         if "groq_api_key" not in st.session_state:
             st.session_state["groq_api_key"] = ""
         if "chat_messages" not in st.session_state:
             st.session_state["chat_messages"] = []
 
-        groq_api_key = obtener_groq_api_key()
-        clave_desde_secrets = False
-        try:
-            clave_desde_secrets = "GROQ_API_KEY" in st.secrets and bool(st.secrets["GROQ_API_KEY"])
-        except Exception:
-            clave_desde_secrets = False
+        gemini_api_key = leer_secreto("GEMINI_API_KEY") or st.session_state.get("gemini_api_key", "")
+        groq_api_key = leer_secreto("GROQ_API_KEY") or st.session_state.get("groq_api_key", "")
 
-        if clave_desde_secrets or os.environ.get("GROQ_API_KEY"):
-            st.success("🔑 API Key cargada de forma permanente (secrets / variable de entorno).")
+        # Preferir Gemini (más estable en plan gratis); Groq como respaldo
+        proveedor = "gemini" if gemini_api_key else ("groq" if groq_api_key else None)
+
+        if proveedor == "gemini":
+            st.success("🔑 Usando Google Gemini (clave permanente o de sesión).")
+        elif proveedor == "groq":
+            st.warning(
+                "⚠️ Usando Groq. Si ves error 403, cambia a Gemini (recomendado). "
+                "Groq a veces bloquea cuentas nuevas o regiones."
+            )
         else:
-            with st.expander("🔑 Configurar API de IA (Groq — gratuita)", expanded=True):
+            with st.expander("🔑 Configurar API de IA (recomendado: Google Gemini)", expanded=True):
                 st.markdown("""
-**Opción recomendada (permanente):** crea el archivo `.streamlit/secrets.toml` junto a tu proyecto:
+**Opción A — Google Gemini (recomendada, gratis y estable)**
+
+1. Entra a [https://aistudio.google.com/apikey](https://aistudio.google.com/apikey)
+2. Pulsa **Create API key** y copia la clave.
+3. En `.streamlit/secrets.toml` agrega:
 
 ```toml
-GROQ_API_KEY = "gsk_tu_clave_aqui"
+GEMINI_API_KEY = "AIza..."
 ```
 
-**Cómo obtener la clave gratis:**
-1. Entra a [https://console.groq.com](https://console.groq.com) y crea una cuenta.
-2. Ve a **API Keys** → **Create API Key**.
-3. Copia la clave y colócala en `secrets.toml` (o pégala abajo solo para esta sesión).
+**Opción B — Groq** (si ya la tienes y funciona):
+
+```toml
+GROQ_API_KEY = "gsk_..."
+```
                 """)
-                api_key_input = st.text_input(
-                    "API Key temporal (solo esta sesión)",
-                    value=st.session_state["groq_api_key"],
-                    type="password",
-                    placeholder="gsk_..."
-                )
-                if st.button("Usar clave temporal", type="primary"):
-                    st.session_state["groq_api_key"] = api_key_input.strip()
-                    st.success("Clave temporal guardada en esta sesión.")
-                    st.rerun()
-                groq_api_key = obtener_groq_api_key()
+                col_g, col_q = st.columns(2)
+                with col_g:
+                    g_in = st.text_input("Gemini (temporal)", type="password", placeholder="AIza...")
+                    if st.button("Usar Gemini", use_container_width=True):
+                        st.session_state["gemini_api_key"] = g_in.strip()
+                        st.rerun()
+                with col_q:
+                    q_in = st.text_input("Groq (temporal)", type="password", placeholder="gsk_...")
+                    if st.button("Usar Groq", use_container_width=True):
+                        st.session_state["groq_api_key"] = q_in.strip()
+                        st.rerun()
+            gemini_api_key = leer_secreto("GEMINI_API_KEY") or st.session_state.get("gemini_api_key", "")
+            groq_api_key = leer_secreto("GROQ_API_KEY") or st.session_state.get("groq_api_key", "")
+            proveedor = "gemini" if gemini_api_key else ("groq" if groq_api_key else None)
 
         # --- Construir contexto con todos los datos del dashboard ---
         def construir_contexto_dashboard():
@@ -1003,8 +1014,42 @@ GROQ_API_KEY = "gsk_tu_clave_aqui"
 
             return "\n".join(bloques)
 
+        def consultar_gemini(pregunta, contexto, api_key):
+            """Google Gemini API (gratis en AI Studio)."""
+            # gemini-2.0-flash es rápido y estable en el plan gratuito
+            modelos = ["gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-flash-latest"]
+            ultimo_error = None
+            for modelo in modelos:
+                url = (
+                    f"https://generativelanguage.googleapis.com/v1beta/models/"
+                    f"{modelo}:generateContent?key={api_key.strip()}"
+                )
+                payload = {
+                    "system_instruction": {"parts": [{"text": contexto}]},
+                    "contents": [{"role": "user", "parts": [{"text": pregunta}]}],
+                    "generationConfig": {
+                        "temperature": 0.2,
+                        "maxOutputTokens": 1500
+                    }
+                }
+                try:
+                    resp = requests.post(url, json=payload, timeout=60)
+                    if resp.status_code == 200:
+                        data = resp.json()
+                        partes = data["candidates"][0]["content"]["parts"]
+                        return "".join(p.get("text", "") for p in partes)
+                    ultimo_error = f"HTTP {resp.status_code} ({modelo}): {resp.text[:250]}"
+                    if resp.status_code in (400, 403) and "API key" in resp.text:
+                        break
+                except requests.RequestException as e:
+                    ultimo_error = str(e)
+            raise RuntimeError(
+                f"{ultimo_error}\n\n"
+                "Revisa tu GEMINI_API_KEY en secrets.toml. "
+                "Créala en https://aistudio.google.com/apikey"
+            )
+
         def consultar_groq(pregunta, contexto, api_key):
-            # Modelos vigentes (llama-3.3-70b-versatile se depreca el 16/08/2026)
             modelos_a_probar = [
                 "openai/gpt-oss-20b",
                 "openai/gpt-oss-120b",
@@ -1033,21 +1078,27 @@ GROQ_API_KEY = "gsk_tu_clave_aqui"
                         return data["choices"][0]["message"]["content"]
                     ultimo_error = f"HTTP {resp.status_code} ({modelo}): {resp.text[:250]}"
                     if resp.status_code == 401:
-                        break  # clave inválida: no probar más modelos
+                        break
                 except requests.RequestException as e:
                     ultimo_error = str(e)
             raise RuntimeError(
                 f"{ultimo_error}\n\n"
-                "Revisa: 1) Clave válida en secrets.toml (empieza con gsk_). "
-                "2) Crea una clave nueva en console.groq.com → API Keys. "
-                "3) Settings → Limits: que el modelo no esté bloqueado."
+                "Groq devolvió 403 en todos los modelos. Usa Gemini en su lugar "
+                "(https://aistudio.google.com/apikey) y pon GEMINI_API_KEY en secrets.toml."
             )
 
+        def consultar_ia(pregunta, contexto):
+            if proveedor == "gemini":
+                return consultar_gemini(pregunta, contexto, gemini_api_key)
+            if proveedor == "groq":
+                return consultar_groq(pregunta, contexto, groq_api_key)
+            raise RuntimeError("No hay API Key configurada.")
+
         # --- UI del chat ---
-        if not groq_api_key:
+        if not proveedor:
             st.warning(
-                "⚠️ Configura tu API Key de forma permanente en `.streamlit/secrets.toml` "
-                "o usa una clave temporal en el panel de arriba."
+                "⚠️ Configura **GEMINI_API_KEY** (recomendado) o **GROQ_API_KEY** "
+                "en `.streamlit/secrets.toml` o usa una clave temporal arriba."
             )
         else:
             st.info(
@@ -1057,7 +1108,6 @@ GROQ_API_KEY = "gsk_tu_clave_aqui"
                 "«¿Cuál fue el pico de producción?»"
             )
 
-            # Historial
             for msg in st.session_state["chat_messages"]:
                 with st.chat_message(msg["role"]):
                     st.markdown(msg["content"])
@@ -1072,11 +1122,7 @@ GROQ_API_KEY = "gsk_tu_clave_aqui"
                     with st.spinner("Analizando datos del dashboard..."):
                         try:
                             contexto = construir_contexto_dashboard()
-                            respuesta = consultar_groq(
-                                pregunta,
-                                contexto,
-                                groq_api_key
-                            )
+                            respuesta = consultar_ia(pregunta, contexto)
                         except Exception as e:
                             respuesta = f"❌ No se pudo obtener respuesta: {e}"
                     st.markdown(respuesta)
