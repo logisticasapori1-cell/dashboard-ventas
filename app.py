@@ -1015,14 +1015,43 @@ GROQ_API_KEY = "gsk_..."
             return "\n".join(bloques)
 
         def consultar_gemini(pregunta, contexto, api_key):
-            """Google Gemini API (gratis en AI Studio)."""
-            # gemini-2.0-flash es rápido y estable en el plan gratuito
-            modelos = ["gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-flash-latest"]
+            """Google Gemini API (gratis en AI Studio). Detecta modelos disponibles."""
+            api_key = api_key.strip()
+            # Modelos prioritarios vigentes (ago 2026)
+            modelos = [
+                "gemini-3.5-flash-lite",
+                "gemini-3.6-flash",
+                "gemini-3.5-flash",
+                "gemini-2.5-flash",
+                "gemini-2.5-flash-lite",
+            ]
+            # Completar con modelos que la propia API exponga
+            try:
+                list_url = f"https://generativelanguage.googleapis.com/v1beta/models?key={api_key}"
+                list_resp = requests.get(list_url, timeout=20)
+                if list_resp.status_code == 200:
+                    nombres = []
+                    for m in list_resp.json().get("models", []):
+                        name = m.get("name", "").replace("models/", "")
+                        methods = m.get("supportedGenerationMethods", [])
+                        if "generateContent" in methods and "gemini" in name and "embed" not in name:
+                            nombres.append(name)
+                    # Preferir flash/lite primero
+                    nombres_ord = sorted(
+                        nombres,
+                        key=lambda n: (0 if "flash-lite" in n else 1 if "flash" in n else 2, n)
+                    )
+                    for n in nombres_ord:
+                        if n not in modelos:
+                            modelos.append(n)
+            except Exception:
+                pass
+
             ultimo_error = None
             for modelo in modelos:
                 url = (
                     f"https://generativelanguage.googleapis.com/v1beta/models/"
-                    f"{modelo}:generateContent?key={api_key.strip()}"
+                    f"{modelo}:generateContent?key={api_key}"
                 )
                 payload = {
                     "system_instruction": {"parts": [{"text": contexto}]},
@@ -1039,7 +1068,7 @@ GROQ_API_KEY = "gsk_..."
                         partes = data["candidates"][0]["content"]["parts"]
                         return "".join(p.get("text", "") for p in partes)
                     ultimo_error = f"HTTP {resp.status_code} ({modelo}): {resp.text[:250]}"
-                    if resp.status_code in (400, 403) and "API key" in resp.text:
+                    if resp.status_code in (400, 403) and "API_KEY" in resp.text.upper():
                         break
                 except requests.RequestException as e:
                     ultimo_error = str(e)
