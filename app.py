@@ -4,6 +4,8 @@ import plotly.graph_objects as go
 import os
 import io
 import re
+import json
+import requests
 
 # ==========================================
 # CONFIGURACIÓN DE PÁGINA
@@ -246,7 +248,8 @@ else:
             [
                 "1. Control Operativo de Ventas y Forecast",
                 "2. Tablero de Desviaciones y Tendencias",
-                "3. Control y Análisis de Producción Mensual"
+                "3. Control y Análisis de Producción Mensual",
+                "4. Asistente de Consultas (IA)"
             ],
             label_visibility="collapsed"
         )
@@ -823,6 +826,214 @@ else:
                 "💡 Asegúrate de que el archivo **'Historico_Produccion_CREMIGURT.xlsx'** "
                 "esté guardado en la raíz junto al código."
             )
+
+    # =========================================================================
+    # MÓDULO 4: ASISTENTE DE CONSULTAS (IA)
+    # =========================================================================
+    elif modulo_activo == "4. Asistente de Consultas (IA)":
+        st.title("🤖 Asistente de Consultas — Supply Chain & S&OP")
+        st.caption("Pregunta en lenguaje natural sobre ventas, forecast, desviaciones y producción")
+
+        st.markdown(
+            '<div class="module-header">ASISTENTE INTELIGENTE CON DATOS DEL DASHBOARD</div>',
+            unsafe_allow_html=True
+        )
+
+        # --- Clave API (Groq gratuito) ---
+        if "groq_api_key" not in st.session_state:
+            st.session_state["groq_api_key"] = ""
+        if "chat_messages" not in st.session_state:
+            st.session_state["chat_messages"] = []
+
+        with st.expander("🔑 Configurar API de IA (Groq — gratuita)", expanded=not bool(st.session_state["groq_api_key"])):
+            st.markdown("""
+**Cómo obtener tu clave gratis (2 minutos):**
+1. Entra a [https://console.groq.com](https://console.groq.com) y crea una cuenta.
+2. Ve a **API Keys** → **Create API Key**.
+3. Copia la clave y pégala abajo.
+            """)
+            api_key_input = st.text_input(
+                "API Key de Groq",
+                value=st.session_state["groq_api_key"],
+                type="password",
+                placeholder="gsk_..."
+            )
+            if st.button("Guardar clave", type="primary"):
+                st.session_state["groq_api_key"] = api_key_input.strip()
+                st.success("Clave guardada en esta sesión.")
+                st.rerun()
+
+        # --- Construir contexto con todos los datos del dashboard ---
+        def construir_contexto_dashboard():
+            bloques = []
+            bloques.append("Eres el asistente oficial del Portal de Supply Chain & S&OP de Sapori.")
+            bloques.append("Responde siempre en español, de forma clara y ejecutiva. Usa números con separador de miles punto (ej. 1.234).")
+            bloques.append("Si no hay datos suficientes, dilo con honestidad. No inventes cifras.")
+            bloques.append(f"Parámetros de tiempo del mes: días efectivos de venta = {dias_efectivos}, días restantes = {dias_restantes}.")
+
+            # Módulo 1 — Ventas y Forecast
+            file_ventas = "VINCULO VTS BY SKU.xlsx"
+            if os.path.exists(file_ventas):
+                try:
+                    df_kpis = pd.read_excel(file_ventas, sheet_name="DASHBOARD", header=None)
+                    val_gross = pd.to_numeric(df_kpis.iloc[2, 0], errors='coerce') or 0
+                    val_net = pd.to_numeric(df_kpis.iloc[2, 1], errors='coerce') or 0
+                    val_prom_dia = pd.to_numeric(df_kpis.iloc[2, 2], errors='coerce') or 0
+                    val_pronost_mes = pd.to_numeric(df_kpis.iloc[2, 3], errors='coerce') or 0
+                    val_forecast = pd.to_numeric(df_kpis.iloc[2, 4], errors='coerce') or 0
+                    val_efficiency = df_kpis.iloc[2, 5]
+                    val_dif_units = pd.to_numeric(df_kpis.iloc[2, 6], errors='coerce') or 0
+                    val_return = pd.to_numeric(df_kpis.iloc[4, 0], errors='coerce') or 0
+                    if isinstance(val_efficiency, str):
+                        try:
+                            val_efficiency = float(val_efficiency.replace('%', '').replace(',', '.').strip())
+                        except Exception:
+                            val_efficiency = 0
+                    elif isinstance(val_efficiency, (int, float)) and val_efficiency <= 1:
+                        val_efficiency = val_efficiency * 100
+
+                    bloques.append("\n=== KPIs DE VENTAS Y FORECAST ===")
+                    bloques.append(f"Total Units Sales Gross: {val_gross:,.0f}".replace(",", "."))
+                    bloques.append(f"Total Units Sales Net: {val_net:,.0f}".replace(",", "."))
+                    bloques.append(f"Promedio Venta Diaria: {val_prom_dia:,.0f}".replace(",", "."))
+                    bloques.append(f"Pronóstico Venta Mensual: {val_pronost_mes:,.0f}".replace(",", "."))
+                    bloques.append(f"Forecast: {val_forecast:,.0f}".replace(",", "."))
+                    bloques.append(f"Forecast Efficiency: {val_efficiency:,.0f}%")
+                    bloques.append(f"Diferencia Alcance Forecast: {val_dif_units:,.0f}".replace(",", "."))
+                    bloques.append(f"Units Return (Devoluciones): {val_return:,.0f}".replace(",", "."))
+
+                    df_vts = pd.read_excel(file_ventas, sheet_name="file_ventas")
+                    # Limitar filas para no saturar el contexto
+                    muestra = df_vts.head(80)
+                    bloques.append("\n=== MUESTRA MATRIZ DE VENTAS POR SKU (primeras filas) ===")
+                    bloques.append(muestra.to_string(index=False))
+                    bloques.append(f"(Total filas en matriz: {len(df_vts)})")
+                except Exception as e:
+                    bloques.append(f"\n[No se pudo leer ventas/forecast: {e}]")
+            else:
+                bloques.append("\n[Archivo de ventas no encontrado: VINCULO VTS BY SKU.xlsx]")
+
+            # Módulo 2 — Desviaciones
+            file_desv = "Comparación de Venta Diaria por SKU (Julio vs Agosto).xlsx"
+            if os.path.exists(file_desv):
+                try:
+                    df = pd.read_excel(file_desv, sheet_name="Table 1")
+                    if 'CATEGORÍA' not in df.columns:
+                        df['CATEGORÍA'] = "Por Asignar"
+                    for col in ['PROMD VTA DIA JULIO', 'PROMD VTA DIA AGOSTO']:
+                        if col in df.columns and df[col].dtype == 'object':
+                            df[col] = (
+                                df[col].astype(str)
+                                .str.replace('.', '', regex=False)
+                                .str.replace(',', '.', regex=False)
+                                .astype(float)
+                            )
+                        if col in df.columns:
+                            df[col] = df[col].round(0).astype(int)
+
+                    total_skus = len(df)
+                    subio = len(df[df['Estado de tendencia'] == 'SUBIÓ']) if 'Estado de tendencia' in df.columns else 0
+                    bajo = len(df[df['Estado de tendencia'] == 'BAJO']) if 'Estado de tendencia' in df.columns else 0
+
+                    bloques.append("\n=== DESVIACIONES JULIO VS AGOSTO ===")
+                    bloques.append(f"Total SKUs: {total_skus}")
+                    bloques.append(f"SKUs en alza (SUBIÓ): {subio}")
+                    bloques.append(f"SKUs en alerta (BAJO): {bajo}")
+
+                    cols_pref = [c for c in [
+                        'REFERENCIA INTERNA', 'PRODUCTO', 'CATEGORÍA',
+                        'PROMD VTA DIA JULIO', 'PROMD VTA DIA AGOSTO',
+                        'Porcentaje de desviación', 'Estado de tendencia'
+                    ] if c in df.columns]
+                    muestra_desv = df[cols_pref].head(60)
+                    bloques.append("\n=== DETALLE DESVIACIONES (muestra) ===")
+                    bloques.append(muestra_desv.to_string(index=False))
+                except Exception as e:
+                    bloques.append(f"\n[No se pudo leer desviaciones: {e}]")
+            else:
+                bloques.append("\n[Archivo de desviaciones no encontrado]")
+
+            # Módulo 3 — Producción
+            file_prod = "Historico_Produccion_CREMIGURT.xlsx"
+            if os.path.exists(file_prod):
+                try:
+                    xls = pd.ExcelFile(file_prod)
+                    bloques.append("\n=== PRODUCCIÓN MENSUAL POR CATEGORÍA ===")
+                    bloques.append(f"Hojas/categorías disponibles: {', '.join(xls.sheet_names)}")
+                    for hoja in xls.sheet_names[:8]:  # límite de hojas
+                        df_h = pd.read_excel(xls, sheet_name=hoja)
+                        # Intento resumido: primeras filas
+                        bloques.append(f"\n--- Categoría: {hoja} ---")
+                        bloques.append(df_h.head(15).to_string(index=False))
+                except Exception as e:
+                    bloques.append(f"\n[No se pudo leer producción: {e}]")
+            else:
+                bloques.append("\n[Archivo de producción no encontrado: Historico_Produccion_CREMIGURT.xlsx]")
+
+            return "\n".join(bloques)
+
+        def consultar_groq(pregunta, contexto, api_key):
+            url = "https://api.groq.com/openai/v1/chat/completions"
+            headers = {
+                "Authorization": f"Bearer {api_key}",
+                "Content-Type": "application/json"
+            }
+            payload = {
+                "model": "llama-3.3-70b-versatile",
+                "messages": [
+                    {"role": "system", "content": contexto},
+                    {"role": "user", "content": pregunta}
+                ],
+                "temperature": 0.2,
+                "max_tokens": 1500
+            }
+            resp = requests.post(url, headers=headers, json=payload, timeout=60)
+            if resp.status_code != 200:
+                raise RuntimeError(f"Error API ({resp.status_code}): {resp.text[:300]}")
+            data = resp.json()
+            return data["choices"][0]["message"]["content"]
+
+        # --- UI del chat ---
+        if not st.session_state["groq_api_key"]:
+            st.warning("⚠️ Configura tu API Key de Groq en el panel de arriba para empezar a consultar.")
+        else:
+            st.info(
+                "Puedes preguntar, por ejemplo: "
+                "«¿Cuál es el forecast efficiency?», "
+                "«Lista los SKUs que bajaron», "
+                "«¿Cuál fue el pico de producción?»"
+            )
+
+            # Historial
+            for msg in st.session_state["chat_messages"]:
+                with st.chat_message(msg["role"]):
+                    st.markdown(msg["content"])
+
+            pregunta = st.chat_input("Escribe tu consulta sobre el dashboard...")
+            if pregunta:
+                st.session_state["chat_messages"].append({"role": "user", "content": pregunta})
+                with st.chat_message("user"):
+                    st.markdown(pregunta)
+
+                with st.chat_message("assistant"):
+                    with st.spinner("Analizando datos del dashboard..."):
+                        try:
+                            contexto = construir_contexto_dashboard()
+                            respuesta = consultar_groq(
+                                pregunta,
+                                contexto,
+                                st.session_state["groq_api_key"]
+                            )
+                        except Exception as e:
+                            respuesta = f"❌ No se pudo obtener respuesta: {e}"
+                    st.markdown(respuesta)
+                st.session_state["chat_messages"].append({"role": "assistant", "content": respuesta})
+
+            col_a, col_b = st.columns([1, 4])
+            with col_a:
+                if st.button("🗑️ Limpiar chat"):
+                    st.session_state["chat_messages"] = []
+                    st.rerun()
 
     # =========================================================================
     # PIE DE PÁGINA GLOBAL
