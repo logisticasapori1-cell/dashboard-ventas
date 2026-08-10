@@ -1004,25 +1004,44 @@ GROQ_API_KEY = "gsk_tu_clave_aqui"
             return "\n".join(bloques)
 
         def consultar_groq(pregunta, contexto, api_key):
+            # Modelos vigentes (llama-3.3-70b-versatile se depreca el 16/08/2026)
+            modelos_a_probar = [
+                "openai/gpt-oss-20b",
+                "openai/gpt-oss-120b",
+                "llama-3.1-8b-instant",
+            ]
             url = "https://api.groq.com/openai/v1/chat/completions"
             headers = {
-                "Authorization": f"Bearer {api_key}",
+                "Authorization": f"Bearer {api_key.strip()}",
                 "Content-Type": "application/json"
             }
-            payload = {
-                "model": "llama-3.3-70b-versatile",
-                "messages": [
-                    {"role": "system", "content": contexto},
-                    {"role": "user", "content": pregunta}
-                ],
-                "temperature": 0.2,
-                "max_tokens": 1500
-            }
-            resp = requests.post(url, headers=headers, json=payload, timeout=60)
-            if resp.status_code != 200:
-                raise RuntimeError(f"Error API ({resp.status_code}): {resp.text[:300]}")
-            data = resp.json()
-            return data["choices"][0]["message"]["content"]
+            ultimo_error = None
+            for modelo in modelos_a_probar:
+                payload = {
+                    "model": modelo,
+                    "messages": [
+                        {"role": "system", "content": contexto},
+                        {"role": "user", "content": pregunta}
+                    ],
+                    "temperature": 0.2,
+                    "max_tokens": 1500
+                }
+                try:
+                    resp = requests.post(url, headers=headers, json=payload, timeout=60)
+                    if resp.status_code == 200:
+                        data = resp.json()
+                        return data["choices"][0]["message"]["content"]
+                    ultimo_error = f"HTTP {resp.status_code} ({modelo}): {resp.text[:250]}"
+                    if resp.status_code == 401:
+                        break  # clave inválida: no probar más modelos
+                except requests.RequestException as e:
+                    ultimo_error = str(e)
+            raise RuntimeError(
+                f"{ultimo_error}\n\n"
+                "Revisa: 1) Clave válida en secrets.toml (empieza con gsk_). "
+                "2) Crea una clave nueva en console.groq.com → API Keys. "
+                "3) Settings → Limits: que el modelo no esté bloqueado."
+            )
 
         # --- UI del chat ---
         if not groq_api_key:
