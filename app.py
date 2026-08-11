@@ -34,7 +34,7 @@ with st.sidebar:
             "1. Control Operativo de Ventas y Forecast",
             "2. Tablero de Desviaciones y Tendencias",
             "3. Control y Análisis de Producción Mensual",
-            "4. Asistente de Consultas (IA)"
+            "4. Asistente de Consultas (IA)",
             "5. Cierre de Inventario Valorizado"
         ],
         label_visibility="collapsed"
