@@ -61,7 +61,8 @@ def renderizar():
         # Excluimos nulos para la suma total
         valor_total = df_filtrado["Valor $"].sum(skipna=True)
         
-        kpi1, kpi2, kpi3 = st.columns(3)
+        # Aumentamos a 4 columnas para que quepan todas las categorías
+        kpi1, kpi2, kpi3, kpi4 = st.columns(4)
         
         # Función rápida para formato monetario corporativo (punto para miles, coma para decimales)
         formato_dinero = lambda x: f"${x:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
@@ -70,9 +71,12 @@ def renderizar():
         
         if filtro_categoria == "Todas las Categorías":
             mp_total = df_filtrado[df_filtrado["Categoría"] == "MATERIA PRIMA"]["Valor $"].sum(skipna=True)
+            me_total = df_filtrado[df_filtrado["Categoría"] == "MATERIAL EMPAQUE"]["Valor $"].sum(skipna=True)
             pt_total = df_filtrado[df_filtrado["Categoría"] == "PRODUCTO TERMINADO"]["Valor $"].sum(skipna=True)
+            
             kpi2.metric("Total Materia Prima", formato_dinero(mp_total))
-            kpi3.metric("Total Producto Terminado", formato_dinero(pt_total))
+            kpi3.metric("Total Material Empaque", formato_dinero(me_total))
+            kpi4.metric("Total Producto Terminado", formato_dinero(pt_total))
         else:
             promedio = df_filtrado["Valor $"].mean(skipna=True)
             kpi2.metric("Promedio en el Período", formato_dinero(promedio) if pd.notna(promedio) else "$0,00")
