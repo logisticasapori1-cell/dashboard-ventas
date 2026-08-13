@@ -5,7 +5,7 @@ import os
 
 def renderizar():
     st.title("🛡️ Salud Financiera y Riesgo de Suministro")
-    st.caption("Capital Inmovilizado · Fill Rate · Riesgo Operativo (Quiebre de Stock)")
+    st.caption("Activos Inventario · Fill Rate · Riesgo Operativo (Quiebre de Stock)")
 
     file_path = "data/Kpis Financieros Inventario.xlsx"
 
@@ -40,7 +40,7 @@ def renderizar():
         st.markdown('<div class="module-header">VISIÓN GLOBAL DE RIESGO Y LIQUIDEZ</div>', unsafe_allow_html=True)
         
         col1, col2, col3 = st.columns(3)
-        col1.metric("Capital Inmovilizado (Tiempo Real)", formato_dinero(capital_inmovilizado))
+        col1.metric("Capital Activos Inventario (Tiempo Real)", formato_dinero(capital_inmovilizado))
         
         # Alerta visual inteligente
         alerta_str = "- ⚠️ Riesgo Crítico Suministro" if fill_rate_global < 0.6 else "+ 🟢 Nivel Aceptable"
@@ -50,7 +50,7 @@ def renderizar():
 
         # --- SECCIÓN 3: GRÁFICOS DE CAPITAL ALLOCATION ---
         st.markdown("---")
-        st.subheader("🍩 Estructura del Capital Inmovilizado")
+        st.subheader("Estructura de Activos Inventario")
         
         val_inicio_mp = pd.to_numeric(df_raw.iloc[18, 1], errors='coerce')
         val_inicio_me = pd.to_numeric(df_raw.iloc[19, 1], errors='coerce')
@@ -70,7 +70,7 @@ def renderizar():
 
         # --- SECCIÓN 4: SUPPLIER FILL RATE ---
         st.markdown("---")
-        st.subheader("🚚 Rendimiento de Proveedores (Fill Rate)")
+        st.subheader("🚚 Presupuesto Compras MPS (Proyección 100% vs Real)")
         
         fill_mp = pd.to_numeric(df_raw.iloc[13, 3], errors='coerce')
         fill_me = pd.to_numeric(df_raw.iloc[14, 3], errors='coerce')
