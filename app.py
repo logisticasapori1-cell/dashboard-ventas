@@ -8,6 +8,7 @@ import modulos.m2_desviaciones as m2
 import modulos.m3_produccion as m3
 import modulos.m4_asistente_ia as m4
 import modulos.m5_cierre_inventario as m5
+import modulos.m6_salud_financiera as m6
 
 # ==========================================
 # 1. CONFIGURACIÓN DE PÁGINA Y ESTILOS
@@ -35,7 +36,8 @@ with st.sidebar:
             "2. Tablero de Desviaciones y Tendencias",
             "3. Control y Análisis de Producción Mensual",
             "4. Asistente de Consultas (IA)",
-            "5. Cierre de Inventario Valorizado"
+            "5. Cierre de Inventario Valorizado",
+            "6. Salud Financiera y Riesgo Suministro"
         ],
         label_visibility="collapsed"
     )
@@ -69,6 +71,8 @@ elif modulo_activo == "4. Asistente de Consultas (IA)":
 elif modulo_activo == "5. Cierre de Inventario Valorizado":
     m5.renderizar()
 
+elif modulo_activo == "6. Salud Financiera y Riesgo Suministro":
+    m6.renderizar()
 # ==========================================
 # 5. PIE DE PÁGINA GLOBAL
 # ==========================================
