@@ -39,14 +39,11 @@ def renderizar():
         # --- SECCIÓN 1: CABECERA ESTRATÉGICA ---
         st.markdown('<div class="module-header">VISIÓN GLOBAL DE RIESGO Y LIQUIDEZ</div>', unsafe_allow_html=True)
         
-        col1, col2, col3 = st.columns(3)
-        col1.metric("Capital Activos Inventario (Tiempo Real)", formato_dinero(capital_inmovilizado))
+        # Reducimos a 2 columnas para centrar perfectamente los 2 KPIs restantes
+        col1, col2 = st.columns(2)
         
-        # Alerta visual inteligente
-        alerta_str = "- ⚠️ Riesgo Crítico Suministro" if fill_rate_global < 0.6 else "+ 🟢 Nivel Aceptable"
-        col2.metric("Alerta Fill Rate Global", f"{fill_rate_global:.2%}", alerta_str, delta_color="normal")
-        
-        col3.metric("Cobertura Global Promedio", f"{dio_global:.1f} Días", "Días de Inventario (DIO)", delta_color="off")
+        col1.metric("Capital Inmovilizado (Tiempo Real)", formato_dinero(capital_inmovilizado))
+        col2.metric("Cobertura Global Promedio", f"{dio_global:.1f} Días", "Días de Inventario (DIO)", delta_color="off")
 
         # --- SECCIÓN 3: GRÁFICOS DE CAPITAL ALLOCATION ---
         st.markdown("---")
