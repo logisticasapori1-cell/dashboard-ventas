@@ -48,8 +48,8 @@ def renderizar():
         st.markdown('<div class="module-header">SÍNTESIS GLOBAL DE CAPITAL E INVENTARIO</div>', unsafe_allow_html=True)
         
         c1, c2 = st.columns(2)
-        c1.metric("Valor Total Inmovilizado Red (USD)", formato_dinero(val_total))
-        c2.metric("Unidades Totales en Red", formato_entero(inv_total))
+        c1.metric("Valor Total Nacional (USD)", formato_dinero(val_total))
+        c2.metric("Unidades Totales en Inventario PT Nacional", formato_entero(inv_total))
         
         st.markdown("---")
         
