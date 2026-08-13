@@ -119,14 +119,62 @@ def renderizar():
         
         df_movimientos = pd.DataFrame(data_mov)
         
+        # --- NUEVO: GRÁFICO DE BARRAS AGRUPADAS (FLUJO DEL MES) ---
+        fig_mov = go.Figure()
+        
+        # 1. Recepción (Entradas de Capital) - Verde
+        fig_mov.add_trace(go.Bar(
+            x=df_movimientos['Categoría'],
+            y=df_movimientos['Recepción/Compras del Mes'],
+            name='Recepción / Compras',
+            marker_color='#16a34a', 
+            text=[f"${v:,.0f}".replace(",", ".") for v in df_movimientos['Recepción/Compras del Mes']],
+            textposition='auto'
+        ))
+        
+        # 2. Consumo (Salidas de Capital) - Rojo
+        fig_mov.add_trace(go.Bar(
+            x=df_movimientos['Categoría'],
+            y=df_movimientos['Consumo del Mes'],
+            name='Consumo del Mes',
+            marker_color='#dc2626', 
+            text=[f"${v:,.0f}".replace(",", ".") for v in df_movimientos['Consumo del Mes']],
+            textposition='auto'
+        ))
+
+        # 3. Inventario Disponible (Saldo Final) - Azul Sapori
+        fig_mov.add_trace(go.Bar(
+            x=df_movimientos['Categoría'],
+            y=df_movimientos['Inventario Disponible'],
+            name='Inventario Disponible',
+            marker_color='#1a3a5c', 
+            text=[f"${v:,.0f}".replace(",", ".") for v in df_movimientos['Inventario Disponible']],
+            textposition='auto'
+        ))
+        
+        fig_mov.update_layout(
+            barmode='group',
+            height=420,
+            margin=dict(t=30, b=20, l=20, r=20),
+            hovermode="x unified",
+            legend=dict(orientation="h", yanchor="bottom", y=1.02, x=0.01),
+            plot_bgcolor='rgba(0,0,0,0)',
+            paper_bgcolor='rgba(0,0,0,0)',
+            yaxis=dict(title="Valor en USD ($)", gridcolor='#e2e8f0', zeroline=False)
+        )
+        
+        st.plotly_chart(fig_mov, use_container_width=True)
+        st.markdown("<br>", unsafe_allow_html=True)
+        # -----------------------------------------------------------
+
         # 4. Semáforo para la columna de tendencia
         def color_tendencia(val):
             val_str = str(val)
             if val_str.startswith('+'):
-                return 'color: #0d0d0c; font-weight: bold; background-color: #c2c2c0;' # Verde (Subió)
+                return 'color: #385723; font-weight: bold; background-color: #e2f0d9;' # Verde (Subió)
             elif val_str.startswith('-'):
-                return 'color: #0d0d0c; font-weight: bold; background-color: #c2c2c0;' # Rojo/Naranja (Bajó)
-            return ''   
+                return 'color: #c65911; font-weight: bold; background-color: #fce4d6;' # Naranja (Bajó)
+            return ''
             
         # 5. Renderizado de la tabla final
         st.dataframe(
