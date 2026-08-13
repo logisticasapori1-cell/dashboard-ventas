@@ -171,9 +171,9 @@ def renderizar():
         def color_tendencia(val):
             val_str = str(val)
             if val_str.startswith('+'):
-                return 'color: #385723; font-weight: bold; background-color: #e2f0d9;' # Verde (Subió)
+                return 'color: #0a0a0a; font-weight: bold; background-color: #c2c2c0;' # Verde (Subió)
             elif val_str.startswith('-'):
-                return 'color: #c65911; font-weight: bold; background-color: #fce4d6;' # Naranja (Bajó)
+                return 'color: #0a0a0a; font-weight: bold; background-color: #c2c2c0;' # Naranja (Bajó)
             return ''
             
         # 5. Renderizado de la tabla final
