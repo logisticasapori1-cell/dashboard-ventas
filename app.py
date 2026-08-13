@@ -9,6 +9,7 @@ import modulos.m3_produccion as m3
 import modulos.m4_asistente_ia as m4
 import modulos.m5_cierre_inventario as m5
 import modulos.m6_salud_financiera as m6
+import modulos.m7_control_multicentro as m7
 
 # ==========================================
 # 1. CONFIGURACIÓN DE PÁGINA Y ESTILOS
@@ -37,7 +38,8 @@ with st.sidebar:
             "3. Control y Análisis de Producción Mensual",
             "4. Asistente de Consultas (IA)",
             "5. Cierre de Inventario Valorizado",
-            "6. Salud Financiera y Riesgo Suministro"
+            "6. Salud Financiera y Riesgo Suministro",
+            "7. Control Integral Multicentro (SICI)"
         ],
         label_visibility="collapsed"
     )
@@ -73,6 +75,9 @@ elif modulo_activo == "5. Cierre de Inventario Valorizado":
 
 elif modulo_activo == "6. Salud Financiera y Riesgo Suministro":
     m6.renderizar()
+
+elif modulo_activo == "7. Control Integral Multicentro (SICI)":
+    m7.renderizar()
 # ==========================================
 # 5. PIE DE PÁGINA GLOBAL
 # ==========================================
