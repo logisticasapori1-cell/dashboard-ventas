@@ -42,7 +42,7 @@ def renderizar():
         # Reducimos a 2 columnas para centrar perfectamente los 2 KPIs restantes
         col1, col2 = st.columns(2)
         
-        col1.metric("Capital Inmovilizado (Tiempo Real)", formato_dinero(capital_inmovilizado))
+        col1.metric("Capital de Activos Inventario", formato_dinero(capital_inmovilizado))
         col2.metric("Cobertura Global Promedio", f"{dio_global:.1f} Días", "Días de Inventario (DIO)", delta_color="off")
 
         # --- SECCIÓN 3: GRÁFICOS DE CAPITAL ALLOCATION ---
