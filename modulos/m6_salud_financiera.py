@@ -89,21 +89,53 @@ def renderizar():
         st.markdown("---")
         st.subheader("📋 Conciliación: Movimientos del Mes Actual")
 
+        # 1. Cálculos de variación (Disponible Actual vs Valor Inicial)
+        var_mp_usd = inv_mp_tr - val_inicio_mp
+        var_me_usd = inv_me_tr - val_inicio_me
+        
+        var_mp_pct = (var_mp_usd / val_inicio_mp) if val_inicio_mp > 0 else 0
+        var_me_pct = (var_me_usd / val_inicio_me) if val_inicio_me > 0 else 0
+        
+        # 2. Función para formatear el texto de la tendencia ej: "+$13.602,04 (+9.05%)"
+        def format_tendencia(usd, pct):
+            if pd.isna(usd) or pd.isna(pct):
+                return "Sin datos"
+            signo = "+" if usd > 0 else "-"
+            # Formateamos el valor absoluto con el estándar de Sapori (puntos en miles)
+            usd_str = f"{abs(usd):,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+            return f"{signo}${usd_str} ({signo}{abs(pct):.2%})"
+            
+        tendencia_mp = format_tendencia(var_mp_usd, var_mp_pct)
+        tendencia_me = format_tendencia(var_me_usd, var_me_pct)
+
+        # 3. Construcción del DataFrame actualizado
         data_mov = {
             "Categoría": ["MATERIA PRIMA", "MATERIAL EMPAQUE"],
             "Inventario Disponible": [inv_mp_tr, inv_me_tr],
             "Recepción/Compras del Mes": [recepcion_mp, recepcion_me],
-            "Consumo del Mes": [pd.to_numeric(df_raw.iloc[33, 3], errors='coerce'), pd.to_numeric(df_raw.iloc[34, 3], errors='coerce')]
+            "Consumo del Mes": [pd.to_numeric(df_raw.iloc[33, 3], errors='coerce'), pd.to_numeric(df_raw.iloc[34, 3], errors='coerce')],
+            "Tendencia vs Inicio Mes": [tendencia_mp, tendencia_me]
         }
         
+        df_movimientos = pd.DataFrame(data_mov)
+        
+        # 4. Semáforo para la columna de tendencia
+        def color_tendencia(val):
+            val_str = str(val)
+            if val_str.startswith('+'):
+                return 'color: #385723; font-weight: bold; background-color: #e2f0d9;' # Verde (Subió)
+            elif val_str.startswith('-'):
+                return 'color: #c65911; font-weight: bold; background-color: #fce4d6;' # Rojo/Naranja (Bajó)
+            return ''
+            
+        # 5. Renderizado de la tabla final
         st.dataframe(
-            pd.DataFrame(data_mov).style.format({
+            df_movimientos.style.map(color_tendencia, subset=['Tendencia vs Inicio Mes']).format({
                 "Inventario Disponible": formato_dinero,
                 "Recepción/Compras del Mes": formato_dinero,
                 "Consumo del Mes": formato_dinero
             }),
             use_container_width=True, hide_index=True
         )
-
     except Exception as e:
         st.error(f"Error procesando los KPIs Financieros: {e}")
