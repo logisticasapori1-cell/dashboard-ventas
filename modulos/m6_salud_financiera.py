@@ -5,7 +5,7 @@ import os
 
 def renderizar():
     st.title("🛡️ Salud Financiera y Riesgo de Suministro")
-    st.caption("Capital Inmovilizado · Fill Rate · Riesgo Operativo (Quiebre de Stock)")
+    st.caption("Capital Activos Inventario · Fill Rate · Riesgo Operativo (Quiebre de Stock)")
 
     file_path = "data/Kpis Financieros Inventario.xlsx"
 
@@ -40,7 +40,7 @@ def renderizar():
         st.markdown('<div class="module-header">VISIÓN GLOBAL DE RIESGO Y LIQUIDEZ</div>', unsafe_allow_html=True)
         
         col1, col2, col3 = st.columns(3)
-        col1.metric("Capital Inmovilizado (Tiempo Real)", formato_dinero(capital_inmovilizado))
+        col1.metric("Capital de Activos Inventario (Tiempo Real)", formato_dinero(capital_inmovilizado))
         
         # Alerta visual inteligente
         alerta_str = "- ⚠️ Riesgo Crítico Suministro" if fill_rate_global < 0.6 else "+ 🟢 Nivel Aceptable"
@@ -48,45 +48,9 @@ def renderizar():
         
         col3.metric("Cobertura Global Promedio", f"{dio_global:.1f} Días", "Días de Inventario (DIO)", delta_color="off")
 
-        # --- SECCIÓN 2: RIESGO OPERATIVO Y SEMÁFOROS ---
-        st.markdown("---")
-        st.subheader("🚦 Riesgo Operativo y Semáforo de Cobertura")
-        
-        data_riesgo = {
-            "Categoría": ["MATERIA PRIMA", "MATERIAL EMPAQUE"],
-            "Inventario Disponible": [inv_mp_tr, inv_me_tr],
-            "Consumo Diario": [cons_mp_tr, cons_me_tr],
-            "Lead Time Proveedor (Días)": [pd.to_numeric(df_raw.iloc[28, 2], errors='coerce'), pd.to_numeric(df_raw.iloc[29, 2], errors='coerce')],
-            "DIO Actual": [pd.to_numeric(df_raw.iloc[8, 3], errors='coerce'), pd.to_numeric(df_raw.iloc[9, 3], errors='coerce')],
-            "Margen de Seguridad (Días)": [pd.to_numeric(df_raw.iloc[28, 3], errors='coerce'), pd.to_numeric(df_raw.iloc[29, 3], errors='coerce')]
-        }
-        df_riesgo = pd.DataFrame(data_riesgo)
-
-        def aplicar_semaforo(val):
-            try:
-                v = float(val)
-                if v > 5:
-                    return 'background-color: #e2f0d9; color: #385723; font-weight: bold;' # Verde
-                elif v > 0:
-                    return 'background-color: #fff2cc; color: #7f6000; font-weight: bold;' # Amarillo
-                else:
-                    return 'background-color: #fce4d6; color: #c65911; font-weight: bold;' # Rojo
-            except: return ''
-
-        st.dataframe(
-            df_riesgo.style.map(aplicar_semaforo, subset=['Margen de Seguridad (Días)']).format({
-                "Inventario Disponible": formato_dinero,
-                "Consumo Diario": formato_dinero,
-                "Lead Time Proveedor (Días)": "{:.0f}",
-                "DIO Actual": "{:.2f}",
-                "Margen de Seguridad (Días)": "{:.2f}"
-            }),
-            use_container_width=True, hide_index=True
-        )
-
         # --- SECCIÓN 3: GRÁFICOS DE CAPITAL ALLOCATION ---
         st.markdown("---")
-        st.subheader("🍩 Estructura del Capital Inmovilizado")
+        st.subheader("Estructura de Activos Inventario")
         
         val_inicio_mp = pd.to_numeric(df_raw.iloc[18, 1], errors='coerce')
         val_inicio_me = pd.to_numeric(df_raw.iloc[19, 1], errors='coerce')
@@ -106,7 +70,7 @@ def renderizar():
 
         # --- SECCIÓN 4: SUPPLIER FILL RATE ---
         st.markdown("---")
-        st.subheader("🚚 Rendimiento de Proveedores (Fill Rate)")
+        st.subheader("🚚 Servicio de Proveedores (PROYECCION 100% VS REAL)")
         
         fill_mp = pd.to_numeric(df_raw.iloc[13, 3], errors='coerce')
         fill_me = pd.to_numeric(df_raw.iloc[14, 3], errors='coerce')
