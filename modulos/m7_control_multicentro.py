@@ -47,28 +47,22 @@ def renderizar():
         # --- SECCIÓN 1: CABECERA MACRO ---
         st.markdown('<div class="module-header">SÍNTESIS GLOBAL DE CAPITAL E INVENTARIO</div>', unsafe_allow_html=True)
         
-        # Dividimos en 5 columnas para mostrar el Total y el desglose por CEDIS
-        c_tot, c_ccs, c_car, c_ori, c_lar = st.columns(5)
+        # Rediseño robusto: Matriz 2x3 para evitar aplastamiento visual en pantallas de laptop
+        # Fila 1: Total Global y principales CEDIS (Caracas / Carabobo)
+        fila1_col1, fila1_col2, fila1_col3 = st.columns(3)
         
-        # Columna 1: Total Red
-        c_tot.metric("TOTAL RED (USD)", formato_dinero(val_total))
-        c_tot.metric("Unidades Totales", formato_entero(inv_total))
+        fila1_col1.metric("🌍 TOTAL RED (USD)", formato_dinero(val_total), f"{formato_entero(inv_total)} Unds Físicas")
+        fila1_col2.metric("🏢 Caracas (USD)", formato_dinero(val_ccs), f"{formato_entero(inv_ccs)} Unds")
+        fila1_col3.metric("🏭 Carabobo (USD)", formato_dinero(val_car), f"{formato_entero(inv_car)} Unds")
         
-        # Columna 2: Caracas
-        c_ccs.metric("🏢 Caracas (USD)", formato_dinero(val_ccs))
-        c_ccs.metric("Unds. Caracas", formato_entero(inv_ccs))
+        st.markdown("<br>", unsafe_allow_html=True) # Espacio entre filas
         
-        # Columna 3: Carabobo
-        c_car.metric("🏭 Carabobo (USD)", formato_dinero(val_car))
-        c_car.metric("Unds. Carabobo", formato_entero(inv_car))
+        # Fila 2: CEDIS restantes (Oriente / Lara)
+        fila2_col1, fila2_col2, fila2_col3 = st.columns(3)
         
-        # Columna 4: Oriente
-        c_ori.metric("🌅 Oriente (USD)", formato_dinero(val_ori))
-        c_ori.metric("Unds. Oriente", formato_entero(inv_ori))
-        
-        # Columna 5: Lara
-        c_lar.metric("🎸 Lara (USD)", formato_dinero(val_lar))
-        c_lar.metric("Unds. Lara", formato_entero(inv_lar))
+        fila2_col1.metric("🌅 Oriente (USD)", formato_dinero(val_ori), f"{formato_entero(inv_ori)} Unds")
+        fila2_col2.metric("🎸 Lara (USD)", formato_dinero(val_lar), f"{formato_entero(inv_lar)} Unds")
+        # Dejamos la fila2_col3 vacía para mantener la proporción de la cuadrícula
         
         st.markdown("---")
         
