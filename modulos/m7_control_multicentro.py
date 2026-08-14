@@ -47,9 +47,28 @@ def renderizar():
         # --- SECCIÓN 1: CABECERA MACRO ---
         st.markdown('<div class="module-header">SÍNTESIS GLOBAL DE CAPITAL E INVENTARIO</div>', unsafe_allow_html=True)
         
-        c1, c2 = st.columns(2)
-        c1.metric("Valor Total Nacional (USD)", formato_dinero(val_total))
-        c2.metric("Unidades Totales en Inventario PT Nacional", formato_entero(inv_total))
+        # Dividimos en 5 columnas para mostrar el Total y el desglose por CEDIS
+        c_tot, c_ccs, c_car, c_ori, c_lar = st.columns(5)
+        
+        # Columna 1: Total Red
+        c_tot.metric("TOTAL RED (USD)", formato_dinero(val_total))
+        c_tot.metric("Unidades Totales", formato_entero(inv_total))
+        
+        # Columna 2: Caracas
+        c_ccs.metric("🏢 Caracas (USD)", formato_dinero(val_ccs))
+        c_ccs.metric("Unds. Caracas", formato_entero(inv_ccs))
+        
+        # Columna 3: Carabobo
+        c_car.metric("🏭 Carabobo (USD)", formato_dinero(val_car))
+        c_car.metric("Unds. Carabobo", formato_entero(inv_car))
+        
+        # Columna 4: Oriente
+        c_ori.metric("🌅 Oriente (USD)", formato_dinero(val_ori))
+        c_ori.metric("Unds. Oriente", formato_entero(inv_ori))
+        
+        # Columna 5: Lara
+        c_lar.metric("🎸 Lara (USD)", formato_dinero(val_lar))
+        c_lar.metric("Unds. Lara", formato_entero(inv_lar))
         
         st.markdown("---")
         
