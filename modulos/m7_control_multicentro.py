@@ -51,8 +51,8 @@ def renderizar():
         # Fila 1: Total Global y principales CEDIS (Caracas / Carabobo)
         fila1_col1, fila1_col2, fila1_col3 = st.columns(3)
         
-        fila1_col1.metric("🌍 TOTAL RED (USD)", formato_dinero(val_total), f"{formato_entero(inv_total)} Unds Físicas")
-        fila1_col2.metric("🏢 Caracas (USD)", formato_dinero(val_ccs), f"{formato_entero(inv_ccs)} Unds")
+        fila1_col1.metric("🌍 TOTAL CIDES (USD)", formato_dinero(val_total), f"{formato_entero(inv_total)} Unds Físicas")
+        fila1_col2.metric("🏭 Caracas (USD)", formato_dinero(val_ccs), f"{formato_entero(inv_ccs)} Unds")
         fila1_col3.metric("🏭 Carabobo (USD)", formato_dinero(val_car), f"{formato_entero(inv_car)} Unds")
         
         st.markdown("<br>", unsafe_allow_html=True) # Espacio entre filas
@@ -60,8 +60,8 @@ def renderizar():
         # Fila 2: CEDIS restantes (Oriente / Lara)
         fila2_col1, fila2_col2, fila2_col3 = st.columns(3)
         
-        fila2_col1.metric("🌅 Oriente (USD)", formato_dinero(val_ori), f"{formato_entero(inv_ori)} Unds")
-        fila2_col2.metric("🎸 Lara (USD)", formato_dinero(val_lar), f"{formato_entero(inv_lar)} Unds")
+        fila2_col1.metric("🏭 Oriente (USD)", formato_dinero(val_ori), f"{formato_entero(inv_ori)} Unds")
+        fila2_col2.metric("🏭 Lara (USD)", formato_dinero(val_lar), f"{formato_entero(inv_lar)} Unds")
         # Dejamos la fila2_col3 vacía para mantener la proporción de la cuadrícula
         
         st.markdown("---")
