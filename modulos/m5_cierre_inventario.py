@@ -67,8 +67,8 @@ def renderizar():
         # 4.1. Tarjeta Principal (Padre) - Cúspide
         st.markdown(f"""
             <div style="background-color: #1a3a5c; padding: 25px; border-radius: 8px; border: 1px solid #e2e8f0; box-shadow: 2px 2px 10px rgba(0,0,0,0.1); text-align: center; margin-bottom: 25px;">
-                <p style="margin:0; color: #ffffff; font-size: 14px; font-weight: bold; letter-spacing: 1.5px;">VALOR TOTAL DEL INVENTARIO</p>
-                <h1 style="margin:0; color: white; font-size: 42px; font-weight: 800;">{formato_dinero(valor_total)}</h1>
+                <p style="margin:0; color: #94a3b8; font-size: 14px; font-weight: bold; letter-spacing: 1.5px;">VALOR TOTAL DEL INVENTARIO</p>
+                <div style="margin:0; color: #ffffff !important; font-size: 42px; font-weight: 800;">{formato_dinero(valor_total)}</div>
             </div>
         """, unsafe_allow_html=True)
         
