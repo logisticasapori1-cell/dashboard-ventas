@@ -98,27 +98,41 @@ def renderizar():
             if pd.isna(usd) or pd.isna(pct):
                 return "Sin datos"
             signo = "+" if usd > 0 else "-"
-            # Formateamos el valor absoluto con el estándar de Sapori (puntos en miles)
+            # Formateamos el valor absoluto con el estándar de Sapori
             usd_str = f"{abs(usd):,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
             return f"{signo}${usd_str} ({signo}{abs(pct):.2%})"
             
         tendencia_mp = format_tendencia(var_mp_usd, var_mp_pct)
         tendencia_me = format_tendencia(var_me_usd, var_me_pct)
 
-        # 3. Construcción del DataFrame actualizado
+        consumo_mp_val = pd.to_numeric(df_raw.iloc[33, 3], errors='coerce')
+        consumo_me_val = pd.to_numeric(df_raw.iloc[34, 3], errors='coerce')
+
+        # 3. Construcción del DataFrame actualizado (Añadido Saldo Inicial)
         data_mov = {
             "Categoría": ["MATERIA PRIMA", "MATERIAL EMPAQUE"],
-            "Inventario Disponible": [inv_mp_tr, inv_me_tr],
+            "Saldo Inicial (USD)": [val_inicio_mp, val_inicio_me],
             "Recepción/Compras del Mes": [recepcion_mp, recepcion_me],
-            "Consumo del Mes": [pd.to_numeric(df_raw.iloc[33, 3], errors='coerce'), pd.to_numeric(df_raw.iloc[34, 3], errors='coerce')],
+            "Consumo del Mes": [consumo_mp_val, consumo_me_val],
+            "Inventario Final (Hoy)": [inv_mp_tr, inv_me_tr],
             "Tendencia vs Inicio Mes": [tendencia_mp, tendencia_me]
         }
         
         df_movimientos = pd.DataFrame(data_mov)
         
-        # --- NUEVO: GRÁFICO DE BARRAS AGRUPADAS (FLUJO DEL MES) ---
+        # --- GRÁFICO DE BARRAS AGRUPADAS (FLUJO CONTABLE DEL MES) ---
         fig_mov = go.Figure()
         
+        # 0. Saldo Inicial - Gris neutral corporativo
+        fig_mov.add_trace(go.Bar(
+            x=df_movimientos['Categoría'],
+            y=df_movimientos['Saldo Inicial (USD)'],
+            name='Saldo Inicial (Día 1)',
+            marker_color='#64748b', 
+            text=[f"${v:,.0f}".replace(",", ".") for v in df_movimientos['Saldo Inicial (USD)']],
+            textposition='auto'
+        ))
+
         # 1. Recepción (Entradas de Capital) - Verde
         fig_mov.add_trace(go.Bar(
             x=df_movimientos['Categoría'],
@@ -142,10 +156,10 @@ def renderizar():
         # 3. Inventario Disponible (Saldo Final) - Azul Sapori
         fig_mov.add_trace(go.Bar(
             x=df_movimientos['Categoría'],
-            y=df_movimientos['Inventario Disponible'],
-            name='Inventario Disponible',
+            y=df_movimientos['Inventario Final (Hoy)'],
+            name='Inventario Final (Hoy)',
             marker_color='#1a3a5c', 
-            text=[f"${v:,.0f}".replace(",", ".") for v in df_movimientos['Inventario Disponible']],
+            text=[f"${v:,.0f}".replace(",", ".") for v in df_movimientos['Inventario Final (Hoy)']],
             textposition='auto'
         ))
         
@@ -168,17 +182,18 @@ def renderizar():
         def color_tendencia(val):
             val_str = str(val)
             if val_str.startswith('+'):
-                return 'color: #0a0a0a; font-weight: bold; background-color: #c2c2c0;' # Verde (Subió)
+                return 'color: #385723; font-weight: bold; background-color: #e2f0d9;' # Verde (Subió)
             elif val_str.startswith('-'):
-                return 'color: #0a0a0a; font-weight: bold; background-color: #c2c2c0;' # Naranja (Bajó)
+                return 'color: #c65911; font-weight: bold; background-color: #fce4d6;' # Naranja (Bajó)
             return ''
             
         # 5. Renderizado de la tabla final
         st.dataframe(
             df_movimientos.style.map(color_tendencia, subset=['Tendencia vs Inicio Mes']).format({
-                "Inventario Disponible": formato_dinero,
+                "Saldo Inicial (USD)": formato_dinero,
                 "Recepción/Compras del Mes": formato_dinero,
-                "Consumo del Mes": formato_dinero
+                "Consumo del Mes": formato_dinero,
+                "Inventario Final (Hoy)": formato_dinero
             }),
             use_container_width=True, hide_index=True
         )
