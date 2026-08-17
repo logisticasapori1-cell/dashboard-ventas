@@ -14,7 +14,7 @@ import modulos.m7_control_multicentro as m7
 # ==========================================
 # 1. CONFIGURACIÓN DE PÁGINA Y ESTILOS
 # ==========================================
-st.set_page_config(layout="wide", page_title="Portal de Supply Chain & S&OP - Sapori", page_icon="🟢")
+st.set_page_config(layout="wide", page_title="Portal de Supply Chain & S&OP - Sapori", page_icon="🟠")
 cargar_css()
 
 # ==========================================
@@ -50,7 +50,7 @@ with st.sidebar:
     dias_restantes = st.number_input("Días de Venta Restantes", min_value=0, value=15, step=1)
 
     st.markdown("---")
-    st.caption("👤 Rol: Administrador / Gerencia")
+    st.caption("👤 Rol: Gerencia")
     if st.button("🚪 Cerrar Sesión", use_container_width=True):
         st.session_state['autenticado'] = False
         st.rerun()
