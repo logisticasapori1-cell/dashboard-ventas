@@ -54,32 +54,37 @@ def renderizar():
         if filtro_categoria != "Todas las Categorías":
             df_filtrado = df_filtrado[df_filtrado["Categoría"] == filtro_categoria]
 
-        # 4. Renderizado de KPIs
+        # 4. Renderizado de KPIs (NUEVA ESTRUCTURA JERÁRQUICA)
         st.markdown("---")
         st.markdown('<p class="kpi-section-label">Resumen de Valorización</p>', unsafe_allow_html=True)
         
         # Excluimos nulos para la suma total
         valor_total = df_filtrado["Valor $"].sum(skipna=True)
         
-        # Aumentamos a 4 columnas para que quepan todas las categorías
-        kpi1, kpi2, kpi3, kpi4 = st.columns(4)
-        
-        # Función rápida para formato monetario corporativo (punto para miles, coma para decimales)
+        # Función rápida para formato monetario corporativo
         formato_dinero = lambda x: f"${x:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
         
-        kpi1.metric("Valor Total del Inventario", formato_dinero(valor_total))
+        # 4.1. Tarjeta Principal (Padre) - Cúspide
+        st.markdown(f"""
+            <div style="background-color: #1a3a5c; padding: 25px; border-radius: 8px; border: 1px solid #e2e8f0; box-shadow: 2px 2px 10px rgba(0,0,0,0.1); text-align: center; margin-bottom: 25px;">
+                <p style="margin:0; color: #94a3b8; font-size: 14px; font-weight: bold; letter-spacing: 1.5px;">VALOR TOTAL DEL INVENTARIO</p>
+                <h1 style="margin:0; color: white; font-size: 42px; font-weight: 800;">{formato_dinero(valor_total)}</h1>
+            </div>
+        """, unsafe_allow_html=True)
         
+        # 4.2. Sub-clasificaciones (Hijos) - Base de 3 columnas
         if filtro_categoria == "Todas las Categorías":
             mp_total = df_filtrado[df_filtrado["Categoría"] == "MATERIA PRIMA"]["Valor $"].sum(skipna=True)
             me_total = df_filtrado[df_filtrado["Categoría"] == "MATERIAL EMPAQUE"]["Valor $"].sum(skipna=True)
             pt_total = df_filtrado[df_filtrado["Categoría"] == "PRODUCTO TERMINADO"]["Valor $"].sum(skipna=True)
             
-            kpi2.metric("Total Materia Prima", formato_dinero(mp_total))
-            kpi3.metric("Total Material Empaque", formato_dinero(me_total))
-            kpi4.metric("Total Producto Terminado", formato_dinero(pt_total))
+            c1, c2, c3 = st.columns(3)
+            c1.metric("TOTAL MATERIA PRIMA", formato_dinero(mp_total))
+            c2.metric("TOTAL MATERIAL EMPAQUE", formato_dinero(me_total))
+            c3.metric("TOTAL PRODUCTO TERMINADO", formato_dinero(pt_total))
         else:
             promedio = df_filtrado["Valor $"].mean(skipna=True)
-            kpi2.metric("Promedio en el Período", formato_dinero(promedio) if pd.notna(promedio) else "$0,00")
+            st.metric("Promedio en el Período", formato_dinero(promedio) if pd.notna(promedio) else "$0,00")
 
         # 5. Gráfica Lineal de Tendencias (Si se seleccionan varios meses)
         st.markdown("---")
