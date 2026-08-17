@@ -82,7 +82,7 @@ def renderizar():
         fig_fill.update_layout(xaxis=dict(tickformat=".0%", range=[0, 1]), height=220, margin=dict(t=20, b=20, l=20, r=20), plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)')
         st.plotly_chart(fig_fill, use_container_width=True)
 
-        # --- SECCIÓN 5: MOVIMIENTOS DEL MES ---
+        # --- SECCIÓN 5: MOVIMIENTOS DEL MES ---    
         st.markdown("---")
         st.subheader("📋 Conciliación: Movimientos del Mes Actual")
 
@@ -178,13 +178,15 @@ def renderizar():
         st.markdown("<br>", unsafe_allow_html=True)
         # -----------------------------------------------------------
 
-        # 4. Semáforo para la columna de tendencia
+        # 4. Semáforo para la columna de tendencia (Lógica Financiera Invertida)
         def color_tendencia(val):
             val_str = str(val)
-            if val_str.startswith('+'):
-                return 'color: #385723; font-weight: bold; background-color: #e2f0d9;' # Verde (Subió)
-            elif val_str.startswith('-'):
-                return 'color: #c65911; font-weight: bold; background-color: #fce4d6;' # Naranja (Bajó)
+            if val_str.startswith('-'):
+                # Si baja el inventario: Verde (Favorable, liberamos capital)
+                return 'color: #385723; font-weight: bold; background-color: #e2f0d9;' 
+            elif val_str.startswith('+'):
+                # Si sube el inventario: Naranja/Rojo (Alerta, inmovilizamos capital)
+                return 'color: #c65911; font-weight: bold; background-color: #fce4d6;' 
             return ''
             
         # 5. Renderizado de la tabla final
@@ -196,6 +198,6 @@ def renderizar():
                 "Inventario Final (Hoy)": formato_dinero
             }),
             use_container_width=True, hide_index=True
-        )
+        )   
     except Exception as e:
         st.error(f"Error procesando los KPIs Financieros: {e}")
