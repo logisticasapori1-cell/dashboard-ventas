@@ -131,22 +131,27 @@ def renderizar(dias_efectivos, dias_restantes):
         return "\n".join(bloques)
 
     def consultar_gemini(pregunta, contexto, api_key):
-        # Actualizado con los modelos reales y funcionales de Google
-        modelos = ["gemini-1.5-flash", "gemini-1.5-pro", "gemini-1.0-pro"]
+        # Dejamos estrictamente los modelos de última generación de Google
+        modelos = ["gemini-1.5-flash", "gemini-1.5-pro"]
         ultimo_error = None
         for modelo in modelos:
             url = f"https://generativelanguage.googleapis.com/v1beta/models/{modelo}:generateContent?key={api_key.strip()}"
+            
+            # NOTA DE DESARROLLO: Google exige 'systemInstruction' en formato camelCase
             payload = {
-                "system_instruction": {"parts": [{"text": contexto}]},
+                "systemInstruction": {"parts": [{"text": contexto}]},
                 "contents": [{"role": "user", "parts": [{"text": pregunta}]}],
                 "generationConfig": {"temperature": 0.2, "maxOutputTokens": 1500}
             }
             try:
-                resp = requests.post(url, json=payload, timeout=60)
+                headers = {'Content-Type': 'application/json'}
+                resp = requests.post(url, headers=headers, json=payload, timeout=60)
                 if resp.status_code == 200:
                     return "".join(p.get("text", "") for p in resp.json()["candidates"][0]["content"]["parts"])
                 ultimo_error = f"HTTP {resp.status_code}: {resp.text}"
-            except requests.RequestException as e: ultimo_error = str(e)
+            except requests.RequestException as e: 
+                ultimo_error = str(e)
+                
         raise RuntimeError(f"Fallo al conectar con Gemini API. Error: {ultimo_error}")
 
     if not proveedor: return
