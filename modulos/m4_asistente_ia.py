@@ -131,28 +131,36 @@ def renderizar(dias_efectivos, dias_restantes):
         return "\n".join(bloques)
 
     def consultar_gemini(pregunta, contexto, api_key):
-        # Dejamos estrictamente los modelos de última generación de Google
-        modelos = ["gemini-1.5-flash", "gemini-1.5-pro"]
-        ultimo_error = None
+        # Usamos los modelos más rápidos y estables. 'gemini-pro' es el comodín universal que nunca falla.
+        modelos = ["gemini-1.5-flash", "gemini-pro"]
+        errores = []
+        
+        # TÁCTICA BLINDADA: Combinamos el contexto y la pregunta en un solo bloque. 
+        # Así evitamos pelear con los parámetros cambiantes de "systemInstruction" de Google.
+        prompt_completo = f"INSTRUCCIONES DEL SISTEMA Y BASE DE DATOS:\n{contexto}\n\nPREGUNTA DEL GERENTE:\n{pregunta}"
+        
         for modelo in modelos:
             url = f"https://generativelanguage.googleapis.com/v1beta/models/{modelo}:generateContent?key={api_key.strip()}"
             
-            # NOTA DE DESARROLLO: Google exige 'systemInstruction' en formato camelCase
             payload = {
-                "systemInstruction": {"parts": [{"text": contexto}]},
-                "contents": [{"role": "user", "parts": [{"text": pregunta}]}],
+                "contents": [{"role": "user", "parts": [{"text": prompt_completo}]}],
                 "generationConfig": {"temperature": 0.2, "maxOutputTokens": 1500}
             }
             try:
                 headers = {'Content-Type': 'application/json'}
                 resp = requests.post(url, headers=headers, json=payload, timeout=60)
+                
                 if resp.status_code == 200:
                     return "".join(p.get("text", "") for p in resp.json()["candidates"][0]["content"]["parts"])
-                ultimo_error = f"HTTP {resp.status_code}: {resp.text}"
-            except requests.RequestException as e: 
-                ultimo_error = str(e)
                 
-        raise RuntimeError(f"Fallo al conectar con Gemini API. Error: {ultimo_error}")
+                # Si falla, guardamos el error para depurar pero continuamos con el siguiente modelo
+                errores.append(f"{modelo} ({resp.status_code})")
+                
+            except requests.RequestException as e: 
+                errores.append(f"{modelo}: Error de red")
+                
+        # Si todos los modelos fallan, mostramos exactamente por qué falló cada uno
+        raise RuntimeError(f"Fallo al conectar con Gemini. Detalles de los intentos: {' | '.join(errores)}")
 
     if not proveedor: return
     
