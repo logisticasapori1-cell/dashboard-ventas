@@ -5,7 +5,7 @@ import requests
 
 def renderizar(dias_efectivos, dias_restantes):
     st.title("🤖 Asistente de Consultas — Supply Chain & S&OP")
-    st.caption("Pregunta en lenguaje natural sobre ventas, forecast, desviaciones y producción")
+    st.caption("Pregunta en lenguaje natural sobre ventas, forecast, desviaciones, producción y salud financiera.")
     st.markdown('<div class="module-header">ASISTENTE INTELIGENTE CON DATOS DEL DASHBOARD</div>', unsafe_allow_html=True)
 
     def leer_secreto(nombre):
@@ -51,11 +51,12 @@ def renderizar(dias_efectivos, dias_restantes):
 
     def construir_contexto_dashboard():
         bloques = []
-        bloques.append("Eres el asistente oficial del Portal de Supply Chain & S&OP de Sapori.")
-        bloques.append("Responde siempre en español, de forma clara y ejecutiva. Usa números con separador de miles punto (ej. 1.234).")
+        bloques.append("Eres el asistente oficial y analista financiero del Portal de Supply Chain & S&OP de Sapori.")
+        bloques.append("Responde siempre en español, de forma clara, ejecutiva y analítica. Usa números con separador de miles punto (ej. 1.234) y coma para decimales.")
+        bloques.append("Tu objetivo es ayudar a la gerencia analizando ventas, producción, desviaciones, CIERRES VALORIZADOS, SALUD FINANCIERA y el SISTEMA INTEGRAL DE CONTROL MULTICENTRO (SICI).")
         bloques.append(f"Parámetros de tiempo: días efectivos = {dias_efectivos}, días restantes = {dias_restantes}.")
 
-        # RUTAS ACTUALIZADAS A LA CARPETA DATA
+        # --- MÓDULOS 1, 2 Y 3 (Ventas, Forecast y Producción) ---
         file_ventas = "data/VINCULO VTS BY SKU.xlsx"
         if os.path.exists(file_ventas):
             try:
@@ -65,19 +66,16 @@ def renderizar(dias_efectivos, dias_restantes):
                 bloques.append(f"\n=== KPIs DE VENTAS Y FORECAST ===")
                 bloques.append(f"Total Units Sales Gross: {val_gross:,.0f}".replace(",", "."))
                 bloques.append(f"Forecast: {val_forecast:,.0f}".replace(",", "."))
-                
                 df_vts = pd.read_excel(file_ventas, sheet_name="file_ventas")
                 bloques.append("\n=== MUESTRA MATRIZ DE VENTAS ===")
                 bloques.append(df_vts.head(80).to_string(index=False))
             except Exception as e: bloques.append(f"[Error leyendo ventas: {e}]")
-        else: bloques.append("[Archivo ventas no encontrado]")
 
         file_desv = "data/Comparación de Venta Diaria por SKU (Julio vs Agosto).xlsx"
         if os.path.exists(file_desv):
             try:
                 df = pd.read_excel(file_desv, sheet_name="Table 1")
                 bloques.append("\n=== DESVIACIONES ===")
-                bloques.append(f"Total SKUs: {len(df)}")
                 bloques.append(df.head(60).to_string(index=False))
             except Exception as e: bloques.append(f"[Error leyendo desviaciones: {e}]")
 
@@ -86,12 +84,47 @@ def renderizar(dias_efectivos, dias_restantes):
             try:
                 xls = pd.ExcelFile(file_prod)
                 bloques.append(f"\n=== PRODUCCIÓN MENSUAL ===")
-                bloques.append(f"Categorías: {', '.join(xls.sheet_names)}")
                 for hoja in xls.sheet_names[:8]:
                     df_h = pd.read_excel(xls, sheet_name=hoja)
                     bloques.append(f"--- {hoja} ---")
                     bloques.append(df_h.head(15).to_string(index=False))
             except Exception as e: bloques.append(f"[Error leyendo producción: {e}]")
+
+        # --- MÓDULO 5: Cierre de Inventario Valorizado ---
+        file_cierre = "data/Historico Cierre Inventario Valorizado.xlsx"
+        if os.path.exists(file_cierre):
+            try:
+                xls_cierre = pd.ExcelFile(file_cierre)
+                bloques.append(f"\n=== CIERRE DE INVENTARIO VALORIZADO ===")
+                for hoja in xls_cierre.sheet_names:
+                    df_cierre = pd.read_excel(xls_cierre, sheet_name=hoja)
+                    bloques.append(f"Mes Cierre: {hoja}")
+                    bloques.append(df_cierre.to_string(index=False))
+            except Exception as e: bloques.append(f"[Error leyendo Cierre Valorizado: {e}]")
+
+        # --- MÓDULO 6: KPIs Financieros (Salud y Riesgo) ---
+        file_kpis_fin = "data/Kpis Financieros Inventario.xlsx"
+        if os.path.exists(file_kpis_fin):
+            try:
+                df_kf = pd.read_excel(file_kpis_fin, sheet_name=0, header=None)
+                bloques.append(f"\n=== SALUD FINANCIERA Y RIESGO DE SUMINISTRO (KPIs) ===")
+                bloques.append("Matriz completa de Días de Cobertura (DIO), Fill Rate de Proveedores, y Capital Inmovilizado.")
+                # Mandamos las primeras 40 filas que contienen todas las métricas clave
+                bloques.append(df_kf.head(40).to_string(index=False))
+            except Exception as e: bloques.append(f"[Error leyendo KPIs Financieros: {e}]")
+
+        # --- MÓDULO 7: SICI (Sistema Integral de Control de Inventarios) ---
+        file_sici = "data/Sistema Integral de Control de Inventarios.xlsx"
+        if os.path.exists(file_sici):
+            try:
+                df_sici = pd.read_excel(file_sici, sheet_name=0, header=None)
+                bloques.append(f"\n=== SICI: CONTROL DE INVENTARIO MULTICENTRO (RED SAPORI) ===")
+                bloques.append("Contiene distribución física y valorizada por CEDIS (Caracas, Carabobo, Oriente, Lara), demandas y Coberturas.")
+                # Mandamos las filas relevantes: desde los SKUs hasta los totales valorizados
+                # Omitimos la inmensa cantidad de filas NaN para no saturar los tokens de la IA
+                df_sici_clean = df_sici.dropna(how='all') 
+                bloques.append(df_sici_clean.head(75).to_string(index=False))
+            except Exception as e: bloques.append(f"[Error leyendo SICI: {e}]")
 
         return "\n".join(bloques)
 
@@ -137,7 +170,7 @@ def renderizar(dias_efectivos, dias_restantes):
         st.session_state["chat_messages"].append({"role": "user", "content": pregunta})
         with st.chat_message("user"): st.markdown(pregunta)
         with st.chat_message("assistant"):
-            with st.spinner("Analizando datos del dashboard..."):
+            with st.spinner("Analizando operación y finanzas de la red Sapori..."):
                 try:
                     contexto = construir_contexto_dashboard()
                     respuesta = consultar_gemini(pregunta, contexto, gemini_api_key) if proveedor == "gemini" else consultar_groq(pregunta, contexto, groq_api_key)
