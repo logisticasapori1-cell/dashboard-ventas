@@ -56,32 +56,33 @@ with st.sidebar:
         st.rerun()
 
 # ==========================================
-# 4. ENRUTADOR DE MÓDULOS (CANVAS CLEARING)
+# 4. ENRUTADOR DE MÓDULOS (BUG FIX APLICADO)
 # ==========================================
-# TÉCNICA DE LIMPIEZA FORZADA: Destruye el DOM anterior y crea un lienzo en blanco
-lienzo_principal = st.empty()
 
-with lienzo_principal.container():
-    if modulo_activo == "1. Control Operativo de Ventas y Forecast":
-        m1.renderizar(dias_efectivos, dias_restantes)
+# TRUCO DE RECONCILIACIÓN: Este elemento <h1> cambia dinámicamente según el módulo y es invisible.
+# Absorbe el bug de reciclaje de Streamlit para que el st.title() interno cargue limpio.
+st.markdown(f"<h1 style='display:none;'>Render_ID: {modulo_activo}</h1>", unsafe_allow_html=True)
 
-    elif modulo_activo == "2. Tablero de Desviaciones y Tendencias":
-        m2.renderizar()
+if modulo_activo == "1. Control Operativo de Ventas y Forecast":
+    m1.renderizar(dias_efectivos, dias_restantes)
 
-    elif modulo_activo == "3. Control y Análisis de Producción Mensual":
-        m3.renderizar()
+elif modulo_activo == "2. Tablero de Desviaciones y Tendencias":
+    m2.renderizar()
 
-    elif modulo_activo == "4. Asistente de Consultas (IA)":
-        m4.renderizar(dias_efectivos, dias_restantes)
+elif modulo_activo == "3. Control y Análisis de Producción Mensual":
+    m3.renderizar()
 
-    elif modulo_activo == "5. Cierre de Inventario Valorizado":
-        m5.renderizar()
+elif modulo_activo == "4. Asistente de Consultas (IA)":
+    m4.renderizar(dias_efectivos, dias_restantes)
 
-    elif modulo_activo == "6. Salud Financiera y Riesgo Suministro":
-        m6.renderizar()
+elif modulo_activo == "5. Cierre de Inventario Valorizado":
+    m5.renderizar()
 
-    elif modulo_activo == "7. Control Integral Multicentro (SICI)":
-        m7.renderizar()
+elif modulo_activo == "6. Salud Financiera y Riesgo Suministro":
+    m6.renderizar()
+
+elif modulo_activo == "7. Control Integral Multicentro (SICI)":
+    m7.renderizar()
 
 # ==========================================
 # 5. PIE DE PÁGINA GLOBAL
