@@ -1,8 +1,9 @@
 import streamlit as st
+import time
 from utils.estilos import cargar_css
 from utils.auth import verificar_login
 
-# Importación de los módulos 
+# Importación de los módulos (Asegúrate de haberles puesto la letra 'm' al principio en la carpeta)
 import modulos.m1_ventas_forecast as m1
 import modulos.m2_desviaciones as m2
 import modulos.m3_produccion as m3
@@ -23,7 +24,9 @@ cargar_css()
 if not verificar_login():
     st.stop() 
 
-# Lista centralizada de módulos para el hack de renderizado
+# ==========================================
+# 3. GESTIÓN DE ESTADO (MEMORIA DEL MENÚ)
+# ==========================================
 lista_modulos = [
     "1. Control Operativo de Ventas y Forecast",
     "2. Tablero de Desviaciones y Tendencias",
@@ -34,14 +37,23 @@ lista_modulos = [
     "7. Control Integral Multicentro (SICI)"
 ]
 
+if "modulo_actual" not in st.session_state:
+    st.session_state.modulo_actual = lista_modulos[0]
+
 # ==========================================
-# 3. INTERFAZ LATERAL (SIDEBAR)
+# 4. INTERFAZ LATERAL (SIDEBAR)
 # ==========================================
 with st.sidebar:
     st.image("assets/logo_empresa.png")
     
     st.markdown("### Módulos de Operación")
-    modulo_activo = st.radio("Área a visualizar", lista_modulos, label_visibility="collapsed")
+    # El radio button ahora lee y escribe en nuestra memoria segura
+    modulo_seleccionado = st.radio(
+        "Área a visualizar", 
+        lista_modulos, 
+        index=lista_modulos.index(st.session_state.modulo_actual),
+        label_visibility="collapsed"
+    )
 
     st.markdown("---")
     st.markdown("### Control de Tiempos")
@@ -55,26 +67,41 @@ with st.sidebar:
         st.rerun()
 
 # ==========================================
-# 4. ENRUTADOR DE MÓDULOS (BUG FIX DEFINITIVO)
+# 5. EL HACK DEL DOBLE RERUN (DESTRUCTOR DE CACHÉ)
 # ==========================================
-# TÁCTICA DE DESFASE DE MEMORIA: 
-# Creamos un número diferente de contenedores invisibles según el módulo activo.
-# Esto rompe el reciclaje de memoria de Streamlit y lo obliga a redibujar el título real.
-indice_modulo = lista_modulos.index(modulo_activo)
-for _ in range(indice_modulo):
-    st.empty()
-
-# Ejecución limpia
-if modulo_activo == lista_modulos[0]: m1.renderizar(dias_efectivos, dias_restantes)
-elif modulo_activo == lista_modulos[1]: m2.renderizar()
-elif modulo_activo == lista_modulos[2]: m3.renderizar()
-elif modulo_activo == lista_modulos[3]: m4.renderizar(dias_efectivos, dias_restantes)
-elif modulo_activo == lista_modulos[4]: m5.renderizar()
-elif modulo_activo == lista_modulos[5]: m6.renderizar()
-elif modulo_activo == lista_modulos[6]: m7.renderizar()
+# Si el usuario hace clic en un módulo diferente, interceptamos la acción
+if modulo_seleccionado != st.session_state.modulo_actual:
+    st.session_state.modulo_actual = modulo_seleccionado
+    
+    # Obligamos al servidor a borrar el módulo anterior de la pantalla
+    with st.spinner("Desplegando análisis..."):
+        time.sleep(0.2)
+        
+    # Reiniciamos la aplicación entera de forma invisible para que el nuevo módulo cargue en un lienzo en blanco
+    st.rerun() 
 
 # ==========================================
-# 5. PIE DE PÁGINA GLOBAL
+# 6. ENRUTADOR DE MÓDULOS (EJECUCIÓN LIMPIA)
+# ==========================================
+modulo_activo = st.session_state.modulo_actual
+
+if modulo_activo == lista_modulos[0]:
+    m1.renderizar(dias_efectivos, dias_restantes)
+elif modulo_activo == lista_modulos[1]:
+    m2.renderizar()
+elif modulo_activo == lista_modulos[2]:
+    m3.renderizar()
+elif modulo_activo == lista_modulos[3]:
+    m4.renderizar(dias_efectivos, dias_restantes)
+elif modulo_activo == lista_modulos[4]:
+    m5.renderizar()
+elif modulo_activo == lista_modulos[5]:
+    m6.renderizar()
+elif modulo_activo == lista_modulos[6]:
+    m7.renderizar()
+
+# ==========================================
+# 7. PIE DE PÁGINA GLOBAL
 # ==========================================
 st.markdown("""
 <div class="footer-custom">
