@@ -4,7 +4,7 @@ import plotly.graph_objects as go
 import os
 
 def renderizar():
-    st.title("📦 Cierre de Inventario Valorizado")
+    st.markdown("# 📦 Cierre de Inventario Valorizado")
     st.caption("Evolución financiera de Materia Prima, Material de Empaque y Producto Terminado")
 
     file_path = "data/Historico Cierre Inventario Valorizado.xlsx"

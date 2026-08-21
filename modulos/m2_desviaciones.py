@@ -5,7 +5,7 @@ import os
 import io
 
 def renderizar():
-    st.title("📊 Impacto Financiero y Desviaciones Estratégicas")
+    st.markdown("# 📊 Impacto Financiero y Desviaciones Estratégicas")
     st.caption("Análisis Comparativo · Financiero · Pareto (ABC) por SKU")
 
     # NUEVA RUTA

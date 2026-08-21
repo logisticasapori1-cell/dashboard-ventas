@@ -3,7 +3,7 @@ import pandas as pd
 import os
 
 def renderizar(dias_efectivos, dias_restantes):
-    st.title("📈 Rendimiento Comercial y Proyecciones de Demanda")
+    st.markdown("# 📈 Rendimiento Comercial y Proyecciones de Demanda")
     st.caption("Ventas diarias · Forecast · Alcance")
 
     # NUEVA RUTA

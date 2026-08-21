@@ -4,7 +4,7 @@ import plotly.graph_objects as go
 import os
 
 def renderizar():
-    st.title("🛡️ Salud Financiera y Riesgo de Suministro")
+    st.markdown("# 🛡️ Salud Financiera y Riesgo de Suministro")
     st.caption("Activos Inventario · Fill Rate · Riesgo Operativo (Quiebre de Stock)")
 
     file_path = "data/Kpis Financieros Inventario.xlsx"

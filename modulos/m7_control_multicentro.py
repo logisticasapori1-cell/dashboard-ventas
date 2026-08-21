@@ -4,7 +4,7 @@ import plotly.graph_objects as go
 import os
 
 def renderizar():
-    st.title("🌍 Sistema Integral de Control Multicentro (SICI)")
+    st.markdown("# 🌍 Sistema Integral de Control Multicentro (SICI)")
     st.caption("Visión Global · Coberturas por CEDIS · Eficiencia Logística")
 
     file_path = "data/Sistema Integral de Control de Inventarios.xlsx"

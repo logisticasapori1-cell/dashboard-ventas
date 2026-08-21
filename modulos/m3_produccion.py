@@ -5,7 +5,7 @@ import os
 import re
 
 def renderizar():
-    st.title("🏭 Tablero de Control de Producción Mensual")
+    st.markdown("# 🏭 Tablero de Control de Producción Mensual")
     st.caption("Monitoreo de Volúmenes de Producción por Categoría · Feb-26 hasta Mes Actual")
 
     # NUEVA RUTA
