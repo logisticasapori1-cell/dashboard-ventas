@@ -2,7 +2,7 @@ import streamlit as st
 from utils.estilos import cargar_css
 from utils.auth import verificar_login
 
-# Importación de los módulos (Asegúrate de haberles puesto la letra 'm' al principio en la carpeta)
+# Importación de los módulos 
 import modulos.m1_ventas_forecast as m1
 import modulos.m2_desviaciones as m2
 import modulos.m3_produccion as m3
@@ -21,7 +21,18 @@ cargar_css()
 # 2. SISTEMA DE AUTENTICACIÓN
 # ==========================================
 if not verificar_login():
-    st.stop() # Detiene la ejecución si el usuario no ha ingresado credenciales
+    st.stop() 
+
+# Lista centralizada de módulos para el hack de renderizado
+lista_modulos = [
+    "1. Control Operativo de Ventas y Forecast",
+    "2. Tablero de Desviaciones y Tendencias",
+    "3. Control y Análisis de Producción Mensual",
+    "4. Asistente de Consultas (IA)",
+    "5. Cierre de Inventario Valorizado",
+    "6. Salud Financiera y Riesgo Suministro",
+    "7. Control Integral Multicentro (SICI)"
+]
 
 # ==========================================
 # 3. INTERFAZ LATERAL (SIDEBAR)
@@ -30,19 +41,7 @@ with st.sidebar:
     st.image("assets/logo_empresa.png")
     
     st.markdown("### Módulos de Operación")
-    modulo_activo = st.radio(
-        "Área a visualizar",
-        [
-            "1. Control Operativo de Ventas y Forecast",
-            "2. Tablero de Desviaciones y Tendencias",
-            "3. Control y Análisis de Producción Mensual",
-            "4. Asistente de Consultas (IA)",
-            "5. Cierre de Inventario Valorizado",
-            "6. Salud Financiera y Riesgo Suministro",
-            "7. Control Integral Multicentro (SICI)"
-        ],
-        label_visibility="collapsed"
-    )
+    modulo_activo = st.radio("Área a visualizar", lista_modulos, label_visibility="collapsed")
 
     st.markdown("---")
     st.markdown("### Control de Tiempos")
@@ -56,33 +55,23 @@ with st.sidebar:
         st.rerun()
 
 # ==========================================
-# 4. ENRUTADOR DE MÓDULOS (BUG FIX APLICADO)
+# 4. ENRUTADOR DE MÓDULOS (BUG FIX DEFINITIVO)
 # ==========================================
+# TÁCTICA DE DESFASE DE MEMORIA: 
+# Creamos un número diferente de contenedores invisibles según el módulo activo.
+# Esto rompe el reciclaje de memoria de Streamlit y lo obliga a redibujar el título real.
+indice_modulo = lista_modulos.index(modulo_activo)
+for _ in range(indice_modulo):
+    st.empty()
 
-# TRUCO DE RECONCILIACIÓN: Este elemento <h1> cambia dinámicamente según el módulo y es invisible.
-# Absorbe el bug de reciclaje de Streamlit para que el st.title() interno cargue limpio.
-st.markdown(f"<h1 style='display:none;'>Render_ID: {modulo_activo}</h1>", unsafe_allow_html=True)
-
-if modulo_activo == "1. Control Operativo de Ventas y Forecast":
-    m1.renderizar(dias_efectivos, dias_restantes)
-
-elif modulo_activo == "2. Tablero de Desviaciones y Tendencias":
-    m2.renderizar()
-
-elif modulo_activo == "3. Control y Análisis de Producción Mensual":
-    m3.renderizar()
-
-elif modulo_activo == "4. Asistente de Consultas (IA)":
-    m4.renderizar(dias_efectivos, dias_restantes)
-
-elif modulo_activo == "5. Cierre de Inventario Valorizado":
-    m5.renderizar()
-
-elif modulo_activo == "6. Salud Financiera y Riesgo Suministro":
-    m6.renderizar()
-
-elif modulo_activo == "7. Control Integral Multicentro (SICI)":
-    m7.renderizar()
+# Ejecución limpia
+if modulo_activo == lista_modulos[0]: m1.renderizar(dias_efectivos, dias_restantes)
+elif modulo_activo == lista_modulos[1]: m2.renderizar()
+elif modulo_activo == lista_modulos[2]: m3.renderizar()
+elif modulo_activo == lista_modulos[3]: m4.renderizar(dias_efectivos, dias_restantes)
+elif modulo_activo == lista_modulos[4]: m5.renderizar()
+elif modulo_activo == lista_modulos[5]: m6.renderizar()
+elif modulo_activo == lista_modulos[6]: m7.renderizar()
 
 # ==========================================
 # 5. PIE DE PÁGINA GLOBAL
