@@ -11,6 +11,7 @@ import modulos.m4_asistente_ia as m4
 import modulos.m5_cierre_inventario as m5
 import modulos.m6_salud_financiera as m6
 import modulos.m7_control_multicentro as m7
+import modulos.m8_ventas_regionales as m8
 
 # ==========================================
 # 1. CONFIGURACIÓN DE PÁGINA Y ESTILOS
@@ -34,7 +35,8 @@ lista_modulos = [
     "4. Asistente de Consultas (IA)",
     "5. Cierre de Inventario Valorizado",
     "6. Salud Financiera y Riesgo Suministro",
-    "7. Control Integral Multicentro (SICI)"
+    "7. Control Integral Multicentro (SICI)",
+    "8. Desempeño Regional de Ventas (CEDIs)"
 ]
 
 if "modulo_actual" not in st.session_state:
@@ -99,7 +101,8 @@ elif modulo_activo == lista_modulos[5]:
     m6.renderizar()
 elif modulo_activo == lista_modulos[6]:
     m7.renderizar()
-
+elif modulo_activo == lista_modulos[7]:
+    m8.renderizar()
 # ==========================================
 # 7. PIE DE PÁGINA GLOBAL
 # ==========================================
