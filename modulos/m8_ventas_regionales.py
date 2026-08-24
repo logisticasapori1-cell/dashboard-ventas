@@ -15,7 +15,7 @@ def renderizar():
         return
 
     try:
-        # Extraer nombres de las hojas (filtrando la pestaña 'Soporte')
+        # Extraer nombres de las hojas (filtrando la pestaña de consolidado y CEDIs)
         xls = pd.ExcelFile(file_path)
         hojas = [h for h in xls.sheet_names if "VENTAS CONSOLIDADA" in h]
 
@@ -27,17 +27,18 @@ def renderizar():
             label_visibility="collapsed"
         )
 
-        # Leer la hoja seleccionada (saltamos las primeras 5 filas que tienen metadata)
+        # Leer la hoja seleccionada (saltamos las primeras 5 filas de metadata)
         df = pd.read_excel(file_path, sheet_name=hoja_seleccionada, skiprows=5)
         
-        # Renombrar columnas para estandarizar
-        df.columns = ["Codigo", "Producto", "Venta_Bruta", "Venta_Diaria", "Venta_Mes", "Vacio"]
+        # Estructurar columnas: Referencia (Código), Producto, Venta Bruta, Venta Diaria, Venta Mes
+        df.columns = ["Referencia", "Producto", "Venta_Bruta", "Venta_Diaria", "Venta_Mes", "Vacio"]
         
-        # Limpiar datos (quitar filas sin Producto o totales vacíos)
+        # Limpiar datos (quitar filas vacías o de totales)
         df = df.dropna(subset=['Producto', 'Venta_Bruta'])
         df = df[df['Producto'] != "Total general"]
         
-        # Asegurar tipos numéricos
+        # Asegurar tipos numéricos y limpiar referencias
+        df['Referencia'] = df['Referencia'].astype(str).str.replace(".0", "", regex=False)
         df['Venta_Bruta'] = pd.to_numeric(df['Venta_Bruta'], errors='coerce').fillna(0)
         df['Venta_Mes'] = pd.to_numeric(df['Venta_Mes'], errors='coerce').fillna(0)
 
@@ -66,7 +67,6 @@ def renderizar():
 
         with col_grafica:
             st.markdown("##### 🏆 Top 10 Productos Más Vendidos")
-            # Ordenar para sacar el top 10
             df_top = df.sort_values(by="Venta_Bruta", ascending=False).head(10)
             
             fig = px.bar(
@@ -87,14 +87,13 @@ def renderizar():
             st.plotly_chart(fig, use_container_width=True)
 
         with col_tabla:
-            st.markdown("##### 📋 Detalle de Volumen por SKU")
-            df_mostrar = df[['Producto', 'Venta_Bruta', 'Venta_Mes']].sort_values(by="Venta_Bruta", ascending=False)
+            st.markdown("##### 📋 Detalle por SKU (Referencia y Venta)")
+            # Seleccionamos únicamente Referencia, Producto y Venta Bruta como pediste
+            df_mostrar = df[['Referencia', 'Producto', 'Venta_Bruta']].sort_values(by="Venta_Bruta", ascending=False)
             
-            # Aplicar estilo al dataframe
             st.dataframe(
                 df_mostrar.style.format({
-                    "Venta_Bruta": "{:,.0f}", 
-                    "Venta_Mes": "{:,.0f}"
+                    "Venta_Bruta": "{:,.0f}"
                 }),
                 hide_index=True,
                 height=400,
