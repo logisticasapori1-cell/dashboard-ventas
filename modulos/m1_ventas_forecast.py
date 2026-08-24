@@ -2,6 +2,14 @@ import streamlit as st
 import pandas as pd
 import os
 
+@st.cache_data
+def _cargar_kpis(path):
+    return pd.read_excel(path, sheet_name="DASHBOARD", header=None)
+
+@st.cache_data
+def _cargar_ventas_sku(path):
+    return pd.read_excel(path, sheet_name="file_ventas")
+
 def renderizar(dias_efectivos, dias_restantes):
     st.markdown("# 📈 Rendimiento Comercial y Proyecciones de Demanda")
     st.caption("Ventas diarias · Forecast · Alcance")
@@ -13,7 +21,7 @@ def renderizar(dias_efectivos, dias_restantes):
         st.error(f"❌ **Archivo requerido no encontrado:** '{file_ventas}'")
     else:
         try:
-            df_kpis = pd.read_excel(file_ventas, sheet_name="DASHBOARD", header=None)
+            df_kpis = _cargar_kpis(file_ventas)
 
             val_gross = pd.to_numeric(df_kpis.iloc[2, 0], errors='coerce') if pd.notna(pd.to_numeric(df_kpis.iloc[2, 0], errors='coerce')) else 0
             val_net = pd.to_numeric(df_kpis.iloc[2, 1], errors='coerce') if pd.notna(pd.to_numeric(df_kpis.iloc[2, 1], errors='coerce')) else 0
@@ -65,7 +73,7 @@ def renderizar(dias_efectivos, dias_restantes):
             st.markdown("### 📋 Desglose Operativo: Matriz de Ventas por SKU")
             busqueda_sku = st.text_input("🔍 Filtrar por Nombre de Producto o SKU de Producción", placeholder="Escriba para filtrar...")
 
-            df_vts = pd.read_excel(file_ventas, sheet_name="file_ventas")
+            df_vts = _cargar_ventas_sku(file_ventas)
             df_vts_filtrado = df_vts.copy()
 
             formatos_columnas = {}

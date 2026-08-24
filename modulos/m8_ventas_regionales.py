@@ -3,6 +3,16 @@ import pandas as pd
 import plotly.express as px
 import os
 
+@st.cache_data
+def _cargar_hojas_regionales(path):
+    """Retorna la lista de hojas con 'VENTAS CONSOLIDADA' en el nombre."""
+    xls = pd.ExcelFile(path)
+    return [h for h in xls.sheet_names if "VENTAS CONSOLIDADA" in h]
+
+@st.cache_data
+def _cargar_hoja_regional(path, hoja):
+    return pd.read_excel(path, sheet_name=hoja, skiprows=5)
+
 def renderizar():
     st.markdown("# 🗺️ Desempeño Regional de Ventas (CEDIs)")
     st.caption("Análisis de Venta Bruta y Proyección por Centro de Distribución")
@@ -16,8 +26,7 @@ def renderizar():
 
     try:
         # Extraer nombres de las hojas (filtrando la pestaña de consolidado y CEDIs)
-        xls = pd.ExcelFile(file_path)
-        hojas = [h for h in xls.sheet_names if "VENTAS CONSOLIDADA" in h]
+        hojas = _cargar_hojas_regionales(file_path)
 
         # Interfaz de selección de región
         st.markdown("### Seleccione el CEDI a analizar")
@@ -28,7 +37,7 @@ def renderizar():
         )
 
         # Leer la hoja seleccionada (saltamos las primeras 5 filas de metadata)
-        df = pd.read_excel(file_path, sheet_name=hoja_seleccionada, skiprows=5)
+        df = _cargar_hoja_regional(file_path, hoja_seleccionada)
         
         # Estructurar columnas: Referencia (Código), Producto, Venta Bruta, Venta Diaria, Venta Mes
         df.columns = ["Referencia", "Producto", "Venta_Bruta", "Venta_Diaria", "Venta_Mes", "Vacio"]

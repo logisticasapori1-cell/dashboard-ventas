@@ -4,6 +4,10 @@ import plotly.graph_objects as go
 import os
 import io
 
+@st.cache_data
+def _cargar_desviaciones(path):
+    return pd.read_excel(path, sheet_name="Table 1")
+
 def renderizar():
     st.markdown("# 📊 Impacto Financiero y Desviaciones Estratégicas")
     st.caption("Análisis Comparativo · Financiero · Pareto (ABC) por SKU")
@@ -15,7 +19,7 @@ def renderizar():
         st.error(f"❌ **No se encontró el archivo de datos:** '{file_name}'")
     else:
         try:
-            df = pd.read_excel(file_name, sheet_name="Table 1")
+            df = _cargar_desviaciones(file_name)
 
             if 'CATEGORÍA' not in df.columns:
                 df['CATEGORÍA'] = "Por Asignar"

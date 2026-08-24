@@ -4,6 +4,13 @@ import plotly.graph_objects as go
 import os
 import re
 
+@st.cache_data
+def _cargar_hojas_produccion(path):
+    """Retorna un dict con {nombre_hoja: DataFrame} para todas las hojas."""
+    xls = pd.ExcelFile(path)
+    hojas = {sheet: pd.read_excel(xls, sheet_name=sheet) for sheet in xls.sheet_names}
+    return xls.sheet_names, hojas
+
 def renderizar():
     st.markdown("# 🏭 Tablero de Control de Producción Mensual")
     st.caption("Monitoreo de Volúmenes de Producción por Categoría · Feb-26 hasta Mes Actual")
@@ -13,8 +20,7 @@ def renderizar():
 
     if os.path.exists(file_historico_path):
         try:
-            xls = pd.ExcelFile(file_historico_path)
-            nombres_hojas = xls.sheet_names
+            nombres_hojas, hojas_dict = _cargar_hojas_produccion(file_historico_path)
 
             st.markdown('<div class="module-header">CONTROL Y ANÁLISIS DE PRODUCCIÓN MENSUAL</div>', unsafe_allow_html=True)
             st.markdown("### 🎛️ Filtros de Análisis")
@@ -23,7 +29,7 @@ def renderizar():
             with col_filtro1:
                 categoria_seleccionada = st.selectbox("🏷️ Categoría (Hoja)", options=nombres_hojas, index=0)
 
-            df = pd.read_excel(xls, sheet_name=categoria_seleccionada)
+            df = hojas_dict[categoria_seleccionada]
 
             meses_patrones = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic']
             pairs = []

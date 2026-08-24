@@ -3,6 +3,13 @@ import pandas as pd
 import plotly.graph_objects as go
 import os
 
+@st.cache_data
+def _cargar_cierre_inventario(path):
+    """Lee todas las hojas del histórico de cierre y retorna sheet_names + dict de DataFrames."""
+    xls = pd.ExcelFile(path)
+    hojas = {sheet: pd.read_excel(xls, sheet_name=sheet) for sheet in xls.sheet_names}
+    return xls.sheet_names, hojas
+
 def renderizar():
     st.markdown("# 📦 Cierre de Inventario Valorizado")
     st.caption("Evolución financiera de Materia Prima, Material de Empaque y Producto Terminado")
@@ -15,11 +22,11 @@ def renderizar():
 
     try:
         # 1. Extracción y Consolidación de Datos
-        xls = pd.ExcelFile(file_path)
+        sheet_names, hojas_dict = _cargar_cierre_inventario(file_path)
         data = []
         
-        for sheet in xls.sheet_names:
-            df = pd.read_excel(xls, sheet_name=sheet)
+        for sheet in sheet_names:
+            df = hojas_dict[sheet]
             if not df.empty:
                 # Extraemos los valores. Si la columna no existe (ej. Producto Terminado en Enero), asignamos None
                 val_mp = df['VALOR $ MATERIA PRIMA'].iloc[0] if 'VALOR $ MATERIA PRIMA' in df.columns else None
@@ -38,7 +45,7 @@ def renderizar():
         
         col_f1, col_f2 = st.columns(2)
         with col_f1:
-            meses_opciones = ["Todos los meses"] + list(xls.sheet_names)
+            meses_opciones = ["Todos los meses"] + list(sheet_names)
             filtro_mes = st.selectbox("📅 Seleccione el Mes", meses_opciones)
             
         with col_f2:
@@ -136,7 +143,7 @@ def renderizar():
         if filtro_categoria == "Todas las Categorías":
             tabla_mostrar = df_filtrado.pivot(index='Mes', columns='Categoría', values='Valor $').reset_index()
             # Respetamos el orden cronológico de los meses originales
-            tabla_mostrar['Mes'] = pd.Categorical(tabla_mostrar['Mes'], categories=xls.sheet_names, ordered=True)
+            tabla_mostrar['Mes'] = pd.Categorical(tabla_mostrar['Mes'], categories=sheet_names, ordered=True)
             tabla_mostrar = tabla_mostrar.sort_values('Mes')
         else:
             tabla_mostrar = df_filtrado.dropna(subset=["Valor $"])

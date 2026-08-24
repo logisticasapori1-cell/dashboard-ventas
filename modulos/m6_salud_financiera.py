@@ -3,6 +3,10 @@ import pandas as pd
 import plotly.graph_objects as go
 import os
 
+@st.cache_data
+def _cargar_kpis_financieros(path):
+    return pd.read_excel(path, sheet_name='Hoja1', header=None)
+
 def renderizar():
     st.markdown("# 🛡️ Salud Financiera y Riesgo de Suministro")
     st.caption("Activos Inventario · Fill Rate · Riesgo Operativo (Quiebre de Stock)")
@@ -15,7 +19,7 @@ def renderizar():
         
     try:
         # Cargar datos sin cabecera para extraer por coordenadas exactas
-        df_raw = pd.read_excel(file_path, sheet_name='Hoja1', header=None)
+        df_raw = _cargar_kpis_financieros(file_path)
         
         # --- 1. EXTRACCIÓN DE DATOS MACRO ---
         capital_inmovilizado = pd.to_numeric(df_raw.iloc[23, 2], errors='coerce')

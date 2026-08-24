@@ -3,6 +3,10 @@ import pandas as pd
 import plotly.graph_objects as go
 import os
 
+@st.cache_data
+def _cargar_sici(path):
+    return pd.read_excel(path, sheet_name=0, header=None)
+
 def renderizar():
     st.markdown("# 🌍 Sistema Integral de Control Multicentro (SICI)")
     st.caption("Visión Global · Coberturas por CEDIS · Eficiencia Logística")
@@ -14,7 +18,7 @@ def renderizar():
         
     try:
         # Cargar datos sin cabecera para poder extraer métricas y tablas dinámicamente
-        df_raw = pd.read_excel(file_path, sheet_name=0, header=None)
+        df_raw = _cargar_sici(file_path)
         
         # --- 1. EXTRACCIÓN INTELIGENTE DE TOTALES ---
         # Buscamos exactamente dónde están los resúmenes financieros para que no se 

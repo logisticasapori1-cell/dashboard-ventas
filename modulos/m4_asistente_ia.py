@@ -3,6 +3,37 @@ import pandas as pd
 import os
 import requests
 
+@st.cache_data
+def _cargar_ventas_dashboard(path):
+    return pd.read_excel(path, sheet_name="DASHBOARD", header=None)
+
+@st.cache_data
+def _cargar_ventas_matriz(path):
+    return pd.read_excel(path, sheet_name="file_ventas")
+
+@st.cache_data
+def _cargar_desviaciones(path):
+    return pd.read_excel(path, sheet_name="Table 1")
+
+@st.cache_data
+def _cargar_produccion_todas(path):
+    xls = pd.ExcelFile(path)
+    hojas = {sheet: pd.read_excel(xls, sheet_name=sheet) for sheet in xls.sheet_names}
+    return xls.sheet_names, hojas
+
+@st.cache_data
+def _cargar_cierre_todas(path):
+    xls = pd.ExcelFile(path)
+    return {sheet: pd.read_excel(xls, sheet_name=sheet) for sheet in xls.sheet_names}
+
+@st.cache_data
+def _cargar_kpis_fin(path):
+    return pd.read_excel(path, sheet_name=0, header=None)
+
+@st.cache_data
+def _cargar_sici(path):
+    return pd.read_excel(path, sheet_name=0, header=None)
+
 def renderizar(dias_efectivos, dias_restantes):
     st.title("🤖 Asistente de Consultas — Supply Chain & S&OP")
     st.caption("Pregunta en lenguaje natural sobre ventas, forecast, desviaciones y producción")
@@ -59,14 +90,14 @@ def renderizar(dias_efectivos, dias_restantes):
         file_ventas = "data/VINCULO VTS BY SKU.xlsx"
         if os.path.exists(file_ventas):
             try:
-                df_kpis = pd.read_excel(file_ventas, sheet_name="DASHBOARD", header=None)
+                df_kpis = _cargar_ventas_dashboard(file_ventas)
                 val_gross = pd.to_numeric(df_kpis.iloc[2, 0], errors='coerce') or 0
                 val_forecast = pd.to_numeric(df_kpis.iloc[2, 4], errors='coerce') or 0
                 bloques.append(f"\n=== KPIs DE VENTAS Y FORECAST ===")
                 bloques.append(f"Total Units Sales Gross: {val_gross:,.0f}".replace(",", "."))
                 bloques.append(f"Forecast: {val_forecast:,.0f}".replace(",", "."))
                 
-                df_vts = pd.read_excel(file_ventas, sheet_name="file_ventas")
+                df_vts = _cargar_ventas_matriz(file_ventas)
                 bloques.append("\n=== MUESTRA MATRIZ DE VENTAS ===")
                 bloques.append(df_vts.head(80).to_string(index=False))
             except Exception as e: bloques.append(f"[Error leyendo ventas: {e}]")
@@ -75,7 +106,7 @@ def renderizar(dias_efectivos, dias_restantes):
         file_desv = "data/Comparación de Venta Diaria por SKU (Julio vs Agosto).xlsx"
         if os.path.exists(file_desv):
             try:
-                df = pd.read_excel(file_desv, sheet_name="Table 1")
+                df = _cargar_desviaciones(file_desv)
                 bloques.append("\n=== DESVIACIONES ===")
                 bloques.append(f"Total SKUs: {len(df)}")
                 bloques.append(df.head(60).to_string(index=False))
@@ -84,11 +115,11 @@ def renderizar(dias_efectivos, dias_restantes):
         file_prod = "data/Historico_Produccion_CREMIGURT.xlsx"
         if os.path.exists(file_prod):
             try:
-                xls = pd.ExcelFile(file_prod)
+                sheet_names_prod, hojas_prod = _cargar_produccion_todas(file_prod)
                 bloques.append(f"\n=== PRODUCCIÓN MENSUAL ===")
-                bloques.append(f"Categorías: {', '.join(xls.sheet_names)}")
-                for hoja in xls.sheet_names[:8]:
-                    df_h = pd.read_excel(xls, sheet_name=hoja)
+                bloques.append(f"Categorías: {', '.join(sheet_names_prod)}")
+                for hoja in sheet_names_prod[:8]:
+                    df_h = hojas_prod[hoja]
                     bloques.append(f"--- {hoja} ---")
                     bloques.append(df_h.head(15).to_string(index=False))
             except Exception as e: bloques.append(f"[Error leyendo producción: {e}]")
@@ -97,10 +128,9 @@ def renderizar(dias_efectivos, dias_restantes):
         file_cierre = "data/Historico Cierre Inventario Valorizado.xlsx"
         if os.path.exists(file_cierre):
             try:
-                xls_cierre = pd.ExcelFile(file_cierre)
+                hojas_cierre = _cargar_cierre_todas(file_cierre)
                 bloques.append(f"\n=== CIERRE DE INVENTARIO VALORIZADO ===")
-                for hoja in xls_cierre.sheet_names:
-                    df_cierre = pd.read_excel(xls_cierre, sheet_name=hoja)
+                for hoja, df_cierre in hojas_cierre.items():
                     bloques.append(f"Mes Cierre: {hoja}")
                     bloques.append(df_cierre.to_string(index=False))
             except Exception as e: bloques.append(f"[Error leyendo Cierre Valorizado: {e}]")
@@ -110,7 +140,7 @@ def renderizar(dias_efectivos, dias_restantes):
         file_kpis_fin = "data/Kpis Financieros Inventario.xlsx"
         if os.path.exists(file_kpis_fin):
             try:
-                df_kf = pd.read_excel(file_kpis_fin, sheet_name=0, header=None)
+                df_kf = _cargar_kpis_fin(file_kpis_fin)
                 bloques.append(f"\n=== SALUD FINANCIERA Y RIESGO DE SUMINISTRO ===")
                 bloques.append(df_kf.head(40).to_string(index=False))
             except Exception as e: bloques.append(f"[Error leyendo KPIs Financieros: {e}]")
@@ -120,7 +150,7 @@ def renderizar(dias_efectivos, dias_restantes):
         file_sici = "data/Sistema Integral de Control de Inventarios.xlsx"
         if os.path.exists(file_sici):
             try:
-                df_sici = pd.read_excel(file_sici, sheet_name=0, header=None)
+                df_sici = _cargar_sici(file_sici)
                 bloques.append(f"\n=== SICI: CONTROL DE INVENTARIO MULTICENTRO ===")
                 df_sici_clean = df_sici.dropna(how='all') 
                 bloques.append(df_sici_clean.head(75).to_string(index=False))
