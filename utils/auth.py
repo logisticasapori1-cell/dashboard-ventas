@@ -22,11 +22,11 @@ def verificar_login():
         else:
             st.markdown("<h1 style='text-align:center; color:#1a3a5c; margin:0; font-size:2rem; letter-spacing:0.04em;'>SAPORI</h1>", unsafe_allow_html=True)
 
-        st.markdown("<p style='text-align:center; color:#2f353d; margin:0.3rem 0 1.4rem 0; font-size:0.95rem;'>Portal de Supply Chain &amp; S&amp;OP</p>", unsafe_allow_html=True)
+        st.markdown("<p style='text-align:center; color:#2f353d; margin:0.3rem 0 1.4rem 0; font-size:1.3rem; font-family: \"Segoe UI\", Roboto, Helvetica, Arial, sans-serif; font-weight:600;'>Portal de Supply Chain &amp; S&amp;OP</p>", unsafe_allow_html=True)
 
         with st.form("formulario_login"):
-            st.markdown("##### Credenciales")
-            usuario = st.text_input("Usuario o Correo", placeholder="ej. sapori@empresa.com")
+            st.markdown("##### Ingrese Credenciales")
+            usuario = st.text_input("Usuario o Correo", placeholder="sapori@empresa.com")
             contrasena = st.text_input("Contraseña", type="password", placeholder="••••••••")
             st.markdown("<div style='height:0.5rem'></div>", unsafe_allow_html=True)
             boton_ingresar = st.form_submit_button("Acceder", type="primary", use_container_width=True)
