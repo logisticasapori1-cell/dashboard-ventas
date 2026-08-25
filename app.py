@@ -111,12 +111,12 @@ st.markdown("""
     <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.5rem;">
         <div>
             <strong>Plataforma de Inteligencia Operativa</strong><br>
-            <span style="font-size:0.75rem; color:#94a3b8;">Versión 3.1 · Entorno Seguro</span>
+            <span style="font-size:0.75rem; color:#94a3b8;">Versión 1.7 · Sapori, C. A. Todos los derechos reservados</span>
         </div>
         <div style="text-align:right;">
             Desarrollado por <strong>Jair Ramos</strong><br>
             <span style="color:#1a3a5c; font-weight:600; font-size:0.82rem;">
-                Dirección de Supply Chain Sapori
+                KaisenYork | Software
             </span>
         </div>
     </div>
