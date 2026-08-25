@@ -108,6 +108,34 @@ def renderizar():
                 height=400,
                 use_container_width=True
             )
+        st.markdown("---")
+        st.markdown("##### Participación % por SKU — Venta del Mes")
+        st.caption("Todos los productos. Cada barra es el peso del SKU sobre el total de Venta Mes del CEDI.")
+
+        df_pct = df.copy()
+        df_pct["Pct_Mes"] = (df_pct["Venta_Mes"] / total_mes * 100) if total_mes > 0 else 0
+        df_pct = df_pct.sort_values(by="Pct_Mes", ascending=False)
+
+        fig_pct = px.bar(
+            df_pct,
+            x="Pct_Mes",
+            y="Producto",
+            orientation="h",
+            color="Pct_Mes",
+            color_continuous_scale="Blues",
+            text=df_pct["Pct_Mes"].map(lambda v: f"{v:.1f}%"),
+        )
+        fig_pct.update_traces(textposition="outside", cliponaxis=False)
+        fig_pct.update_layout(
+            yaxis={"categoryorder": "total ascending"},
+            showlegend=False,
+            coloraxis_showscale=False,
+            margin=dict(l=0, r=40, t=30, b=0),
+            height=max(400, len(df_pct) * 28),
+            xaxis_title="% de la venta del mes",
+            yaxis_title="",
+        )
+        st.plotly_chart(fig_pct, use_container_width=True)
 
     except Exception as e:
         st.error(f"⚠️ **Error al procesar el archivo:** {e}")
