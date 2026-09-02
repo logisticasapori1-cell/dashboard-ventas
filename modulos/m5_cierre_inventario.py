@@ -103,7 +103,7 @@ def renderizar():
             # Definir colores corporativos para cada línea
             colores = {
                 "MATERIA PRIMA": "#1a3a5c",
-                "MATERIAL EMPAQUE": "#e8a317",
+                "MATERIAL EMPAQUE": "#fa7d2a",
                 "PRODUCTO TERMINADO": "#16a34a"
             }
 

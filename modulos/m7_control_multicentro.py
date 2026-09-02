@@ -73,7 +73,7 @@ def renderizar():
         # Gráficos de Dona para representar las particiones financieras
         col_d1, col_d2 = st.columns(2)
         labels_cedis = ["Caracas", "Carabobo", "Oriente", "Lara"]
-        colores_cedis = ['#1a3a5c', '#e8a317', '#dc2626', '#16a34a']
+        colores_cedis = ['#1a3a5c', '#fa7d2a', '#dc2626', '#16a34a']
         
         with col_d1:
             fig_val = go.Figure(data=[go.Pie(labels=labels_cedis, values=[val_ccs, val_car, val_ori, val_lar], hole=.5, marker_colors=colores_cedis)])

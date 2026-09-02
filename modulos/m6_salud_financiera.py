@@ -57,7 +57,7 @@ def renderizar():
         val_inicio_me = pd.to_numeric(df_raw.iloc[19, 1], errors='coerce')
 
         col_dona1, col_dona2 = st.columns(2)
-        colores_dona = ['#1a3a5c', '#e8a317'] # Azul corporativo y Oro Sapori
+        colores_dona = ['#1a3a5c', '#fa7d2a'] # Azul corporativo y Naranja Sapori
 
         with col_dona1:
             fig1 = go.Figure(data=[go.Pie(labels=["Materia Prima", "Empaque"], values=[val_inicio_mp, val_inicio_me], hole=.5, marker_colors=colores_dona, textinfo='percent+label')])

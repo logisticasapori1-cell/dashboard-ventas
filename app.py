@@ -4,7 +4,7 @@ import base64
 from utils.estilos import cargar_css
 from utils.auth import verificar_login
 
-# Importación de módulos (sin cambios)
+# Importación de módulos
 import modulos.m1_ventas_forecast as m1
 import modulos.m2_desviaciones as m2
 import modulos.m3_produccion as m3
@@ -31,7 +31,7 @@ if not verificar_login():
     st.stop()
 
 # ══════════════════════════════════════════════════════════
-# 2. TOPBAR (banner institucional)
+# 2. TOPBAR (BANNER INSTITUCIONAL)
 # ══════════════════════════════════════════════════════════
 if os.path.exists("assets/logo_empresa.png"):
     with open("assets/logo_empresa.png", "rb") as f:
@@ -59,36 +59,67 @@ st.markdown(f"""
 """, unsafe_allow_html=True)
 
 # ══════════════════════════════════════════════════════════
-# 3. BARRA DE LOGOUT (alineada a la derecha, bajo el topbar)
+# 3. NAVEGACIÓN PRINCIPAL – BOTONES ERP
 # ══════════════════════════════════════════════════════════
-_, col_logout = st.columns([11.5, 1])
+if "grupo_activo" not in st.session_state:
+    st.session_state["grupo_activo"] = "comercial"
+
+grupo_activo = st.session_state["grupo_activo"]
+
+col1, col2, col3, col4, col5, col_logout = st.columns([1.1, 1.1, 1.3, 1.2, 1.1, 0.7])
+
+with col1:
+    btn_type = "primary" if grupo_activo == "comercial" else "secondary"
+    if st.button("📊  Comercial", key="nav_comercial", type=btn_type, use_container_width=True):
+        if grupo_activo != "comercial":
+            st.session_state["grupo_activo"] = "comercial"
+            st.rerun()
+
+with col2:
+    btn_type = "primary" if grupo_activo == "operaciones" else "secondary"
+    if st.button("🏭  Operaciones", key="nav_operaciones", type=btn_type, use_container_width=True):
+        if grupo_activo != "operaciones":
+            st.session_state["grupo_activo"] = "operaciones"
+            st.rerun()
+
+with col3:
+    btn_type = "primary" if grupo_activo == "supply" else "secondary"
+    if st.button("📦  Supply & Inv.", key="nav_supply", type=btn_type, use_container_width=True):
+        if grupo_activo != "supply":
+            st.session_state["grupo_activo"] = "supply"
+            st.rerun()
+
+with col4:
+    btn_type = "primary" if grupo_activo == "finanzas" else "secondary"
+    if st.button("💰  Finanzas & Riesgo", key="nav_finanzas", type=btn_type, use_container_width=True):
+        if grupo_activo != "finanzas":
+            st.session_state["grupo_activo"] = "finanzas"
+            st.rerun()
+
+with col5:
+    btn_type = "primary" if grupo_activo == "ia" else "secondary"
+    if st.button("🤖  Asistente IA", key="nav_ia", type=btn_type, use_container_width=True):
+        if grupo_activo != "ia":
+            st.session_state["grupo_activo"] = "ia"
+            st.rerun()
+
 with col_logout:
-    # El CSS .erp-logout-col da estilo especial a este botón
-    st.markdown('<div class="erp-logout-col">', unsafe_allow_html=True)
-    if st.button("🚪 Salir", key="btn_logout", use_container_width=True):
+    st.markdown('<div class="erp-logout-btn">', unsafe_allow_html=True)
+    if st.button("🚪 Salir", key="nav_logout", use_container_width=True):
         st.session_state["autenticado"] = False
         st.rerun()
     st.markdown('</div>', unsafe_allow_html=True)
 
+st.markdown('<div style="height: 0.8rem;"></div>', unsafe_allow_html=True)
+
 # ══════════════════════════════════════════════════════════
-# 4. NAVEGACIÓN PRINCIPAL – GRUPOS DE MÓDULOS
-#    Cada grupo es una pestaña de nivel 1 (estilo ERP oscuro).
-#    Dentro de cada grupo, los módulos son pestañas de nivel 2.
+# 4. DESPLIEGUE DEL ÁREA ACTIVA
 # ══════════════════════════════════════════════════════════
-grupo_tabs = st.tabs([
-    "📊  Comercial",
-    "🏭  Operaciones",
-    "📦  Supply & Inventario",
-    "💰  Finanzas & Riesgo",
-    "🤖  Asistente IA",
-])
 
 # ──────────────────────────────────────────────────────────
-# GRUPO 1 · Comercial
-#   M1 – Ventas & Forecast  |  M8 – Desempeño Regional
+# ÁREA 1 · Comercial (M1 · Ventas & Forecast | M8 · Desempeño Regional)
 # ──────────────────────────────────────────────────────────
-with grupo_tabs[0]:
-    # Panel de parámetros (reemplaza los inputs del sidebar)
+if grupo_activo == "comercial":
     de_prev = st.session_state.get("dias_efectivos", 8)
     dr_prev = st.session_state.get("dias_restantes", 15)
     with st.expander(
@@ -104,11 +135,9 @@ with grupo_tabs[0]:
             dias_restantes = st.number_input(
                 "Días Restantes de Venta", min_value=0, value=dr_prev, step=1, key="dr_grp1"
             )
-        # Persistir para que el expander refleje valores actualizados
         st.session_state["dias_efectivos"] = dias_efectivos
         st.session_state["dias_restantes"] = dias_restantes
 
-    # Módulos del grupo como pestañas de nivel 2
     mod_tabs_c = st.tabs(["📈  Ventas & Forecast", "🗺️  Desempeño Regional (CEDIs)"])
     with mod_tabs_c[0]:
         m1.renderizar(dias_efectivos, dias_restantes)
@@ -116,10 +145,9 @@ with grupo_tabs[0]:
         m8.renderizar()
 
 # ──────────────────────────────────────────────────────────
-# GRUPO 2 · Operaciones
-#   M3 – Producción  |  M7 – Control Multicentro (SICI)
+# ÁREA 2 · Operaciones (M3 · Producción | M7 · Control Multicentro)
 # ──────────────────────────────────────────────────────────
-with grupo_tabs[1]:
+elif grupo_activo == "operaciones":
     mod_tabs_o = st.tabs(["⚙️  Control de Producción", "🏢  Control Multicentro (SICI)"])
     with mod_tabs_o[0]:
         m3.renderizar()
@@ -127,10 +155,9 @@ with grupo_tabs[1]:
         m7.renderizar()
 
 # ──────────────────────────────────────────────────────────
-# GRUPO 3 · Supply & Inventario
-#   M2 – Desviaciones  |  M5 – Cierre de Inventario
+# ÁREA 3 · Supply & Inventario (M2 · Desviaciones | M5 · Cierre de Inventario)
 # ──────────────────────────────────────────────────────────
-with grupo_tabs[2]:
+elif grupo_activo == "supply":
     mod_tabs_s = st.tabs(["📉  Desviaciones & Tendencias", "📦  Cierre de Inventario Valorizado"])
     with mod_tabs_s[0]:
         m2.renderizar()
@@ -138,17 +165,15 @@ with grupo_tabs[2]:
         m5.renderizar()
 
 # ──────────────────────────────────────────────────────────
-# GRUPO 4 · Finanzas & Riesgo
-#   M6 – Salud Financiera (módulo único en el grupo)
+# ÁREA 4 · Finanzas & Riesgo (M6 · Salud Financiera)
 # ──────────────────────────────────────────────────────────
-with grupo_tabs[3]:
+elif grupo_activo == "finanzas":
     m6.renderizar()
 
 # ──────────────────────────────────────────────────────────
-# GRUPO 5 · Asistente IA
-#   M4 – Asistente de Consultas  (también necesita parámetros de período)
+# ÁREA 5 · Asistente IA (M4 · Asistente de Consultas)
 # ──────────────────────────────────────────────────────────
-with grupo_tabs[4]:
+elif grupo_activo == "ia":
     de_ia = st.session_state.get("dias_efectivos_ia", 8)
     dr_ia = st.session_state.get("dias_restantes_ia", 15)
     with st.expander(

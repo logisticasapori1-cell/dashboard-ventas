@@ -4,13 +4,14 @@ def cargar_css():
     st.markdown("""
     <style>
     /* ═══════════════════════════════════════════════════════
-       VARIABLES GLOBALES
+       VARIABLES GLOBALES (Paleta Corporativa con #fa7d2a)
     ═══════════════════════════════════════════════════════ */
     :root {
         --primary:        #1a3a5c;
         --primary-light:  #2c5a8a;
-        --accent:         #e8a317;
-        --accent-dim:     rgba(232, 163, 23, 0.15);
+        --accent:         #fa7d2a;
+        --accent-hover:   #e66b1a;
+        --accent-dim:     rgba(250, 125, 42, 0.15);
         --bg-main:        #f0f4f8;
         --bg-card:        #ffffff;
         --bg-soft:        #f8fafc;
@@ -18,7 +19,7 @@ def cargar_css():
         --text-muted:     #64748b;
         --border:         #e2e8f0;
         --success:        #16a34a;
-        --warning:        #d97706;
+        --warning:        #fa7d2a;
         --danger:         #dc2626;
         --nav-dark:       #0f2744;
         --nav-darker:     #0a1f38;
@@ -59,16 +60,16 @@ def cargar_css():
     }
 
     /* ═══════════════════════════════════════════════════════
-       ERP TOPBAR
+       ERP TOPBAR (BANNER INSTITUCIONAL)
     ═══════════════════════════════════════════════════════ */
     .erp-topbar {
         background: linear-gradient(135deg, var(--primary) 0%, var(--nav-darker) 100%);
         padding: 0 1.8rem;
-        height: 60px;
+        height: 62px;
         display: flex;
         align-items: center;
         justify-content: space-between;
-        margin: 0 -1.8rem 0 -1.8rem;
+        margin: 0 -1.8rem 1rem -1.8rem;
         border-bottom: 3px solid var(--accent);
         box-shadow: 0 4px 14px rgba(0, 0, 0, 0.22);
     }
@@ -88,7 +89,7 @@ def cargar_css():
         font-family: 'Segoe UI', system-ui, sans-serif;
     }
     .erp-topbar-sub {
-        color: #7a94b0;
+        color: #94a3b8;
         font-size: 0.65rem;
         letter-spacing: 0.05em;
         text-transform: uppercase;
@@ -100,124 +101,128 @@ def cargar_css():
     }
     .erp-user-badge {
         background: var(--accent-dim);
-        border: 1px solid rgba(232, 163, 23, 0.45);
+        border: 1px solid rgba(250, 125, 42, 0.45);
         color: var(--accent) !important;
-        padding: 0.32rem 0.9rem;
+        padding: 0.35rem 0.95rem;
         border-radius: 20px;
-        font-size: 0.78rem;
+        font-size: 0.8rem;
         font-weight: 600;
         letter-spacing: 0.03em;
     }
     .erp-version {
-        color: #475569;
-        font-size: 0.7rem;
+        color: #64748b;
+        font-size: 0.72rem;
         letter-spacing: 0.06em;
-        font-weight: 500;
+        font-weight: 600;
     }
 
     /* ═══════════════════════════════════════════════════════
-       BARRA DE ACCIÓN (contiene el botón de logout)
+       BOTONES DE NAVEGACIÓN ERP (ÁREAS PRINCIPALES)
     ═══════════════════════════════════════════════════════ */
-    .erp-action-row {
-        background: var(--nav-dark);
-        margin: 0 -1.8rem;
-        padding: 0.3rem 1.8rem 0.3rem;
-        display: flex;
-        justify-content: flex-end;
-        border-bottom: 1px solid rgba(255,255,255,0.07);
+    /* Botón Activo (Seleccionado) */
+    .stButton > button[kind="primary"] {
+        background: linear-gradient(135deg, #fa7d2a 0%, #e66b1a 100%) !important;
+        border: 1px solid #fa7d2a !important;
+        color: #ffffff !important;
+        font-weight: 700 !important;
+        font-size: 0.9rem !important;
+        padding: 0.6rem 1rem !important;
+        border-radius: 8px !important;
+        box-shadow: 0 3px 12px rgba(250, 125, 42, 0.38) !important;
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    }
+    .stButton > button[kind="primary"]:hover {
+        background: linear-gradient(135deg, #e66b1a 0%, #d45f12 100%) !important;
+        border-color: #d45f12 !important;
+        box-shadow: 0 4px 16px rgba(250, 125, 42, 0.5) !important;
+        transform: translateY(-1px);
+    }
+
+    /* Botón Inactivo */
+    .stButton > button[kind="secondary"] {
+        background: #1a3a5c !important;
+        border: 1px solid rgba(255, 255, 255, 0.18) !important;
+        color: #f1f5f9 !important;
+        font-weight: 600 !important;
+        font-size: 0.9rem !important;
+        padding: 0.6rem 1rem !important;
+        border-radius: 8px !important;
+        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08) !important;
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    }
+    .stButton > button[kind="secondary"]:hover {
+        background: rgba(250, 125, 42, 0.15) !important;
+        border-color: #fa7d2a !important;
+        color: #fa7d2a !important;
+        box-shadow: 0 3px 10px rgba(0, 0, 0, 0.12) !important;
+        transform: translateY(-1px);
+    }
+
+    /* Botón Logout específico */
+    .erp-logout-btn .stButton > button {
+        background: rgba(220, 38, 38, 0.08) !important;
+        border: 1px solid rgba(220, 38, 38, 0.25) !important;
+        color: #dc2626 !important;
+        font-size: 0.82rem !important;
+        padding: 0.6rem 0.8rem !important;
+        border-radius: 8px !important;
+        font-weight: 600 !important;
+        transition: all 0.15s ease !important;
+    }
+    .erp-logout-btn .stButton > button:hover {
+        background: #dc2626 !important;
+        border-color: #dc2626 !important;
+        color: #ffffff !important;
+        box-shadow: 0 3px 10px rgba(220, 38, 38, 0.3) !important;
     }
 
     /* ═══════════════════════════════════════════════════════
-       NAVEGACIÓN PRINCIPAL – TABS DE GRUPO (nivel 1)
-       Estilo: barra oscura tipo menú ERP
+       PESTAÑAS DE SUBMÓDULOS (NIVEL 2)
     ═══════════════════════════════════════════════════════ */
     .stTabs [data-baseweb="tab-list"] {
-        background: var(--nav-dark) !important;
-        gap: 0 !important;
-        padding: 0 1rem !important;
-        margin: 0 -1.8rem !important;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.07) !important;
-        border-radius: 0 !important;
-        overflow-x: auto;
+        background: #ffffff !important;
+        border: 1px solid var(--border) !important;
+        border-bottom: 2px solid var(--border) !important;
+        border-radius: 10px 10px 0 0 !important;
+        padding: 0 0.5rem !important;
+        gap: 4px !important;
     }
 
     .stTabs [data-baseweb="tab"] {
         background: transparent !important;
-        color: #7a94b0 !important;
+        color: var(--text-muted) !important;
         border: none !important;
         border-bottom: 3px solid transparent !important;
-        border-radius: 0 !important;
-        font-weight: 500;
-        font-size: 0.87rem;
-        padding: 0.88rem 1.35rem !important;
-        transition: color 0.18s ease, background 0.18s ease, border-color 0.18s ease;
-        letter-spacing: 0.01em;
-        white-space: nowrap;
+        border-radius: 6px 6px 0 0 !important;
+        font-weight: 600 !important;
+        font-size: 0.86rem !important;
+        padding: 0.75rem 1.25rem !important;
+        transition: all 0.15s ease !important;
     }
 
     .stTabs [data-baseweb="tab"]:hover {
-        color: #d1dde9 !important;
-        background: rgba(255, 255, 255, 0.05) !important;
+        color: var(--primary) !important;
+        background: rgba(250, 125, 42, 0.06) !important;
     }
 
     .stTabs [aria-selected="true"] {
-        color: #ffffff !important;
-        border-bottom: 3px solid var(--accent) !important;
-        background: rgba(232, 163, 23, 0.07) !important;
+        color: #fa7d2a !important;
+        border-bottom: 3px solid #fa7d2a !important;
+        background: rgba(250, 125, 42, 0.08) !important;
         font-weight: 700 !important;
     }
 
-    /* Quitar la línea azul nativa de Streamlit */
-    .stTabs [data-baseweb="tab-highlight"] { display: none !important; }
+    .stTabs [data-baseweb="tab-highlight"] {
+        background-color: #fa7d2a !important;
+    }
 
-    /* Área de contenido del tab de grupo */
     .stTabs [data-baseweb="tab-panel"] {
-        padding: 1.4rem 0 0 0 !important;
-        background: transparent !important;
-    }
-
-    /* ═══════════════════════════════════════════════════════
-       TABS DE MÓDULO (nivel 2, anidados dentro de un tab-panel)
-       Estilo: tarjeta blanca con pestañas profesionales
-    ═══════════════════════════════════════════════════════ */
-    [data-baseweb="tab-panel"] .stTabs [data-baseweb="tab-list"] {
-        background: #f1f5f9 !important;
-        margin: 0 !important;
-        padding: 0 0.6rem !important;
-        border: 1px solid var(--border) !important;
-        border-bottom: none !important;
-        border-radius: 10px 10px 0 0 !important;
-        gap: 2px !important;
-    }
-
-    [data-baseweb="tab-panel"] .stTabs [data-baseweb="tab"] {
-        color: var(--text-muted) !important;
-        font-size: 0.84rem !important;
-        font-weight: 500 !important;
-        padding: 0.62rem 1.15rem !important;
-        border-bottom: 2px solid transparent !important;
-    }
-
-    [data-baseweb="tab-panel"] .stTabs [data-baseweb="tab"]:hover {
-        color: var(--primary-light) !important;
-        background: rgba(26, 58, 92, 0.06) !important;
-    }
-
-    [data-baseweb="tab-panel"] .stTabs [aria-selected="true"] {
-        color: var(--primary) !important;
-        border-bottom: 2px solid var(--primary) !important;
-        font-weight: 700 !important;
-        background: rgba(26, 58, 92, 0.06) !important;
-    }
-
-    /* Contenido del tab de módulo: panel tipo tarjeta */
-    [data-baseweb="tab-panel"] .stTabs [data-baseweb="tab-panel"] {
         background: var(--bg-card) !important;
         border: 1px solid var(--border) !important;
         border-top: none !important;
         border-radius: 0 0 10px 10px !important;
         padding: 1.8rem 1.6rem !important;
-        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
     }
 
     /* ═══════════════════════════════════════════════════════
@@ -234,6 +239,7 @@ def cargar_css():
     [data-testid="stMetric"]:hover {
         box-shadow: 0 6px 16px rgba(0, 0, 0, 0.09);
         transform: translateY(-1px);
+        border-color: rgba(250, 125, 42, 0.35);
     }
     [data-testid="stMetricLabel"] {
         color: var(--text-muted) !important;
@@ -268,43 +274,8 @@ def cargar_css():
         padding: 0.7rem 1rem !important;
     }
     [data-testid="stExpander"] summary:hover {
-        background: rgba(26, 58, 92, 0.04) !important;
-    }
-
-    /* ═══════════════════════════════════════════════════════
-       BOTÓN DE LOGOUT (estilo sobrio para topbar)
-    ═══════════════════════════════════════════════════════ */
-    .erp-logout-col .stButton > button {
-        background: rgba(255, 255, 255, 0.06) !important;
-        border: 1px solid rgba(255, 255, 255, 0.18) !important;
-        color: #94a3b8 !important;
-        font-size: 0.78rem !important;
-        padding: 0.28rem 0.9rem !important;
-        border-radius: 6px !important;
-        font-weight: 500;
-        transition: all 0.15s ease;
-    }
-    .erp-logout-col .stButton > button:hover {
-        background: rgba(220, 38, 38, 0.12) !important;
-        border-color: rgba(220, 38, 38, 0.4) !important;
-        color: #fca5a5 !important;
-    }
-
-    /* ═══════════════════════════════════════════════════════
-       BOTONES GENERALES
-    ═══════════════════════════════════════════════════════ */
-    .stButton > button {
-        border-radius: 8px;
-        font-weight: 600;
-        transition: all 0.15s ease;
-    }
-    .stButton > button[kind="primary"] {
-        background: var(--primary);
-        border: none;
-    }
-    .stButton > button[kind="primary"]:hover {
-        background: var(--primary-light);
-        box-shadow: 0 4px 12px rgba(26, 58, 92, 0.25);
+        background: rgba(250, 125, 42, 0.04) !important;
+        color: #fa7d2a !important;
     }
 
     /* ═══════════════════════════════════════════════════════
@@ -324,6 +295,11 @@ def cargar_css():
     .stNumberInput input {
         border-radius: 8px !important;
         border: 1px solid var(--border) !important;
+    }
+    .stTextInput input:focus,
+    .stNumberInput input:focus {
+        border-color: #fa7d2a !important;
+        box-shadow: 0 0 0 1px #fa7d2a !important;
     }
 
     /* ═══════════════════════════════════════════════════════
@@ -348,6 +324,7 @@ def cargar_css():
         letter-spacing: 0.02em;
         margin-bottom: 1.4rem;
         box-shadow: 0 4px 12px rgba(26, 58, 92, 0.18);
+        border-left: 4px solid var(--accent);
     }
 
     .kpi-section-label {
