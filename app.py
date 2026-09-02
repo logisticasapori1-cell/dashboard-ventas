@@ -31,7 +31,7 @@ if not verificar_login():
     st.stop()
 
 # ══════════════════════════════════════════════════════════
-# 2. TOPBAR (BANNER INSTITUCIONAL)
+# 2. TOPBAR INSTITUCIONAL (LOGO + TÍTULO + USUARIO + SALIR)
 # ══════════════════════════════════════════════════════════
 if os.path.exists("assets/logo_empresa.png"):
     with open("assets/logo_empresa.png", "rb") as f:
@@ -42,8 +42,10 @@ else:
 
 usuario_activo = st.session_state.get("usuario_nombre", "Gerencia")
 
-st.markdown(f"""
-<div class="erp-topbar">
+col_brand, col_user, col_logout = st.columns([7.3, 1.8, 0.9], vertical_alignment="center")
+
+with col_brand:
+    st.markdown(f"""
     <div class="erp-topbar-left">
         {logo_html}
         <div class="erp-topbar-info">
@@ -51,12 +53,20 @@ st.markdown(f"""
             <span class="erp-topbar-sub">Plataforma de Inteligencia Operativa &nbsp;·&nbsp; Sapori, C.A.</span>
         </div>
     </div>
-    <div class="erp-topbar-right">
+    """, unsafe_allow_html=True)
+
+with col_user:
+    st.markdown(f"""
+    <div style="display:flex; align-items:center; gap:0.6rem; justify-content:flex-end; height:100%;">
         <span class="erp-user-badge">👤 {usuario_activo}</span>
         <span class="erp-version">v1.7</span>
     </div>
-</div>
-""", unsafe_allow_html=True)
+    """, unsafe_allow_html=True)
+
+with col_logout:
+    if st.button("🚪 Salir", key="top_btn_logout", use_container_width=True):
+        st.session_state["autenticado"] = False
+        st.rerun()
 
 # ══════════════════════════════════════════════════════════
 # 3. NAVEGACIÓN PRINCIPAL – BOTONES ERP
@@ -66,7 +76,7 @@ if "grupo_activo" not in st.session_state:
 
 grupo_activo = st.session_state["grupo_activo"]
 
-col1, col2, col3, col4, col5, col_logout = st.columns([1.1, 1.1, 1.3, 1.2, 1.1, 0.7])
+col1, col2, col3, col4, col5 = st.columns(5)
 
 with col1:
     btn_type = "primary" if grupo_activo == "comercial" else "secondary"
@@ -84,7 +94,7 @@ with col2:
 
 with col3:
     btn_type = "primary" if grupo_activo == "supply" else "secondary"
-    if st.button("📦  Supply & Inv.", key="nav_supply", type=btn_type, use_container_width=True):
+    if st.button("📦  Supply & Inventario", key="nav_supply", type=btn_type, use_container_width=True):
         if grupo_activo != "supply":
             st.session_state["grupo_activo"] = "supply"
             st.rerun()
@@ -102,13 +112,6 @@ with col5:
         if grupo_activo != "ia":
             st.session_state["grupo_activo"] = "ia"
             st.rerun()
-
-with col_logout:
-    st.markdown('<div class="erp-logout-btn">', unsafe_allow_html=True)
-    if st.button("🚪 Salir", key="nav_logout", use_container_width=True):
-        st.session_state["autenticado"] = False
-        st.rerun()
-    st.markdown('</div>', unsafe_allow_html=True)
 
 st.markdown('<div style="height: 0.8rem;"></div>', unsafe_allow_html=True)
 
