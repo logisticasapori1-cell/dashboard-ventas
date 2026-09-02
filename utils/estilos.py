@@ -60,18 +60,15 @@ def cargar_css():
     }
 
     /* ═══════════════════════════════════════════════════════
-       ERP TOPBAR (BANNER INSTITUCIONAL)
+       ERP TOPBAR (BANNER INSTITUCIONAL CON USUARIO Y SALIR)
     ═══════════════════════════════════════════════════════ */
-    .erp-topbar {
+    div[data-testid="stHorizontalBlock"]:has(.st-key-top_btn_logout) {
         background: linear-gradient(135deg, var(--primary) 0%, var(--nav-darker) 100%);
-        padding: 0 1.8rem;
-        height: 62px;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        margin: 0 -1.8rem 1rem -1.8rem;
+        padding: 0.6rem 1.8rem;
+        margin: 0 -1.8rem 1.1rem -1.8rem;
         border-bottom: 3px solid var(--accent);
         box-shadow: 0 4px 14px rgba(0, 0, 0, 0.22);
+        align-items: center !important;
     }
     .erp-topbar-left {
         display: flex;
@@ -94,26 +91,46 @@ def cargar_css():
         letter-spacing: 0.05em;
         text-transform: uppercase;
     }
-    .erp-topbar-right {
-        display: flex;
-        align-items: center;
-        gap: 1rem;
-    }
     .erp-user-badge {
         background: var(--accent-dim);
         border: 1px solid rgba(250, 125, 42, 0.45);
         color: var(--accent) !important;
-        padding: 0.35rem 0.95rem;
+        padding: 0.35rem 0.9rem;
         border-radius: 20px;
         font-size: 0.8rem;
         font-weight: 600;
         letter-spacing: 0.03em;
+        white-space: nowrap;
+        display: inline-block;
     }
     .erp-version {
         color: #64748b;
         font-size: 0.72rem;
         letter-spacing: 0.06em;
         font-weight: 600;
+        white-space: nowrap;
+        display: inline-block;
+    }
+
+    /* Botón Logout integrado en la Topbar al lado del usuario */
+    .st-key-top_btn_logout .stButton > button {
+        background: rgba(220, 38, 38, 0.12) !important;
+        border: 1px solid rgba(220, 38, 38, 0.35) !important;
+        color: #fca5a5 !important;
+        font-size: 0.8rem !important;
+        padding: 0.38rem 0.85rem !important;
+        border-radius: 6px !important;
+        font-weight: 600 !important;
+        transition: all 0.18s ease !important;
+        white-space: nowrap !important;
+        box-shadow: none !important;
+    }
+    .st-key-top_btn_logout .stButton > button:hover {
+        background: #dc2626 !important;
+        border-color: #dc2626 !important;
+        color: #ffffff !important;
+        box-shadow: 0 3px 10px rgba(220, 38, 38, 0.35) !important;
+        transform: translateY(-1px);
     }
 
     /* ═══════════════════════════════════════════════════════
@@ -156,24 +173,6 @@ def cargar_css():
         color: #fa7d2a !important;
         box-shadow: 0 3px 10px rgba(0, 0, 0, 0.12) !important;
         transform: translateY(-1px);
-    }
-
-    /* Botón Logout específico */
-    .erp-logout-btn .stButton > button {
-        background: rgba(220, 38, 38, 0.08) !important;
-        border: 1px solid rgba(220, 38, 38, 0.25) !important;
-        color: #dc2626 !important;
-        font-size: 0.82rem !important;
-        padding: 0.6rem 0.8rem !important;
-        border-radius: 8px !important;
-        font-weight: 600 !important;
-        transition: all 0.15s ease !important;
-    }
-    .erp-logout-btn .stButton > button:hover {
-        background: #dc2626 !important;
-        border-color: #dc2626 !important;
-        color: #ffffff !important;
-        box-shadow: 0 3px 10px rgba(220, 38, 38, 0.3) !important;
     }
 
     /* ═══════════════════════════════════════════════════════
