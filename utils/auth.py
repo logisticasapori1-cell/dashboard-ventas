@@ -18,7 +18,7 @@ def verificar_login():
         if os.path.exists("assets/logo_empresa.png"):
             col_l, col_c, col_r = st.columns([1.5, 1.3, 1.5])
             with col_c:
-                st.image("assets/logo_empresa.png", use_column_width=True)
+                st.image("assets/logo_empresa.png", use_container_width=True)
         else:
             st.markdown("<h1 style='text-align:center; color:#1a3a5c; margin:0; font-size:2rem; letter-spacing:0.04em;'>SAPORI</h1>", unsafe_allow_html=True)
 
