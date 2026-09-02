@@ -1,9 +1,10 @@
 import streamlit as st
-import time
+import os
+import base64
 from utils.estilos import cargar_css
 from utils.auth import verificar_login
 
-# Importación de los módulos (Asegúrate de haberles puesto la letra 'm' al principio en la carpeta)
+# Importación de módulos (sin cambios)
 import modulos.m1_ventas_forecast as m1
 import modulos.m2_desviaciones as m2
 import modulos.m3_produccion as m3
@@ -13,99 +14,164 @@ import modulos.m6_salud_financiera as m6
 import modulos.m7_control_multicentro as m7
 import modulos.m8_ventas_regionales as m8
 
-# ==========================================
-# 1. CONFIGURACIÓN DE PÁGINA Y ESTILOS
-# ==========================================
-st.set_page_config(layout="wide", page_title="Portal de Supply Chain & S&OP - Sapori", page_icon="🟠")
+# ══════════════════════════════════════════════════════════
+# 0. CONFIGURACIÓN DE PÁGINA
+# ══════════════════════════════════════════════════════════
+st.set_page_config(
+    layout="wide",
+    page_title="Portal Supply Chain & S&OP – Sapori",
+    page_icon="🟠"
+)
 cargar_css()
 
-# ==========================================
-# 2. SISTEMA DE AUTENTICACIÓN
-# ==========================================
+# ══════════════════════════════════════════════════════════
+# 1. AUTENTICACIÓN
+# ══════════════════════════════════════════════════════════
 if not verificar_login():
-    st.stop() 
+    st.stop()
 
-# ==========================================
-# 3. GESTIÓN DE ESTADO (MEMORIA DEL MENÚ)
-# ==========================================
-lista_modulos = [
-    "1. Control Operativo de Ventas y Forecast",
-    "2. Tablero de Desviaciones y Tendencias",
-    "3. Control y Análisis de Producción Mensual",
-    "4. Asistente de Consultas (IA)",
-    "5. Cierre de Inventario Valorizado",
-    "6. Salud Financiera y Riesgo Suministro",
-    "7. Control Integral Multicentro (SICI)",
-    "8. Desempeño Regional de Ventas (CEDIs)"
-]
+# ══════════════════════════════════════════════════════════
+# 2. TOPBAR (banner institucional)
+# ══════════════════════════════════════════════════════════
+if os.path.exists("assets/logo_empresa.png"):
+    with open("assets/logo_empresa.png", "rb") as f:
+        logo_b64 = base64.b64encode(f.read()).decode()
+    logo_html = f'<img src="data:image/png;base64,{logo_b64}" class="erp-logo" />'
+else:
+    logo_html = '<span class="erp-logo-text">SAPORI</span>'
 
-if "modulo_actual" not in st.session_state:
-    st.session_state.modulo_actual = lista_modulos[0]
+usuario_activo = st.session_state.get("usuario_nombre", "Gerencia")
 
-# ==========================================
-# 4. INTERFAZ LATERAL (SIDEBAR)
-# ==========================================
-with st.sidebar:
-    st.image("assets/logo_empresa.png")
-    
-    st.markdown("### Módulos de Operación")
-    # El radio button ahora lee y escribe en nuestra memoria segura
-    modulo_seleccionado = st.radio(
-        "Área a visualizar", 
-        lista_modulos, 
-        index=lista_modulos.index(st.session_state.modulo_actual),
-        label_visibility="collapsed"
-    )
+st.markdown(f"""
+<div class="erp-topbar">
+    <div class="erp-topbar-left">
+        {logo_html}
+        <div class="erp-topbar-info">
+            <span class="erp-topbar-title">Portal Supply Chain &amp; S&amp;OP</span>
+            <span class="erp-topbar-sub">Plataforma de Inteligencia Operativa &nbsp;·&nbsp; Sapori, C.A.</span>
+        </div>
+    </div>
+    <div class="erp-topbar-right">
+        <span class="erp-user-badge">👤 {usuario_activo}</span>
+        <span class="erp-version">v1.7</span>
+    </div>
+</div>
+""", unsafe_allow_html=True)
 
-    st.markdown("---")
-    st.markdown("### Control de Tiempos")
-    dias_efectivos = st.number_input("Días de Venta Efectivos", min_value=1, value=8, step=1)
-    dias_restantes = st.number_input("Días de Venta Restantes", min_value=0, value=15, step=1)
-
-    st.markdown("---")
-    st.caption("👤 Rol: Gerencia")
-    if st.button("🚪 Cerrar Sesión", use_container_width=True):
-        st.session_state['autenticado'] = False
+# ══════════════════════════════════════════════════════════
+# 3. BARRA DE LOGOUT (alineada a la derecha, bajo el topbar)
+# ══════════════════════════════════════════════════════════
+_, col_logout = st.columns([11.5, 1])
+with col_logout:
+    # El CSS .erp-logout-col da estilo especial a este botón
+    st.markdown('<div class="erp-logout-col">', unsafe_allow_html=True)
+    if st.button("🚪 Salir", key="btn_logout", use_container_width=True):
+        st.session_state["autenticado"] = False
         st.rerun()
+    st.markdown('</div>', unsafe_allow_html=True)
 
-# ==========================================
-# 5. EL HACK DEL DOBLE RERUN (DESTRUCTOR DE CACHÉ)
-# ==========================================
-# Si el usuario hace clic en un módulo diferente, interceptamos la acción
-if modulo_seleccionado != st.session_state.modulo_actual:
-    st.session_state.modulo_actual = modulo_seleccionado
-    
-    # Obligamos al servidor a borrar el módulo anterior de la pantalla
-    with st.spinner("Desplegando análisis..."):
-        time.sleep(0.2)
-        
-    # Reiniciamos la aplicación entera de forma invisible para que el nuevo módulo cargue en un lienzo en blanco
-    st.rerun() 
+# ══════════════════════════════════════════════════════════
+# 4. NAVEGACIÓN PRINCIPAL – GRUPOS DE MÓDULOS
+#    Cada grupo es una pestaña de nivel 1 (estilo ERP oscuro).
+#    Dentro de cada grupo, los módulos son pestañas de nivel 2.
+# ══════════════════════════════════════════════════════════
+grupo_tabs = st.tabs([
+    "📊  Comercial",
+    "🏭  Operaciones",
+    "📦  Supply & Inventario",
+    "💰  Finanzas & Riesgo",
+    "🤖  Asistente IA",
+])
 
-# ==========================================
-# 6. ENRUTADOR DE MÓDULOS (EJECUCIÓN LIMPIA)
-# ==========================================
-modulo_activo = st.session_state.modulo_actual
+# ──────────────────────────────────────────────────────────
+# GRUPO 1 · Comercial
+#   M1 – Ventas & Forecast  |  M8 – Desempeño Regional
+# ──────────────────────────────────────────────────────────
+with grupo_tabs[0]:
+    # Panel de parámetros (reemplaza los inputs del sidebar)
+    de_prev = st.session_state.get("dias_efectivos", 8)
+    dr_prev = st.session_state.get("dias_restantes", 15)
+    with st.expander(
+        f"⚙️  Parámetros del Período  ·  {de_prev} días efectivos  ·  {dr_prev} restantes",
+        expanded=False
+    ):
+        col_a, col_b, _ = st.columns([1.6, 1.6, 5])
+        with col_a:
+            dias_efectivos = st.number_input(
+                "Días Efectivos de Venta", min_value=1, value=de_prev, step=1, key="de_grp1"
+            )
+        with col_b:
+            dias_restantes = st.number_input(
+                "Días Restantes de Venta", min_value=0, value=dr_prev, step=1, key="dr_grp1"
+            )
+        # Persistir para que el expander refleje valores actualizados
+        st.session_state["dias_efectivos"] = dias_efectivos
+        st.session_state["dias_restantes"] = dias_restantes
 
-if modulo_activo == lista_modulos[0]:
-    m1.renderizar(dias_efectivos, dias_restantes)
-elif modulo_activo == lista_modulos[1]:
-    m2.renderizar()
-elif modulo_activo == lista_modulos[2]:
-    m3.renderizar()
-elif modulo_activo == lista_modulos[3]:
-    m4.renderizar(dias_efectivos, dias_restantes)
-elif modulo_activo == lista_modulos[4]:
-    m5.renderizar()
-elif modulo_activo == lista_modulos[5]:
+    # Módulos del grupo como pestañas de nivel 2
+    mod_tabs_c = st.tabs(["📈  Ventas & Forecast", "🗺️  Desempeño Regional (CEDIs)"])
+    with mod_tabs_c[0]:
+        m1.renderizar(dias_efectivos, dias_restantes)
+    with mod_tabs_c[1]:
+        m8.renderizar()
+
+# ──────────────────────────────────────────────────────────
+# GRUPO 2 · Operaciones
+#   M3 – Producción  |  M7 – Control Multicentro (SICI)
+# ──────────────────────────────────────────────────────────
+with grupo_tabs[1]:
+    mod_tabs_o = st.tabs(["⚙️  Control de Producción", "🏢  Control Multicentro (SICI)"])
+    with mod_tabs_o[0]:
+        m3.renderizar()
+    with mod_tabs_o[1]:
+        m7.renderizar()
+
+# ──────────────────────────────────────────────────────────
+# GRUPO 3 · Supply & Inventario
+#   M2 – Desviaciones  |  M5 – Cierre de Inventario
+# ──────────────────────────────────────────────────────────
+with grupo_tabs[2]:
+    mod_tabs_s = st.tabs(["📉  Desviaciones & Tendencias", "📦  Cierre de Inventario Valorizado"])
+    with mod_tabs_s[0]:
+        m2.renderizar()
+    with mod_tabs_s[1]:
+        m5.renderizar()
+
+# ──────────────────────────────────────────────────────────
+# GRUPO 4 · Finanzas & Riesgo
+#   M6 – Salud Financiera (módulo único en el grupo)
+# ──────────────────────────────────────────────────────────
+with grupo_tabs[3]:
     m6.renderizar()
-elif modulo_activo == lista_modulos[6]:
-    m7.renderizar()
-elif modulo_activo == lista_modulos[7]:
-    m8.renderizar()
-# ==========================================
-# 7. PIE DE PÁGINA GLOBAL
-# ==========================================
+
+# ──────────────────────────────────────────────────────────
+# GRUPO 5 · Asistente IA
+#   M4 – Asistente de Consultas  (también necesita parámetros de período)
+# ──────────────────────────────────────────────────────────
+with grupo_tabs[4]:
+    de_ia = st.session_state.get("dias_efectivos_ia", 8)
+    dr_ia = st.session_state.get("dias_restantes_ia", 15)
+    with st.expander(
+        f"⚙️  Parámetros del Período  ·  {de_ia} días efectivos  ·  {dr_ia} restantes",
+        expanded=False
+    ):
+        col_a, col_b, _ = st.columns([1.6, 1.6, 5])
+        with col_a:
+            dias_efectivos_ia = st.number_input(
+                "Días Efectivos de Venta", min_value=1, value=de_ia, step=1, key="de_grp5"
+            )
+        with col_b:
+            dias_restantes_ia = st.number_input(
+                "Días Restantes de Venta", min_value=0, value=dr_ia, step=1, key="dr_grp5"
+            )
+        st.session_state["dias_efectivos_ia"] = dias_efectivos_ia
+        st.session_state["dias_restantes_ia"] = dias_restantes_ia
+
+    m4.renderizar(dias_efectivos_ia, dias_restantes_ia)
+
+# ══════════════════════════════════════════════════════════
+# 5. PIE DE PÁGINA GLOBAL
+# ══════════════════════════════════════════════════════════
 st.markdown("""
 <div class="footer-custom">
     <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.5rem;">
@@ -115,9 +181,7 @@ st.markdown("""
         </div>
         <div style="text-align:right;">
             Desarrollado por <strong>Jair Ramos</strong><br>
-            <span style="color:#1a3a5c; font-weight:600; font-size:0.82rem;">
-                KaisenYork | Software
-            </span>
+            <span style="color:#1a3a5c; font-weight:600; font-size:0.82rem;">KaisenYork | Software</span>
         </div>
     </div>
 </div>

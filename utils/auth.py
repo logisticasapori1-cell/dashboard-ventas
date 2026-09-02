@@ -41,6 +41,7 @@ def verificar_login():
                 }
                 if usuario in usuarios_autorizados and usuarios_autorizados[usuario] == contrasena:
                     st.session_state['autenticado'] = True
+                    st.session_state['usuario_nombre'] = usuario
                     st.success("✅ Acceso concedido. Inicializando entorno...")
                     st.rerun()
                 else:
