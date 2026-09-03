@@ -18,7 +18,7 @@ def renderizar():
     st.caption("Análisis de Venta Bruta y Proyección por Centro de Distribución")
 
     # Ruta del archivo
-    file_path = "data/Ventas por cides AGOSTO.xlsx"
+    file_path = "data/Ventas por cides.xlsx"
 
     if not os.path.exists(file_path):
         st.error(f"❌ **No se encontró el archivo:** '{file_path}'")
@@ -40,7 +40,7 @@ def renderizar():
         df = _cargar_hoja_regional(file_path, hoja_seleccionada)
         
         # Estructurar columnas: Referencia (Código), Producto, Venta Bruta, Venta Diaria, Venta Mes
-        df.columns = ["Referencia", "Producto", "Venta_Bruta", "Venta_Diaria", "Venta_Mes", "Vacio"]
+        df.columns = ["Referencia", "Producto", "Venta_Bruta", "Venta_Diaria", "Venta_Mes"]
         
         # Limpiar datos (quitar filas vacías o de totales)
         df = df.dropna(subset=['Producto', 'Venta_Bruta'])
