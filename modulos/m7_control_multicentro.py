@@ -97,7 +97,7 @@ def renderizar():
         )
         
         # Recortar solo las filas de productos (desde la fila 11)
-        df_tabla_raw = df_raw.iloc[11:idx_val-2].copy()
+        df_tabla_raw = df_raw.iloc[12:idx_val-2].copy()
         
         # Lógicas de Semáforos Corporativos seguros
         def semaforo_cobertura(val):
