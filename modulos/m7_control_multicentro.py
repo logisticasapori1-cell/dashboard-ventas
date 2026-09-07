@@ -97,12 +97,13 @@ def renderizar():
                 "🏢 CEDIS Caracas", 
                 "🏭 CEDIS Carabobo", 
                 "🌅 CEDIS Oriente", 
-                "🎸 CEDIS Lara"
+                "🎸 CEDIS Lara",
+                "☀️ CEDIS Zulia"
             ]
         )
         
         # Recortar solo las filas de productos (fila 12 hasta donde inician los totales)
-        df_tabla_raw = df_raw.iloc[12:idx_val-2].copy()
+        df_tabla_raw = df_raw.iloc[11:idx_val-2].copy()
         
         # Lógicas de Semáforos Corporativos
         def semaforo_cobertura(val):
@@ -123,7 +124,7 @@ def renderizar():
 
         # Renderizado Dinámico según selección del Selectbox
         if centro_seleccionado == "🌐 Visión Global (Consolidado SICI)":
-            cols = [1, 2, 24, 25, 26, 27, 28] # Coordenadas de las columnas globales en tu Excel
+            cols = [1, 2, 29, 30, 31, 32, 33] # Nuevas coordenadas globales desplazadas por Zulia
             df_render = df_tabla_raw[cols].copy()
             df_render.columns = ["SKU", "Producto", "Existencia Total", "Valor Total ($)", "Demanda Promedio", "Cobertura (Días)", "Eficiencia SICI"]
             
@@ -147,7 +148,8 @@ def renderizar():
                 "🏢 CEDIS Caracas": [4, 5, 6, 7, 8],
                 "🏭 CEDIS Carabobo": [9, 10, 11, 12, 13],
                 "🌅 CEDIS Oriente": [14, 15, 16, 17, 18],
-                "🎸 CEDIS Lara": [19, 20, 21, 22, 23]
+                "🎸 CEDIS Lara": [19, 20, 21, 22, 23],
+                "☀️ CEDIS Zulia": [24, 25, 26, 27, 28]
             }
             
             cols_base = [1, 2] # SKU y Producto siempre visibles
