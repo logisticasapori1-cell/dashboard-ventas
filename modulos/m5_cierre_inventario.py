@@ -10,6 +10,85 @@ def _cargar_cierre_inventario(path):
     hojas = {sheet: pd.read_excel(xls, sheet_name=sheet) for sheet in xls.sheet_names}
     return xls.sheet_names, hojas
 
+
+def _renderizar_tendencia_total(df_consolidado, sheet_names, formato_dinero):
+    """Gráfica de línea con el Valor Total del inventario (MP + ME + PT) desde abril hasta el último mes."""
+    st.subheader("📊 Tendencia del Valor Total del Inventario (desde Abril)")
+    st.caption("Suma de Materia Prima + Material de Empaque + Producto Terminado. Cifras en USD. No depende de los filtros superiores.")
+
+    # Ubicar la hoja de abril (se toma la más reciente si hubiera varias)
+    indices_abril = [
+        i for i, s in enumerate(sheet_names)
+        if "ABR" in str(s).upper() or "APR" in str(s).upper()
+    ]
+    if not indices_abril:
+        st.info("No se encontró una hoja de Abril en el archivo; no es posible construir la tendencia.")
+        return
+
+    meses = list(sheet_names[indices_abril[-1]:])
+
+    df = df_consolidado[df_consolidado["Mes"].isin(meses)].copy()
+    df["Valor $"] = pd.to_numeric(df["Valor $"], errors="coerce")
+
+    agrupado = df.groupby("Mes")["Valor $"]
+    resumen = pd.DataFrame({
+        "Mes": meses,
+        "Valor_Total": agrupado.sum(min_count=1).reindex(meses).values,
+        "Categorias": agrupado.count().reindex(meses).fillna(0).astype(int).values,
+    })
+    resumen["Var_%"] = resumen["Valor_Total"].pct_change(fill_method=None) * 100
+
+    df_plot = resumen.dropna(subset=["Valor_Total"])
+    if df_plot.empty:
+        st.info("No hay valores registrados desde Abril.")
+        return
+
+    # KPI: variación entre el primer y el último mes del rango
+    v_ini, v_fin = df_plot["Valor_Total"].iloc[0], df_plot["Valor_Total"].iloc[-1]
+    var_total = ((v_fin - v_ini) / v_ini * 100) if v_ini else 0
+    k1, k2, k3 = st.columns(3)
+    k1.metric(f"Valor {df_plot['Mes'].iloc[0]} (USD)", formato_dinero(v_ini))
+    k2.metric(f"Valor {df_plot['Mes'].iloc[-1]} (USD)", formato_dinero(v_fin))
+    k3.metric("Variación en el período", f"{var_total:+.1f}%".replace(".", ","))
+
+    # Textos de hover con formato local
+    def _hover(fila):
+        texto = f"<b>{fila['Mes']}</b><br>Valor total: {formato_dinero(fila['Valor_Total'])}"
+        if pd.notna(fila["Var_%"]):
+            texto += f"<br>Var. vs mes anterior: {fila['Var_%']:+.1f}%".replace(".", ",")
+        if fila["Categorias"] < 3:
+            texto += f"<br>⚠️ Incompleto: {fila['Categorias']}/3 categorías registradas"
+        return texto
+
+    incompletos = df_plot["Categorias"] < 3
+    colores_marcador = ["#fa7d2a" if inc else "#1a3a5c" for inc in incompletos]
+
+    fig = go.Figure(go.Scatter(
+        x=df_plot["Mes"],
+        y=df_plot["Valor_Total"],
+        mode="lines+markers+text",
+        name="Valor Total",
+        line=dict(color="#1a3a5c", width=3),
+        marker=dict(size=10, color=colores_marcador),
+        text=[formato_dinero(v).split(",")[0] for v in df_plot["Valor_Total"]],
+        textposition="top center",
+        customdata=df_plot.apply(_hover, axis=1),
+        hovertemplate="%{customdata}<extra></extra>",
+    ))
+    fig.update_layout(
+        height=420,
+        margin=dict(l=20, r=20, t=40, b=20),
+        yaxis=dict(title="Valor Total (USD)", gridcolor="#e2e8f0"),
+        xaxis=dict(title="Período de Cierre", gridcolor="#f1f5f9"),
+        plot_bgcolor="rgba(0,0,0,0)",
+        paper_bgcolor="rgba(0,0,0,0)",
+        showlegend=False,
+    )
+    st.plotly_chart(fig, use_container_width=True)
+
+    if incompletos.any():
+        st.caption("🟠 Los puntos naranjas son meses con alguna categoría sin registrar; su total puede estar subestimado.")
+
 def renderizar():
     st.markdown("# 📦 Cierre de Inventario Valorizado")
     st.caption("Evolución financiera de Materia Prima, Material de Empaque y Producto Terminado")
@@ -135,6 +214,11 @@ def renderizar():
                 legend=dict(orientation="h", yanchor="bottom", y=1.02, x=0.01)
             )
             st.plotly_chart(fig, use_container_width=True)
+
+        # 5.1 Tendencia del Valor Total (Abril → último mes)
+        st.markdown("---")
+        _renderizar_tendencia_total(df_consolidado, sheet_names, formato_dinero)
+        st.markdown("---")
 
         # 6. Tabla Detallada
         st.subheader("📋 Desglose de Registros")
