@@ -133,85 +133,227 @@ def cargar_css():
         transform: translateY(-1px);
     }
 
-  /* ═══════════════════════════════════════════════════════
-  RESUMEN EJECUTIVO
-  ═══════════════════════════════════════════════════════ */
-  .executive-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-end;
-      gap: 1.5rem;
-      margin: 0.4rem 0 1.1rem;
-  }
-  .eyebrow {
-      color: var(--accent);
-      font-size: 0.7rem;
-      font-weight: 800;
-      letter-spacing: 0.12em;
-      text-transform: uppercase;
-      margin-bottom: 0.25rem;
-  }
-  .executive-header h1 {
-      color: var(--primary);
-      font-size: clamp(1.65rem, 2.5vw, 2.2rem);
-      line-height: 1.1;
-      margin: 0;
-      letter-spacing: -0.035em;
-  }
-  .executive-header p {
-      color: var(--text-muted);
-      margin: 0.45rem 0 0;
-      font-size: 0.88rem;
-  }
-  .period-status {
-      display: flex;
-      align-items: center;
-      gap: 0.65rem;
-      background: #fff;
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 0.7rem 0.9rem;
-      min-width: 220px;
-      box-shadow: 0 2px 8px rgba(15, 39, 68, 0.05);
-  }
-  .period-status strong, .period-status small { display: block; }
-  .period-status strong { color: var(--primary); font-size: 0.78rem; }
-  .period-status small { color: var(--text-muted); font-size: 0.7rem; margin-top: 0.18rem; }
-  .status-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--success); box-shadow: 0 0 0 4px rgba(22, 163, 74, 0.12); flex: 0 0 auto; }
-  .summary-card {
-      background: var(--bg-card);
-      border: 1px solid var(--border);
-      border-left: 4px solid var(--primary-light);
-      border-radius: 10px;
-      padding: 0.95rem 1rem;
-      min-height: 108px;
-      box-shadow: 0 2px 8px rgba(15, 39, 68, 0.04);
-  }
-  .summary-label, .summary-trend { display: block; }
-  .summary-label { color: var(--text-muted); font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; }
-  .summary-card strong { display: block; color: var(--primary); font-size: 1.7rem; line-height: 1.25; margin: 0.35rem 0 0.2rem; }
-  .summary-trend { font-size: 0.72rem; font-weight: 600; }
-  .positive { color: var(--success); } .warning { color: var(--warning); } .neutral { color: var(--text-muted); }
-  .insight-strip {
-      display: flex;
-      align-items: center;
-      gap: 0.75rem;
-      background: #fff8f2;
-      border: 1px solid #fed7aa;
-      border-radius: 10px;
-      padding: 0.75rem 0.9rem;
-      margin: 1rem 0 1.2rem;
-  }
-  .insight-mark { display: grid; place-items: center; width: 25px; height: 25px; border-radius: 50%; color: #fff; background: var(--accent); font-weight: 800; font-size: 0.8rem; flex: 0 0 auto; }
-  .insight-strip strong, .insight-strip span { display: block; }
-  .insight-strip strong { color: var(--primary); font-size: 0.78rem; }
-  .insight-strip span { color: var(--text-muted); font-size: 0.76rem; margin-top: 0.12rem; }
-  .insight-action { margin-left: auto; color: var(--accent) !important; font-weight: 700; white-space: nowrap; }
+    /* ═══════════════════════════════════════════════════════
+       BOTONES DE NAVEGACIÓN ERP (ÁREAS PRINCIPALES)
+    ═══════════════════════════════════════════════════════ */
+    /* Botón Activo (Seleccionado) */
+    .stButton > button[kind="primary"] {
+        background: linear-gradient(135deg, #fa7d2a 0%, #e66b1a 100%) !important;
+        border: 1px solid #fa7d2a !important;
+        color: #ffffff !important;
+        font-weight: 700 !important;
+        font-size: 0.9rem !important;
+        padding: 0.6rem 1rem !important;
+        border-radius: 8px !important;
+        box-shadow: 0 3px 12px rgba(250, 125, 42, 0.38) !important;
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    }
+    .stButton > button[kind="primary"]:hover {
+        background: linear-gradient(135deg, #e66b1a 0%, #d45f12 100%) !important;
+        border-color: #d45f12 !important;
+        box-shadow: 0 4px 16px rgba(250, 125, 42, 0.5) !important;
+        transform: translateY(-1px);
+    }
 
-  /* ═══════════════════════════════════════════════════════
-  PIE DE PÁGINA
-  ═══════════════════════════════════════════════════════ */
-  .footer-custom {
+    /* Botón Inactivo */
+    .stButton > button[kind="secondary"] {
+        background: #1a3a5c !important;
+        border: 1px solid rgba(255, 255, 255, 0.18) !important;
+        color: #f1f5f9 !important;
+        font-weight: 600 !important;
+        font-size: 0.9rem !important;
+        padding: 0.6rem 1rem !important;
+        border-radius: 8px !important;
+        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08) !important;
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    }
+    .stButton > button[kind="secondary"]:hover {
+        background: rgba(250, 125, 42, 0.15) !important;
+        border-color: #fa7d2a !important;
+        color: #fa7d2a !important;
+        box-shadow: 0 3px 10px rgba(0, 0, 0, 0.12) !important;
+        transform: translateY(-1px);
+    }
+
+    /* ═══════════════════════════════════════════════════════
+       PESTAÑAS DE SUBMÓDULOS (NIVEL 2)
+    ═══════════════════════════════════════════════════════ */
+    .stTabs [data-baseweb="tab-list"] {
+        background: #ffffff !important;
+        border: 1px solid var(--border) !important;
+        border-bottom: 2px solid var(--border) !important;
+        border-radius: 10px 10px 0 0 !important;
+        padding: 0 0.5rem !important;
+        gap: 4px !important;
+    }
+
+    .stTabs [data-baseweb="tab"] {
+        background: transparent !important;
+        color: var(--text-muted) !important;
+        border: none !important;
+        border-bottom: 3px solid transparent !important;
+        border-radius: 6px 6px 0 0 !important;
+        font-weight: 600 !important;
+        font-size: 0.86rem !important;
+        padding: 0.75rem 1.25rem !important;
+        transition: all 0.15s ease !important;
+    }
+
+    .stTabs [data-baseweb="tab"]:hover {
+        color: var(--primary) !important;
+        background: rgba(250, 125, 42, 0.06) !important;
+    }
+
+    .stTabs [aria-selected="true"] {
+        color: #fa7d2a !important;
+        border-bottom: 3px solid #fa7d2a !important;
+        background: rgba(250, 125, 42, 0.08) !important;
+        font-weight: 700 !important;
+    }
+
+    .stTabs [data-baseweb="tab-highlight"] {
+        background-color: #fa7d2a !important;
+    }
+
+    .stTabs [data-baseweb="tab-panel"] {
+        background: var(--bg-card) !important;
+        border: 1px solid var(--border) !important;
+        border-top: none !important;
+        border-radius: 0 0 10px 10px !important;
+        padding: 1.8rem 1.6rem !important;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
+    }
+
+    /* ═══════════════════════════════════════════════════════
+       MÉTRICAS / KPI CARDS
+    ═══════════════════════════════════════════════════════ */
+    [data-testid="stMetric"] {
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 16px 18px;
+        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+        transition: box-shadow 0.2s ease, transform 0.15s ease;
+    }
+    [data-testid="stMetric"]:hover {
+        box-shadow: 0 6px 16px rgba(0, 0, 0, 0.09);
+        transform: translateY(-1px);
+        border-color: rgba(250, 125, 42, 0.35);
+    }
+    [data-testid="stMetricLabel"] {
+        color: var(--text-muted) !important;
+        font-size: 0.73rem !important;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        font-weight: 600 !important;
+    }
+    [data-testid="stMetricValue"] {
+        color: var(--primary) !important;
+        font-weight: 700 !important;
+        font-size: 1.4rem !important;
+    }
+    [data-testid="stMetricDelta"] { font-size: 0.8rem !important; }
+
+    /* ═══════════════════════════════════════════════════════
+       EXPANDER (Panel de Parámetros)
+    ═══════════════════════════════════════════════════════ */
+    [data-testid="stExpander"] {
+        background: var(--bg-card) !important;
+        border: 1px solid var(--border) !important;
+        border-radius: 10px !important;
+        margin-bottom: 1.1rem !important;
+        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+        overflow: hidden;
+    }
+    [data-testid="stExpander"] summary {
+        font-weight: 600 !important;
+        color: var(--primary) !important;
+        font-size: 0.87rem !important;
+        letter-spacing: 0.02em;
+        padding: 0.7rem 1rem !important;
+    }
+    [data-testid="stExpander"] summary:hover {
+        background: rgba(250, 125, 42, 0.04) !important;
+        color: #fa7d2a !important;
+    }
+
+    /* ═══════════════════════════════════════════════════════
+       TIPOGRAFÍA
+    ═══════════════════════════════════════════════════════ */
+    h1, h2, h3, h4 {
+        color: var(--primary) !important;
+        font-family: 'Segoe UI', 'Inter', system-ui, sans-serif !important;
+        letter-spacing: -0.02em;
+    }
+
+    /* ═══════════════════════════════════════════════════════
+       INPUTS
+    ═══════════════════════════════════════════════════════ */
+    .stTextInput input,
+    .stSelectbox div[data-baseweb="select"],
+    .stNumberInput input {
+        border-radius: 8px !important;
+        border: 1px solid var(--border) !important;
+    }
+    .stTextInput input:focus,
+    .stNumberInput input:focus {
+        border-color: #fa7d2a !important;
+        box-shadow: 0 0 0 1px #fa7d2a !important;
+    }
+
+    /* ═══════════════════════════════════════════════════════
+       DATAFRAMES
+    ═══════════════════════════════════════════════════════ */
+    .stDataFrame {
+        border-radius: 10px;
+        overflow: hidden;
+        border: 1px solid var(--border);
+    }
+
+    /* ═══════════════════════════════════════════════════════
+       ENCABEZADO DE MÓDULO (clases reutilizables)
+    ═══════════════════════════════════════════════════════ */
+    .module-header {
+        background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+        color: white;
+        padding: 14px 24px;
+        border-radius: 10px;
+        font-weight: 600;
+        font-size: 1.12rem;
+        letter-spacing: 0.02em;
+        margin-bottom: 1.4rem;
+        box-shadow: 0 4px 12px rgba(26, 58, 92, 0.18);
+        border-left: 4px solid var(--accent);
+    }
+
+    .kpi-section-label {
+        font-size: 0.78rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: var(--text-muted);
+        margin: 0.8rem 0 0.5rem 0;
+    }
+
+    /* ═══════════════════════════════════════════════════════
+       SEPARADOR
+    ═══════════════════════════════════════════════════════ */
+    hr {
+        border: none;
+        height: 1px;
+        background: linear-gradient(to right, transparent, #cbd5e1, transparent);
+        margin: 1.4rem 0;
+    }
+
+    /* ═══════════════════════════════════════════════════════
+       SPINNER
+    ═══════════════════════════════════════════════════════ */
+    [data-testid="stSpinner"] { color: var(--accent) !important; }
+
+    /* ═══════════════════════════════════════════════════════
+       PIE DE PÁGINA
+    ═══════════════════════════════════════════════════════ */
+    .footer-custom {
         margin-top: 3rem;
         padding: 1.2rem 0;
         border-top: 1px solid var(--border);
