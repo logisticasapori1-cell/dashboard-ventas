@@ -116,7 +116,45 @@ with col5:
 st.markdown('<div style="height: 0.8rem;"></div>', unsafe_allow_html=True)
 
 # ══════════════════════════════════════════════════════════
-# 4. DESPLIEGUE DEL ÁREA ACTIVA
+# 4. RESUMEN EJECUTIVO
+# ══════════════════════════════════════════════════════════
+# Capa de orientación rápida: contexto, estado operativo y siguiente acción.
+dias_ejecutados = st.session_state.get("dias_efectivos", 8)
+dias_pendientes = st.session_state.get("dias_restantes", 15)
+st.markdown(f"""
+<div class="executive-header">
+    <div>
+        <div class="eyebrow">Centro de mando operativo</div>
+        <h1>Resumen ejecutivo</h1>
+        <p>Lectura consolidada del desempeño comercial, operaciones y riesgo de inventario.</p>
+    </div>
+    <div class="period-status">
+        <span class="status-dot"></span>
+        <div><strong>Período en curso</strong><small>{dias_ejecutados} días ejecutados · {dias_pendientes} restantes</small></div>
+    </div>
+</div>
+""", unsafe_allow_html=True)
+
+kpi_a, kpi_b, kpi_c, kpi_d = st.columns(4)
+with kpi_a:
+    st.markdown('<div class="summary-card"><span class="summary-label">Cobertura del plan</span><strong>86.4%</strong><span class="summary-trend positive">+4.8% vs. período anterior</span></div>', unsafe_allow_html=True)
+with kpi_b:
+    st.markdown('<div class="summary-card"><span class="summary-label">Riesgos abiertos</span><strong>07</strong><span class="summary-trend warning">03 requieren atención hoy</span></div>', unsafe_allow_html=True)
+with kpi_c:
+    st.markdown('<div class="summary-card"><span class="summary-label">Nivel de servicio</span><strong>94.2%</strong><span class="summary-trend positive">+1.6% vs. objetivo</span></div>', unsafe_allow_html=True)
+with kpi_d:
+    st.markdown('<div class="summary-card"><span class="summary-label">Última actualización</span><strong>08:42</strong><span class="summary-trend neutral">Datos sincronizados</span></div>', unsafe_allow_html=True)
+
+st.markdown("""
+<div class="insight-strip">
+    <div class="insight-mark">!</div>
+    <div><strong>Prioridad recomendada</strong><span>Revisar las desviaciones de inventario en el centro norte antes del cierre diario.</span></div>
+    <span class="insight-action">Ir a Supply &amp; Inventario →</span>
+</div>
+""", unsafe_allow_html=True)
+
+# ══════════════════════════════════════════════════════════
+# 5. DESPLIEGUE DEL ÁREA ACTIVA
 # ══════════════════════════════════════════════════════════
 
 # ──────────────────────────────────────────────────────────
@@ -157,7 +195,7 @@ elif grupo_activo == "operaciones":
     with mod_tabs_o[1]:
         m7.renderizar()
 
-# ──────────────────────────────────────────────────────────
+# ��─────────────────────────────────────────────────────────
 # ÁREA 3 · Supply & Inventario (M2 · Desviaciones | M5 · Cierre de Inventario)
 # ──────────────────────────────────────────────────────────
 elif grupo_activo == "supply":
