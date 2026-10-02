@@ -168,7 +168,7 @@ def renderizar():
     st.caption("Análisis de Venta Bruta y Proyección por Centro de Distribución")
 
     # Ruta del archivo
-    file_path = "data/Ventas por cides.xlsx"
+    file_path = "data/Ventas por cedis.xlsx"
 
     if not os.path.exists(file_path):
         st.error(f"❌ **No se encontró el archivo:** '{file_path}'")
