@@ -5,6 +5,8 @@ import os
 import io
 from utils import datos
 
+PREFIJO_COL_MES = "PROMD VTA DIA"
+
 def _cargar_desviaciones(path=None):
     return datos.leer_hoja(datos.HOJA_DESVIACIONES)
 
@@ -23,13 +25,19 @@ def renderizar():
             if 'CATEGORÍA' not in df.columns:
                 df['CATEGORÍA'] = "Por Asignar"
 
-            rename_map = {
-                'PROMD VTA DIA AGOSTO': 'PROMD VTA DIA SEPTIEMBRE',
-                'PROMD VTA DIA SEPTIEMBRE': 'PROMD VTA DIA OCTUBRE'
-            }
-            df = df.rename(columns={k: v for k, v in rename_map.items() if k in df.columns and v not in df.columns})
+            # Columnas de mes detectadas por nombre: 'PROMD VTA DIA <MES>'.
+            # La primera es el mes anterior y la segunda el mes actual (orden del Excel).
+            cols_mes = [c for c in df.columns if str(c).strip().upper().startswith(PREFIJO_COL_MES)]
+            if len(cols_mes) != 2:
+                raise ValueError(
+                    f"Se esperaban 2 columnas que empiecen por '{PREFIJO_COL_MES}' en la hoja "
+                    f"'{datos.HOJA_DESVIACIONES}' y se encontraron {len(cols_mes)}: {cols_mes}"
+                )
+            COL_ANT, COL_ACT = cols_mes
+            MES_ANT = str(COL_ANT).strip()[len(PREFIJO_COL_MES):].strip().capitalize()
+            MES_ACT = str(COL_ACT).strip()[len(PREFIJO_COL_MES):].strip().capitalize()
 
-            for col in ['PROMD VTA DIA SEPTIEMBRE', 'PROMD VTA DIA OCTUBRE']:
+            for col in [COL_ANT, COL_ACT]:
                 if col in df.columns and df[col].dtype == 'object':
                     df[col] = df[col].astype(str).str.replace('.', '', regex=False).str.replace(',', '.', regex=False).astype(float)
                 if col in df.columns:
@@ -38,17 +46,17 @@ def renderizar():
             if 'Porcentaje de desviación' in df.columns:
                 df['Desviacion_Num'] = df['Porcentaje de desviación'].astype(str).str.rstrip('%').str.replace(',', '.', regex=False).astype(float)
             else:
-                df['Desviacion_Num'] = ((df['PROMD VTA DIA OCTUBRE'] - df['PROMD VTA DIA SEPTIEMBRE']) / df['PROMD VTA DIA SEPTIEMBRE']) * 100
+                df['Desviacion_Num'] = ((df[COL_ACT] - df[COL_ANT]) / df[COL_ANT]) * 100
 
             tiene_precio = 'PRECIO UNITARIO' in df.columns
             if tiene_precio:
-                df['Dif_Unidades_Diarias'] = df['PROMD VTA DIA OCTUBRE'] - df['PROMD VTA DIA SEPTIEMBRE']
+                df['Dif_Unidades_Diarias'] = df[COL_ACT] - df[COL_ANT]
                 df['Impacto_Diario_$'] = df['Dif_Unidades_Diarias'] * df['PRECIO UNITARIO']
                 df['Impacto Mensual $'] = df['Impacto_Diario_$'] * 30
 
-            df = df.sort_values(by='PROMD VTA DIA SEPTIEMBRE', ascending=False).reset_index(drop=True)
-            volumen_total_julio = df['PROMD VTA DIA SEPTIEMBRE'].sum()
-            df['Porcentaje_Participacion'] = (df['PROMD VTA DIA SEPTIEMBRE'] / volumen_total_julio) * 100 if volumen_total_julio > 0 else 0
+            df = df.sort_values(by=COL_ANT, ascending=False).reset_index(drop=True)
+            volumen_total_ant = df[COL_ANT].sum()
+            df['Porcentaje_Participacion'] = (df[COL_ANT] / volumen_total_ant) * 100 if volumen_total_ant > 0 else 0
             df['Acumulado_ABC'] = df['Porcentaje_Participacion'].cumsum()
 
             def asignar_abc(acumulado):
@@ -72,7 +80,7 @@ def renderizar():
 
             if tiene_precio:
                 impacto_total = df['Impacto Mensual $'].sum()
-                delta_financiero = "- Mensual vs Septiembre" if impacto_total < 0 else "+ Mensual vs Septiembre"
+                delta_financiero = f"- Mensual vs {MES_ANT}" if impacto_total < 0 else f"+ Mensual vs {MES_ANT}"
                 impacto_str = f"${impacto_total:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
                 kpi4.metric("Balance Financiero Proyectado", impacto_str, delta=delta_financiero, delta_color="normal")
             else:
@@ -101,11 +109,11 @@ def renderizar():
                     df_filtrado['REFERENCIA INTERNA'].astype(str).str.contains(busqueda, na=False)
                 ]
 
-            df_grafico = df_filtrado.sort_values(by='PROMD VTA DIA OCTUBRE', ascending=False)
+            df_grafico = df_filtrado.sort_values(by=COL_ACT, ascending=False)
             if not df_grafico.empty:
                 fig = go.Figure()
-                fig.add_trace(go.Bar(x=df_grafico['PRODUCTO'], y=df_grafico['PROMD VTA DIA SEPTIEMBRE'], name='Septiembre', marker_color='#1a3a5c'))
-                fig.add_trace(go.Bar(x=df_grafico['PRODUCTO'], y=df_grafico['PROMD VTA DIA OCTUBRE'], name='Octubre', marker_color='#d95f02'))
+                fig.add_trace(go.Bar(x=df_grafico['PRODUCTO'], y=df_grafico[COL_ANT], name=MES_ANT, marker_color='#1a3a5c'))
+                fig.add_trace(go.Bar(x=df_grafico['PRODUCTO'], y=df_grafico[COL_ACT], name=MES_ACT, marker_color='#d95f02'))
                 fig.update_layout(barmode='group', height=500, hovermode="x unified", legend=dict(orientation="h", yanchor="bottom", y=1.02, x=0.01), plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', margin=dict(l=20, r=20, t=40, b=20))
                 st.plotly_chart(fig, use_container_width=True)
 
@@ -113,9 +121,9 @@ def renderizar():
             st.markdown("### 📋 Detalle de Desviaciones")
 
             if tiene_precio:
-                columnas_render = ['REFERENCIA INTERNA', 'PRODUCTO', 'CATEGORÍA', 'Clasificación ABC', 'PROMD VTA DIA SEPTIEMBRE', 'PROMD VTA DIA OCTUBRE', 'Porcentaje de desviación', 'Impacto Mensual $', 'Estado de tendencia']
+                columnas_render = ['REFERENCIA INTERNA', 'PRODUCTO', 'CATEGORÍA', 'Clasificación ABC', COL_ANT, COL_ACT, 'Porcentaje de desviación', 'Impacto Mensual $', 'Estado de tendencia']
             else:
-                columnas_render = ['REFERENCIA INTERNA', 'PRODUCTO', 'CATEGORÍA', 'Clasificación ABC', 'PROMD VTA DIA SEPTIEMBRE', 'PROMD VTA DIA OCTUBRE', 'Porcentaje de desviación', 'Estado de tendencia']
+                columnas_render = ['REFERENCIA INTERNA', 'PRODUCTO', 'CATEGORÍA', 'Clasificación ABC', COL_ANT, COL_ACT, 'Porcentaje de desviación', 'Estado de tendencia']
 
             def resaltar_tendencia(val):
                 if val == 'SUBIÓ': return 'background-color: #e2f0d9; color: #385723; font-weight: bold;'
@@ -123,8 +131,8 @@ def renderizar():
                 return ''
 
             formato_columnas = {
-                'PROMD VTA DIA SEPTIEMBRE': lambda x: f"{x:,.0f}".replace(",", "."),
-                'PROMD VTA DIA OCTUBRE': lambda x: f"{x:,.0f}".replace(",", "."),
+                COL_ANT: lambda x: f"{x:,.0f}".replace(",", "."),
+                COL_ACT: lambda x: f"{x:,.0f}".replace(",", "."),
                 'Porcentaje de desviación': '{:.2%}'
             }
             
