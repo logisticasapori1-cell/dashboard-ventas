@@ -56,6 +56,8 @@ header[data-testid="stHeader"] { background:transparent !important; }
 .sp-crumb { margin:0; font-size:13px; color:var(--muted); }
 .sp-title { margin:0; padding:0 !important; font-size:28px !important; font-weight:700 !important; color:var(--ink) !important; letter-spacing:-.015em; line-height:1.2 !important; }
 .sp-sub { margin:0; font-size:13px; color:var(--muted); }
+.sp-section { display:flex; flex-direction:column; gap:4px; margin-top:1.25rem; padding-top:1.25rem; border-top:1px solid var(--border); }
+.sp-section-title { margin:0 !important; padding:0 !important; font-size:20px !important; font-weight:700 !important; color:var(--ink) !important; }
 
 /* ── Tarjetas ──────────────────────────────────────── */
 [class*="st-key-sp_card_"] { background:#ffffff; border-radius:12px !important; padding:20px !important; border-color:var(--border) !important; }

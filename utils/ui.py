@@ -74,6 +74,12 @@ def encabezado(ruta, titulo, subtitulo=None):
         </header>''')
 
 
+def seccion(titulo, subtitulo=None):
+    """Título de una sección dentro de la página (debajo del encabezado principal)."""
+    sub = f'<p class="sp-sub">{_e(subtitulo)}</p>' if subtitulo else ""
+    _render(f'<div class="sp-section"><h2 class="sp-section-title">{_e(titulo)}</h2>{sub}</div>')
+
+
 @contextmanager
 def tarjeta(clave, titulo=None, nota=None):
     """Contenedor blanco con borde. Uso:  with ui.tarjeta("cedis", "Venta por CEDI", "Unidades"): ..."""
