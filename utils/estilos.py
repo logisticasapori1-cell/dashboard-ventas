@@ -113,6 +113,12 @@ header[data-testid="stHeader"] { background:transparent !important; }
 [class*="st-key-sp_card_"] [data-testid="stPageLink"] a { padding-left:44px !important; }
 [class*="st-key-sp_card_"] [data-testid="stPageLink"] a span { color:var(--navy) !important; font-size:13px !important; font-weight:600; }
 
+/* ── Estado ───────────────────────────────────────── */
+.sp-status { display:flex; flex-wrap:wrap; align-items:center; gap:8px; padding:10px 14px; border:1px solid; border-radius:10px; font-size:13px; }
+.sp-status-text { color:var(--muted); }
+[class*="st-key-ia_sugerida_"] button { min-height:48px; justify-content:flex-start; }
+[class*="st-key-ia_sugerida_"] button p { white-space:normal !important; text-align:left; line-height:1.3; overflow:visible !important; text-overflow:clip !important; }
+
 /* ── Pie ──────────────────────────────────────────── */
 .sp-foot { display:flex; flex-wrap:wrap; justify-content:space-between; gap:12px; margin-top:1rem; padding-top:20px; border-top:1px solid var(--border); font-size:12px; color:var(--muted); }
 

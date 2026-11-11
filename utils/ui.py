@@ -223,6 +223,15 @@ def leyenda(items):
         f'<span><i style="background:{c}"></i>{_e(t)}</span>' for t, c in items) + '</div>')
 
 
+def estado(tono, titulo, texto=""):
+    """Franja de estado compacta (conexión, configuración, avisos de la página)."""
+    color = {"neg": NEG, "aviso": ORANGE_TXT, "info": NAVY, "pos": POS}[tono]
+    ico = {"neg": "alert", "aviso": "alert", "info": "trend", "pos": "check"}[tono]
+    t = f'<span class="sp-status-text">{_e(texto)}</span>' if texto else ""
+    _render(f'<div class="sp-status" style="border-color:{color}55;background:{color}0f">'
+            f'{icono(ico, 16, color)}<strong style="color:{color}">{_e(titulo)}</strong>{t}</div>')
+
+
 def alerta(icono_nombre, tono, titulo, texto):
     """Punto de atención (icono + título + texto). Debajo se puede poner un st.page_link."""
     color = {"neg": NEG, "aviso": ORANGE_TXT, "info": NAVY, "pos": POS}[tono]

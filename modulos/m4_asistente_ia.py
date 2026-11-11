@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 import os
 import requests
-from utils import datos
+from utils import datos, ui
 
 # Todas las lecturas salen del Excel único (ver utils/datos.py)
 def _cargar_ventas_dashboard(path=None):
@@ -26,10 +26,17 @@ def _cargar_kpis_fin(path=None):
 def _cargar_sici(path=None):
     return datos.leer_hoja(datos.HOJA_SICI, header=None)
 
+PREGUNTAS_SUGERIDAS = [
+    "¿Cómo va la venta frente al forecast del mes?",
+    "¿Qué SKUs bajaron más su venta diaria y cuánto impactan?",
+    "¿Qué productos tienen menos de 7 días de cobertura?",
+    "Resume el valor del inventario en los últimos cierres",
+]
+
+
 def renderizar(dias_efectivos, dias_restantes):
-    st.title("🤖 Asistente de Consultas — Supply Chain & S&OP")
-    st.caption("Pregunta en lenguaje natural sobre ventas, forecast, desviaciones y producción")
-    st.markdown('<div class="module-header">ASISTENTE INTELIGENTE CON DATOS DEL DASHBOARD</div>', unsafe_allow_html=True)
+    ui.encabezado("Asistente › Asistente IA", "Asistente IA",
+                  "Pregunta en lenguaje natural sobre ventas, forecast, desviaciones, producción, inventario y finanzas")
 
     def leer_secreto(nombre):
         try:
@@ -47,10 +54,13 @@ def renderizar(dias_efectivos, dias_restantes):
     groq_api_key = leer_secreto("GROQ_API_KEY") or st.session_state.get("groq_api_key", "")
     proveedor = "gemini" if gemini_api_key else ("groq" if groq_api_key else None)
 
-    if proveedor == "gemini": st.success("🔑 Usando Google Gemini (clave permanente o de sesión).")
-    elif proveedor == "groq": st.warning("⚠️ Usando Groq. Si ves error 403, cambia a Gemini (recomendado).")
+    if proveedor == "gemini":
+        ui.estado("pos", "Conectado a Google Gemini", "Las respuestas usan los datos actuales del portal.")
+    elif proveedor == "groq":
+        ui.estado("aviso", "Conectado a Groq", "Si aparece un error 403, cambia a Google Gemini (recomendado).")
     else:
-        with st.expander("🔑 Configurar API de IA (recomendado: Google Gemini)", expanded=True):
+        ui.estado("aviso", "Falta configurar el proveedor de IA", "Agrega una clave para activar el asistente.")
+        with st.expander("Configurar API de IA (recomendado: Google Gemini)", expanded=True, icon=":material/key:"):
             st.markdown("""
             **Opción A — Google Gemini (recomendada, gratis y estable)**
             1. Entra a https://aistudio.google.com/apikey
@@ -185,23 +195,32 @@ def renderizar(dias_efectivos, dias_restantes):
         raise RuntimeError("Fallo con Groq. Intenta con Gemini.")
 
     if not proveedor: return
-    
-    for msg in st.session_state["chat_messages"]:
-        with st.chat_message(msg["role"]): st.markdown(msg["content"])
 
-    pregunta = st.chat_input("Escribe tu consulta sobre el dashboard...")
+    with ui.tarjeta("ia_chat", "Conversación", "Los datos se leen del Excel en cada consulta"):
+        if not st.session_state["chat_messages"]:
+            ui.alerta("trend", "info", "Prueba con una de estas preguntas",
+                      "O escribe la tuya abajo. El asistente responde con las cifras del portal.")
+            cols = st.columns(2)
+            for col, (i, texto) in zip(cols * 2, enumerate(PREGUNTAS_SUGERIDAS)):
+                with col:
+                    if st.button(texto, key=f"ia_sugerida_{i}", width="stretch"):
+                        st.session_state["ia_pregunta_sugerida"] = texto
+                        st.rerun()
+        for msg in st.session_state["chat_messages"]:
+            with st.chat_message(msg["role"]): st.markdown(msg["content"])
+
+    pregunta = st.chat_input("Escribe tu consulta sobre el portal...")
+    pregunta = pregunta or st.session_state.pop("ia_pregunta_sugerida", None)
     if pregunta:
         st.session_state["chat_messages"].append({"role": "user", "content": pregunta})
-        with st.chat_message("user"): st.markdown(pregunta)
-        with st.chat_message("assistant"):
-            with st.spinner("Analizando datos del dashboard..."):
-                try:
-                    contexto = construir_contexto_dashboard()
-                    respuesta = consultar_gemini(pregunta, contexto, gemini_api_key) if proveedor == "gemini" else consultar_groq(pregunta, contexto, groq_api_key)
-                except Exception as e: respuesta = f"❌ No se pudo obtener respuesta: {e}"
-            st.markdown(respuesta)
+        with st.spinner("Analizando datos del portal..."):
+            try:
+                contexto = construir_contexto_dashboard()
+                respuesta = consultar_gemini(pregunta, contexto, gemini_api_key) if proveedor == "gemini" else consultar_groq(pregunta, contexto, groq_api_key)
+            except Exception as e: respuesta = f"No se pudo obtener respuesta: {e}"
         st.session_state["chat_messages"].append({"role": "assistant", "content": respuesta})
+        st.rerun()  # la conversación se vuelve a dibujar completa dentro de la tarjeta
 
-    if st.button("🗑️ Limpiar chat"):
+    if st.session_state["chat_messages"] and st.button("Limpiar conversación", icon=":material/delete:", key="ia_limpiar"):
         st.session_state["chat_messages"] = []
-        st.rerun()
+        st.rerun()

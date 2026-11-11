@@ -2,7 +2,8 @@ import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
 import os
-from utils import datos
+from utils import datos, ui
+from utils.formato import num, usd, pct
 
 def _cargar_kpis_financieros(path=None):
     return datos.leer_hoja(datos.HOJA_KPIS_FINANCIEROS, header=None)
@@ -27,198 +28,140 @@ def extraer_kpis(df_raw):
     return {"capital_inmovilizado": capital_inmovilizado, "recepcion_mp": recepcion_mp, "recepcion_me": recepcion_me, "req_mp": req_mp, "req_me": req_me, "fill_rate_global": fill_rate_global, "inv_mp_tr": inv_mp_tr, "inv_me_tr": inv_me_tr, "cons_mp_tr": cons_mp_tr, "cons_me_tr": cons_me_tr, "dio_global": dio_global}
 
 
+GRIS = "#b8c4d0"
+
+
+def movimientos(df_raw, k):
+    """Tabla de conciliación del mes (sin dibujar nada). k = extraer_kpis(df_raw)."""
+    val_inicio_mp = pd.to_numeric(df_raw.iloc[18, 1], errors='coerce')
+    val_inicio_me = pd.to_numeric(df_raw.iloc[19, 1], errors='coerce')
+    consumo_mp = pd.to_numeric(df_raw.iloc[33, 3], errors='coerce')
+    consumo_me = pd.to_numeric(df_raw.iloc[34, 3], errors='coerce')
+    var_mp = k["inv_mp_tr"] - val_inicio_mp
+    var_me = k["inv_me_tr"] - val_inicio_me
+    return pd.DataFrame({
+        "Categoría": ["MATERIA PRIMA", "MATERIAL EMPAQUE"],
+        "Saldo Inicial (USD)": [val_inicio_mp, val_inicio_me],
+        "Recepción/Compras del Mes": [k["recepcion_mp"], k["recepcion_me"]],
+        "Consumo del Mes": [consumo_mp, consumo_me],
+        "Inventario Final (Hoy)": [k["inv_mp_tr"], k["inv_me_tr"]],
+        "Var_USD": [var_mp, var_me],
+        "Var_%": [(var_mp / val_inicio_mp) if val_inicio_mp > 0 else 0, (var_me / val_inicio_me) if val_inicio_me > 0 else 0],
+    })
+
+
+def format_tendencia(v_usd, v_pct):
+    if pd.isna(v_usd) or pd.isna(v_pct):
+        return "Sin datos"
+    signo = "+" if v_usd > 0 else "-"
+    return f"{signo}{usd(abs(v_usd))} ({signo}{num(abs(v_pct) * 100, 2)}%)"
+
+
+def color_tendencia(val):
+    """Lógica financiera invertida: bajar inventario libera capital (favorable)."""
+    s = str(val)
+    if s.startswith('-'):
+        return "background-color:#e3f1e8;color:#17734a;font-weight:600;"
+    if s.startswith('+'):
+        return "background-color:#fde7d9;color:#a84b0b;font-weight:600;"
+    return ""
+
+
+def _estado_compras(v):
+    if pd.isna(v):
+        return ("Sin datos", None)
+    if v < 0.5:
+        return ("Crítico (< 50%)", False)
+    if v < 0.8:
+        return ("En riesgo (50% a 80%)", None)
+    return ("Adecuado (≥ 80%)", True)
+
+
+def _grafico_estructura(inicio, hoy):
+    fig = go.Figure()
+    for nombre, idx, color in (("Materia prima", 0, ui.NAVY), ("Material de empaque", 1, ui.ORANGE)):
+        vals = [hoy[idx], inicio[idx]]
+        totales = [sum(hoy), sum(inicio)]
+        fig.add_bar(y=["Hoy", "Inicio de mes"], x=vals, name=nombre, orientation="h", marker_color=color,
+                    text=[f"{pct(v / t * 100 if t else 0)}" for v, t in zip(vals, totales)], textposition="inside",
+                    insidetextanchor="middle", textfont=dict(color="#ffffff", size=13),
+                    customdata=[usd(v) for v in vals],
+                    hovertemplate="%{y} · " + nombre + "<br>%{customdata} (%{text})<extra></extra>")
+    fig.update_layout(barmode="stack", barnorm="percent", bargap=0.35)
+    ui.estilo_grafico(fig, alto=220)
+    fig.update_xaxes(ticksuffix="%", range=[0, 100], showgrid=True, gridcolor=ui.BORDER)
+    fig.update_yaxes(showgrid=False, tickfont=dict(size=13, color=ui.INK))
+    ui.grafico(fig, clave="fin_estructura")
+
+
+def _grafico_movimientos(df):
+    fig = go.Figure()
+    series = [("Saldo Inicial (USD)", "Saldo inicial (día 1)", GRIS), ("Recepción/Compras del Mes", "Recepción / compras", ui.LIGHTBLUE),
+              ("Consumo del Mes", "Consumo del mes", ui.ORANGE), ("Inventario Final (Hoy)", "Inventario final (hoy)", ui.NAVY)]
+    etiquetas = [c.capitalize() for c in df["Categoría"]]
+    for col, nombre, color in series:
+        fig.add_bar(x=etiquetas, y=df[col], name=nombre, marker_color=color,
+                    text=[usd(v, dec=0) for v in df[col]], textposition="outside", cliponaxis=False,
+                    textfont=dict(size=11, color=ui.INK), hovertemplate="%{x} · " + nombre + "<br>%{text}<extra></extra>")
+    fig.update_layout(barmode="group", bargap=0.3, bargroupgap=0.06)
+    ui.estilo_grafico(fig, alto=400)
+    ui.ejes_miles(fig)
+    ui.grafico(fig, clave="fin_movimientos")
+
+
 def renderizar():
-    st.markdown("# 🛡️ Salud Financiera y Riesgo de Suministro")
-    st.caption("Activos Inventario · Fill Rate · Riesgo Operativo (Quiebre de Stock)")
+    ui.encabezado("Finanzas › Salud financiera", "Salud financiera y riesgo de suministro",
+                  "Capital en inventario, cumplimiento del presupuesto de compras (MPS) y movimientos del mes · Cifras en USD")
 
-    file_path = datos.ARCHIVO_DATOS
-
-    if not os.path.exists(file_path):
-        st.error(f"❌ **Archivo requerido no encontrado:** '{file_path}'")
+    if not datos.existe():
+        datos.mostrar_error_archivo()
         return
-        
+
     try:
-        # Cargar datos sin cabecera para extraer por coordenadas exactas
-        df_raw = _cargar_kpis_financieros(file_path)
-        
-        # --- 1. EXTRACCIÓN DE DATOS MACRO ---
-        _r = extraer_kpis(df_raw)
-        capital_inmovilizado = _r["capital_inmovilizado"]
-        recepcion_mp = _r["recepcion_mp"]
-        recepcion_me = _r["recepcion_me"]
-        req_mp = _r["req_mp"]
-        req_me = _r["req_me"]
-        fill_rate_global = _r["fill_rate_global"]
-        inv_mp_tr = _r["inv_mp_tr"]
-        inv_me_tr = _r["inv_me_tr"]
-        cons_mp_tr = _r["cons_mp_tr"]
-        cons_me_tr = _r["cons_me_tr"]
-        dio_global = _r["dio_global"]
-
-        formato_dinero = lambda x: f"${x:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
-
-        # --- SECCIÓN 1: CABECERA ESTRATÉGICA ---
-        st.markdown('<div class="module-header">VISIÓN GLOBAL DE RIESGO Y LIQUIDEZ</div>', unsafe_allow_html=True)
-        
-        # Reducimos a 2 columnas para centrar perfectamente los 2 KPIs restantes
-        col1, col2 = st.columns(2)
-        
-        col1.metric("Capital de Activos Inventario", formato_dinero(capital_inmovilizado))
-        col2.metric("Cobertura Global Promedio", f"{dio_global:.1f} Días", "Días de Inventario (DIO)", delta_color="off")
-
-        # --- SECCIÓN 3: GRÁFICOS DE CAPITAL ALLOCATION ---
-        st.markdown("---")
-        st.subheader("Estructura de Activos Inventario")
-        
-        val_inicio_mp = pd.to_numeric(df_raw.iloc[18, 1], errors='coerce')
-        val_inicio_me = pd.to_numeric(df_raw.iloc[19, 1], errors='coerce')
-
-        col_dona1, col_dona2 = st.columns(2)
-        colores_dona = ['#1a3a5c', '#fa7d2a'] # Azul corporativo y Naranja Sapori
-
-        with col_dona1:
-            fig1 = go.Figure(data=[go.Pie(labels=["Materia Prima", "Empaque"], values=[val_inicio_mp, val_inicio_me], hole=.5, marker_colors=colores_dona, textinfo='percent+label')])
-            fig1.update_layout(title_text="Distribución a Inicio de Mes", showlegend=False, margin=dict(t=40, b=10, l=0, r=0), height=300)
-            st.plotly_chart(fig1, width="stretch")
-
-        with col_dona2:
-            fig2 = go.Figure(data=[go.Pie(labels=["Materia Prima", "Empaque"], values=[inv_mp_tr, inv_me_tr], hole=.5, marker_colors=colores_dona, textinfo='percent+label')])
-            fig2.update_layout(title_text="Distribución en Tiempo Real", showlegend=False, margin=dict(t=40, b=10, l=0, r=0), height=300)
-            st.plotly_chart(fig2, width="stretch")
-
-        # --- SECCIÓN 4: SUPPLIER FILL RATE ---
-        st.markdown("---")
-        st.subheader("🚚 Presupuesto Compras MPS (Proyección 100% vs Real)")
-        
+        df_raw = _cargar_kpis_financieros()
+        k = extraer_kpis(df_raw)
         fill_mp = pd.to_numeric(df_raw.iloc[13, 3], errors='coerce')
         fill_me = pd.to_numeric(df_raw.iloc[14, 3], errors='coerce')
+        df_mov = movimientos(df_raw, k)
 
-        fig_fill = go.Figure(go.Bar(
-            y=['Material Empaque', 'Materia Prima'],
-            x=[fill_me, fill_mp],
-            orientation='h',
-            marker=dict(color=['#dc2626' if v < 0.5 else '#d97706' if v < 0.8 else '#16a34a' for v in [fill_me, fill_mp]]),
-            text=[f"{v:.2%}" for v in [fill_me, fill_mp]], textposition='auto'
-        ))
-        fig_fill.update_layout(xaxis=dict(tickformat=".0%", range=[0, 1]), height=220, margin=dict(t=20, b=20, l=20, r=20), plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)')
-        st.plotly_chart(fig_fill, width="stretch")
+        # ── 1. Visión global de riesgo y liquidez ───
+        e_mp, e_me = _estado_compras(fill_mp), _estado_compras(fill_me)
+        ui.kpis([
+            ui.kpi_html("Capital de activos inventario", usd(k["capital_inmovilizado"], simbolo=""), "USD"),
+            ui.kpi_html("Cobertura global promedio", num(k["dio_global"], 1), "días", nota="Días de inventario (DIO)"),
+            ui.kpi_html("Compras MPS · Materia prima", pct(fill_mp * 100, 2) if pd.notna(fill_mp) else "–",
+                        progreso=((0 if pd.isna(fill_mp) else fill_mp) * 100, "Real vs. proyección 100%", ""), delta=e_mp),
+            ui.kpi_html("Compras MPS · Material de empaque", pct(fill_me * 100, 2) if pd.notna(fill_me) else "–",
+                        progreso=((0 if pd.isna(fill_me) else fill_me) * 100, "Real vs. proyección 100%", ""), delta=e_me),
+        ], minimo=230)
 
-        # --- SECCIÓN 5: MOVIMIENTOS DEL MES ---    
-        st.markdown("---")
-        st.subheader("📋 Conciliación: Movimientos del Mes Actual")
+        # ── 2. Estructura de activos ────────────────
+        inicio = [df_mov["Saldo Inicial (USD)"].iloc[0], df_mov["Saldo Inicial (USD)"].iloc[1]]
+        hoy = [k["inv_mp_tr"], k["inv_me_tr"]]
+        with ui.tarjeta("fin_estructura", "Estructura de activos de inventario",
+                        "Participación de materia prima y empaque · inicio de mes vs. hoy"):
+            ui.leyenda([("Materia prima", ui.NAVY), ("Material de empaque", ui.ORANGE)])
+            _grafico_estructura(inicio, hoy)
+            ui.linea_resumen([("Inicio de mes", usd(sum(inicio)), False), ("Hoy", usd(sum(hoy)), False)])
 
-        # 1. Cálculos de variación (Disponible Actual vs Valor Inicial)
-        var_mp_usd = inv_mp_tr - val_inicio_mp
-        var_me_usd = inv_me_tr - val_inicio_me
-        
-        var_mp_pct = (var_mp_usd / val_inicio_mp) if val_inicio_mp > 0 else 0
-        var_me_pct = (var_me_usd / val_inicio_me) if val_inicio_me > 0 else 0
-        
-        # 2. Función para formatear el texto de la tendencia ej: "+$13.602,04 (+9.05%)"
-        def format_tendencia(usd, pct):
-            if pd.isna(usd) or pd.isna(pct):
-                return "Sin datos"
-            signo = "+" if usd > 0 else "-"
-            # Formateamos el valor absoluto con el estándar de Sapori
-            usd_str = f"{abs(usd):,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
-            return f"{signo}${usd_str} ({signo}{abs(pct):.2%})"
-            
-        tendencia_mp = format_tendencia(var_mp_usd, var_mp_pct)
-        tendencia_me = format_tendencia(var_me_usd, var_me_pct)
+        # ── 3. Conciliación del mes ─────────────────
+        with ui.tarjeta("fin_movimientos", "Conciliación: movimientos del mes actual", "USD"):
+            ui.leyenda([("Saldo inicial", GRIS), ("Recepción / compras", ui.LIGHTBLUE),
+                        ("Consumo", ui.ORANGE), ("Inventario final (hoy)", ui.NAVY)])
+            _grafico_movimientos(df_mov)
 
-        consumo_mp_val = pd.to_numeric(df_raw.iloc[33, 3], errors='coerce')
-        consumo_me_val = pd.to_numeric(df_raw.iloc[34, 3], errors='coerce')
+            tabla = df_mov.drop(columns=["Var_USD", "Var_%"]).copy()
+            tabla["Tendencia vs Inicio Mes"] = [format_tendencia(u, p) for u, p in zip(df_mov["Var_USD"], df_mov["Var_%"])]
+            tabla["Categoría"] = tabla["Categoría"].str.capitalize()
+            dinero = ["Saldo Inicial (USD)", "Recepción/Compras del Mes", "Consumo del Mes", "Inventario Final (Hoy)"]
+            st.dataframe(tabla.style.map(color_tendencia, subset=["Tendencia vs Inicio Mes"]).format({c: usd for c in dinero}),
+                         width="stretch", hide_index=True, column_config={
+                             "Saldo Inicial (USD)": st.column_config.Column("Saldo inicial"),
+                             "Recepción/Compras del Mes": st.column_config.Column("Recepción / compras"),
+                             "Consumo del Mes": st.column_config.Column("Consumo"),
+                             "Inventario Final (Hoy)": st.column_config.Column("Inventario final (hoy)"),
+                             "Tendencia vs Inicio Mes": st.column_config.Column("Variación vs. inicio de mes")})
+            st.caption("Variación en verde: el inventario bajó y se liberó capital. En naranja: subió y se inmovilizó capital.")
 
-        # 3. Construcción del DataFrame actualizado (Añadido Saldo Inicial)
-        data_mov = {
-            "Categoría": ["MATERIA PRIMA", "MATERIAL EMPAQUE"],
-            "Saldo Inicial (USD)": [val_inicio_mp, val_inicio_me],
-            "Recepción/Compras del Mes": [recepcion_mp, recepcion_me],
-            "Consumo del Mes": [consumo_mp_val, consumo_me_val],
-            "Inventario Final (Hoy)": [inv_mp_tr, inv_me_tr],
-            "Tendencia vs Inicio Mes": [tendencia_mp, tendencia_me]
-        }
-        
-        df_movimientos = pd.DataFrame(data_mov)
-        
-        # --- GRÁFICO DE BARRAS AGRUPADAS (FLUJO CONTABLE DEL MES) ---
-        fig_mov = go.Figure()
-        
-        # 0. Saldo Inicial - Gris neutral corporativo
-        fig_mov.add_trace(go.Bar(
-            x=df_movimientos['Categoría'],
-            y=df_movimientos['Saldo Inicial (USD)'],
-            name='Saldo Inicial (Día 1)',
-            marker_color='#64748b', 
-            text=[f"${v:,.0f}".replace(",", ".") for v in df_movimientos['Saldo Inicial (USD)']],
-            textposition='auto'
-        ))
-
-        # 1. Recepción (Entradas de Capital) - Verde
-        fig_mov.add_trace(go.Bar(
-            x=df_movimientos['Categoría'],
-            y=df_movimientos['Recepción/Compras del Mes'],
-            name='Recepción / Compras',
-            marker_color='#16a34a', 
-            text=[f"${v:,.0f}".replace(",", ".") for v in df_movimientos['Recepción/Compras del Mes']],
-            textposition='auto'
-        ))
-        
-        # 2. Consumo (Salidas de Capital) - Rojo
-        fig_mov.add_trace(go.Bar(
-            x=df_movimientos['Categoría'],
-            y=df_movimientos['Consumo del Mes'],
-            name='Consumo del Mes',
-            marker_color='#dc2626', 
-            text=[f"${v:,.0f}".replace(",", ".") for v in df_movimientos['Consumo del Mes']],
-            textposition='auto'
-        ))
-
-        # 3. Inventario Disponible (Saldo Final) - Azul Sapori
-        fig_mov.add_trace(go.Bar(
-            x=df_movimientos['Categoría'],
-            y=df_movimientos['Inventario Final (Hoy)'],
-            name='Inventario Final (Hoy)',
-            marker_color='#1a3a5c', 
-            text=[f"${v:,.0f}".replace(",", ".") for v in df_movimientos['Inventario Final (Hoy)']],
-            textposition='auto'
-        ))
-        
-        fig_mov.update_layout(
-            barmode='group',
-            height=420,
-            margin=dict(t=30, b=20, l=20, r=20),
-            hovermode="x unified",
-            legend=dict(orientation="h", yanchor="bottom", y=1.02, x=0.01),
-            plot_bgcolor='rgba(0,0,0,0)',
-            paper_bgcolor='rgba(0,0,0,0)',
-            yaxis=dict(title="Valor en USD ($)", gridcolor='#e2e8f0', zeroline=False)
-        )
-        
-        st.plotly_chart(fig_mov, width="stretch")
-        st.markdown("<br>", unsafe_allow_html=True)
-        # -----------------------------------------------------------
-
-        # 4. Semáforo para la columna de tendencia (Lógica Financiera Invertida)
-        def color_tendencia(val):
-            val_str = str(val)
-            if val_str.startswith('-'):
-                # Si baja el inventario: Verde (Favorable, liberamos capital)
-                return 'color: #385723; font-weight: bold; background-color: #e2f0d9;' 
-            elif val_str.startswith('+'):
-                # Si sube el inventario: Naranja/Rojo (Alerta, inmovilizamos capital)
-                return 'color: #c65911; font-weight: bold; background-color: #fce4d6;' 
-            return ''
-            
-        # 5. Renderizado de la tabla final
-        st.dataframe(
-            df_movimientos.style.map(color_tendencia, subset=['Tendencia vs Inicio Mes']).format({
-                "Saldo Inicial (USD)": formato_dinero,
-                "Recepción/Compras del Mes": formato_dinero,
-                "Consumo del Mes": formato_dinero,
-                "Inventario Final (Hoy)": formato_dinero
-            }),
-            width="stretch", hide_index=True
-        )   
     except Exception as e:
-        st.error(f"Error procesando los KPIs Financieros: {e}")
+        st.error(f"Error procesando los KPIs Financieros: {e}")
