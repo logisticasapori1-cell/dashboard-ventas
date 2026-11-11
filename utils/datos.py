@@ -100,3 +100,34 @@ def leer_grupo(prefijo, quitar_prefijo=False, header=0, skiprows=None):
         nombres.append(nombre)
         dfs[nombre] = leer_hoja(h, header=header, skiprows=skiprows)
     return nombres, dfs
+
+
+@st.cache_data(show_spinner=False)
+def _fecha_guardado(path, ver):
+    """Fecha en que se guardó el Excel (propiedades del archivo, la escribe Excel al guardar)."""
+    import openpyxl
+    try:
+        wb = openpyxl.load_workbook(path, read_only=True)
+        fecha = wb.properties.modified
+        wb.close()
+        return fecha
+    except Exception:
+        return None
+
+
+def fecha_actualizacion(zona="America/Caracas"):
+    """Fecha y hora (hora de Venezuela) en que se guardó el Excel de datos, o None.
+
+    Se lee de las propiedades del archivo y no de la fecha del sistema, porque al
+    desplegar en Render la fecha del sistema es la del despliegue, no la del Excel.
+    """
+    if not existe():
+        return None
+    fecha = _fecha_guardado(ARCHIVO_DATOS, version())
+    if fecha is None:
+        return None
+    from datetime import timezone
+    from zoneinfo import ZoneInfo
+    if fecha.tzinfo is None:
+        fecha = fecha.replace(tzinfo=timezone.utc)  # Excel la guarda en UTC
+    return fecha.astimezone(ZoneInfo(zona))

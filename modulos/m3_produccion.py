@@ -9,6 +9,72 @@ def _cargar_hojas_produccion(path=None):
     """Retorna (nombres, {nombre_hoja: DataFrame}) de las hojas de producción."""
     return datos.leer_grupo(datos.PREFIJO_PRODUCCION)
 
+def serie_produccion(df):
+    """Convierte una hoja de producción en la serie mensual (Fecha, Real). Retorna (df, aviso)."""
+    meses_patrones = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic']
+    pairs = []
+
+    def es_celda_fecha(val):
+        if hasattr(val, 'strftime'): return True
+        val_str = str(val).lower().strip()
+        return any(m in val_str for m in meses_patrones)
+
+    conteo_cols = sum(1 for col in df.columns if es_celda_fecha(col))
+    if conteo_cols >= 2:
+        for idx, row in df.iterrows():
+            fila_pairs = []
+            for i, col in enumerate(df.columns):
+                if es_celda_fecha(col):
+                    val_num = pd.to_numeric(row.iloc[i], errors='coerce')
+                    if pd.notna(val_num) and val_num > 0: fila_pairs.append((col, val_num))
+            if len(fila_pairs) >= 2:
+                pairs = fila_pairs
+                break
+
+    if len(pairs) == 0:
+        for idx, row in df.iterrows():
+            conteo_fila = sum(1 for val in row if es_celda_fecha(val))
+            if conteo_fila >= 2:
+                if idx + 1 < len(df):
+                    fila_valores = df.iloc[idx + 1]
+                    for i in range(len(row)):
+                        f_val = row.iloc[i]
+                        if es_celda_fecha(f_val):
+                            val_num = pd.to_numeric(fila_valores.iloc[i], errors='coerce')
+                            if pd.notna(val_num) and val_num > 0: pairs.append((f_val, val_num))
+                break
+
+    if len(pairs) == 0:
+        return None, "⚠️ No se detectó la secuencia horizontal de meses o valores en esta hoja. Verifica la estructura."
+
+    meses_espanol = {'ene': '01', 'feb': '02', 'mar': '03', 'abr': '04', 'may': '05', 'jun': '06', 'jul': '07', 'ago': '08', 'sep': '09', 'oct': '10', 'nov': '11', 'dic': '12'}
+    clean_data = []
+
+    for f_val, val in pairs:
+        if hasattr(f_val, 'strftime'):
+            dt = pd.to_datetime(f_val)
+            if pd.notna(dt): clean_data.append({'Fecha': dt, 'Real': val})
+        else:
+            m_str = str(f_val).lower().strip()
+            for m_letra, m_num in meses_espanol.items():
+                if m_letra in m_str:
+                    year_match = re.search(r'(\d{2,4})$', m_str)
+                    if year_match:
+                        year_part = year_match.group(1)
+                        m_str_numeric = f"{m_num}-{year_part}"
+                        fmt = '%m-%y' if len(year_part) == 2 else '%m-%Y'
+                        dt = pd.to_datetime(m_str_numeric, format=fmt, errors='coerce')
+                        if pd.notna(dt): clean_data.append({'Fecha': dt, 'Real': val})
+                    break
+
+    df_final = pd.DataFrame(clean_data)
+    if df_final.empty:
+        return None, "⚠️ Las celdas de fecha detectadas no pudieron ser procesadas correctamente."
+
+    df_final = df_final.sort_values(by='Fecha').reset_index(drop=True)
+    return df_final, None
+
+
 def renderizar():
     st.markdown("# 🏭 Tablero de Control de Producción Mensual")
     st.caption("Monitoreo de Volúmenes de Producción por Categoría · Feb-26 hasta Mes Actual")
@@ -28,69 +94,10 @@ def renderizar():
 
             df = hojas_dict[categoria_seleccionada]
 
-            meses_patrones = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic']
-            pairs = []
-
-            def es_celda_fecha(val):
-                if hasattr(val, 'strftime'): return True
-                val_str = str(val).lower().strip()
-                return any(m in val_str for m in meses_patrones)
-
-            conteo_cols = sum(1 for col in df.columns if es_celda_fecha(col))
-            if conteo_cols >= 2:
-                for idx, row in df.iterrows():
-                    fila_pairs = []
-                    for i, col in enumerate(df.columns):
-                        if es_celda_fecha(col):
-                            val_num = pd.to_numeric(row.iloc[i], errors='coerce')
-                            if pd.notna(val_num) and val_num > 0: fila_pairs.append((col, val_num))
-                    if len(fila_pairs) >= 2:
-                        pairs = fila_pairs
-                        break
-
-            if len(pairs) == 0:
-                for idx, row in df.iterrows():
-                    conteo_fila = sum(1 for val in row if es_celda_fecha(val))
-                    if conteo_fila >= 2:
-                        if idx + 1 < len(df):
-                            fila_valores = df.iloc[idx + 1]
-                            for i in range(len(row)):
-                                f_val = row.iloc[i]
-                                if es_celda_fecha(f_val):
-                                    val_num = pd.to_numeric(fila_valores.iloc[i], errors='coerce')
-                                    if pd.notna(val_num) and val_num > 0: pairs.append((f_val, val_num))
-                        break
-
-            if len(pairs) == 0:
-                st.warning("⚠️ No se detectó la secuencia horizontal de meses o valores en esta hoja. Verifica la estructura.")
+            df_final, _aviso = serie_produccion(df)
+            if _aviso:
+                st.warning(_aviso)
                 return
-
-            meses_espanol = {'ene': '01', 'feb': '02', 'mar': '03', 'abr': '04', 'may': '05', 'jun': '06', 'jul': '07', 'ago': '08', 'sep': '09', 'oct': '10', 'nov': '11', 'dic': '12'}
-            clean_data = []
-            
-            for f_val, val in pairs:
-                if hasattr(f_val, 'strftime'):
-                    dt = pd.to_datetime(f_val)
-                    if pd.notna(dt): clean_data.append({'Fecha': dt, 'Real': val})
-                else:
-                    m_str = str(f_val).lower().strip()
-                    for m_letra, m_num in meses_espanol.items():
-                        if m_letra in m_str:
-                            year_match = re.search(r'(\d{2,4})$', m_str)
-                            if year_match:
-                                year_part = year_match.group(1)
-                                m_str_numeric = f"{m_num}-{year_part}"
-                                fmt = '%m-%y' if len(year_part) == 2 else '%m-%Y'
-                                dt = pd.to_datetime(m_str_numeric, format=fmt, errors='coerce')
-                                if pd.notna(dt): clean_data.append({'Fecha': dt, 'Real': val})
-                            break
-
-            df_final = pd.DataFrame(clean_data)
-            if df_final.empty:
-                st.warning("⚠️ Las celdas de fecha detectadas no pudieron ser procesadas correctamente.")
-                return
-
-            df_final = df_final.sort_values(by='Fecha').reset_index(drop=True)
             meses_display = {1: 'Ene', 2: 'Feb', 3: 'Mar', 4: 'Abr', 5: 'May', 6: 'Jun', 7: 'Jul', 8: 'Ago', 9: 'Sep', 10: 'Oct', 11: 'Nov', 12: 'Dic'}
             df_final['Mes_Filtro'] = df_final['Fecha'].dt.month.map(meses_display) + "-" + df_final['Fecha'].dt.strftime('%Y')
 
@@ -127,13 +134,13 @@ def renderizar():
                 text=[f"{v:,.0f}".replace(",", ".") for v in df_final['Real']], textposition='top center', textfont=dict(size=11, color='#1a3a5c')
             ))
             fig.update_layout(height=450, margin=dict(l=20, r=20, t=30, b=20), hovermode="x unified", yaxis=dict(title="Unidades", gridcolor='#e2e8f0', zeroline=False), xaxis=dict(title="Meses", gridcolor='#f1f5f9'), plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)')
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, width="stretch")
 
             st.subheader("📋 Resumen de Datos Analizados")
             df_tabla = df_final[['Mes_Filtro', 'Real']].copy()
             df_tabla.columns = ['Mes / Período', 'Producción Real (Unidades)']
 
-            st.dataframe(df_tabla.style.format({'Producción Real (Unidades)': lambda x: f"{x:,.0f}".replace(",", ".")}), use_container_width=True, hide_index=True)
+            st.dataframe(df_tabla.style.format({'Producción Real (Unidades)': lambda x: f"{x:,.0f}".replace(",", ".")}), width="stretch", hide_index=True)
 
         except Exception as e:
             st.error(f"Error analítico durante el procesamiento horizontal: {e}")

@@ -9,19 +9,15 @@ def _cargar_cierre_inventario(path=None):
     return datos.leer_grupo(datos.PREFIJO_CIERRE, quitar_prefijo=True)
 
 
-def _renderizar_tendencia_total(df_consolidado, sheet_names, formato_dinero):
-    """Gráfica de línea con el Valor Total del inventario (MP + ME + PT) desde abril hasta el último mes."""
-    st.subheader("📊 Tendencia del Valor Total del Inventario (desde Abril)")
-    st.caption("Suma de Materia Prima + Material de Empaque + Producto Terminado. Cifras en USD. No depende de los filtros superiores.")
-
+def tendencia_total(df_consolidado, sheet_names):
+    """Serie del valor total (MP+ME+PT) desde abril. Retorna (dict, aviso)."""
     # Ubicar la hoja de abril (se toma la más reciente si hubiera varias)
     indices_abril = [
         i for i, s in enumerate(sheet_names)
         if "ABR" in str(s).upper() or "APR" in str(s).upper()
     ]
     if not indices_abril:
-        st.info("No se encontró una hoja de Abril en el archivo; no es posible construir la tendencia.")
-        return
+        return None, "No se encontró una hoja de Abril en el archivo; no es posible construir la tendencia."
 
     meses = list(sheet_names[indices_abril[-1]:])
 
@@ -38,12 +34,24 @@ def _renderizar_tendencia_total(df_consolidado, sheet_names, formato_dinero):
 
     df_plot = resumen.dropna(subset=["Valor_Total"])
     if df_plot.empty:
-        st.info("No hay valores registrados desde Abril.")
-        return
+        return None, "No hay valores registrados desde Abril."
 
     # KPI: variación entre el primer y el último mes del rango
     v_ini, v_fin = df_plot["Valor_Total"].iloc[0], df_plot["Valor_Total"].iloc[-1]
     var_total = ((v_fin - v_ini) / v_ini * 100) if v_ini else 0
+    return {"resumen": resumen, "df_plot": df_plot, "v_ini": v_ini, "v_fin": v_fin, "var_total": var_total}, None
+
+
+def _renderizar_tendencia_total(df_consolidado, sheet_names, formato_dinero):
+    """Gráfica de línea con el Valor Total del inventario (MP + ME + PT) desde abril hasta el último mes."""
+    st.subheader("📊 Tendencia del Valor Total del Inventario (desde Abril)")
+    st.caption("Suma de Materia Prima + Material de Empaque + Producto Terminado. Cifras en USD. No depende de los filtros superiores.")
+
+    _t, _aviso = tendencia_total(df_consolidado, sheet_names)
+    if _aviso:
+        st.info(_aviso)
+        return
+    resumen, df_plot, v_ini, v_fin, var_total = _t["resumen"], _t["df_plot"], _t["v_ini"], _t["v_fin"], _t["var_total"]
     k1, k2, k3 = st.columns(3)
     k1.metric(f"Valor {df_plot['Mes'].iloc[0]} (USD)", formato_dinero(v_ini))
     k2.metric(f"Valor {df_plot['Mes'].iloc[-1]} (USD)", formato_dinero(v_fin))
@@ -82,10 +90,30 @@ def _renderizar_tendencia_total(df_consolidado, sheet_names, formato_dinero):
         paper_bgcolor="rgba(0,0,0,0)",
         showlegend=False,
     )
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, width="stretch")
 
     if incompletos.any():
         st.caption("🟠 Los puntos naranjas son meses con alguna categoría sin registrar; su total puede estar subestimado.")
+
+def consolidar(sheet_names, hojas_dict):
+    """Une las hojas de cierre en una tabla larga (Mes, Categoría, Valor $)."""
+    data = []
+
+    for sheet in sheet_names:
+        df = hojas_dict[sheet]
+        if not df.empty:
+            # Extraemos los valores. Si la columna no existe (ej. Producto Terminado en Enero), asignamos None
+            val_mp = df['VALOR $ MATERIA PRIMA'].iloc[0] if 'VALOR $ MATERIA PRIMA' in df.columns else None
+            val_me = df['VALOR $ MATERIAL EMPAQUE'].iloc[0] if 'VALOR $ MATERIAL EMPAQUE' in df.columns else None
+            val_pt = df['VALOR $ PRODUCTO TERMINADO'].iloc[0] if 'VALOR $ PRODUCTO TERMINADO' in df.columns else None
+
+            data.append({"Mes": sheet, "Categoría": "MATERIA PRIMA", "Valor $": val_mp})
+            data.append({"Mes": sheet, "Categoría": "MATERIAL EMPAQUE", "Valor $": val_me})
+            data.append({"Mes": sheet, "Categoría": "PRODUCTO TERMINADO", "Valor $": val_pt})
+
+    df_consolidado = pd.DataFrame(data)
+    return df_consolidado
+
 
 def renderizar():
     st.markdown("# 📦 Cierre de Inventario Valorizado")
@@ -100,21 +128,7 @@ def renderizar():
     try:
         # 1. Extracción y Consolidación de Datos
         sheet_names, hojas_dict = _cargar_cierre_inventario(file_path)
-        data = []
-        
-        for sheet in sheet_names:
-            df = hojas_dict[sheet]
-            if not df.empty:
-                # Extraemos los valores. Si la columna no existe (ej. Producto Terminado en Enero), asignamos None
-                val_mp = df['VALOR $ MATERIA PRIMA'].iloc[0] if 'VALOR $ MATERIA PRIMA' in df.columns else None
-                val_me = df['VALOR $ MATERIAL EMPAQUE'].iloc[0] if 'VALOR $ MATERIAL EMPAQUE' in df.columns else None
-                val_pt = df['VALOR $ PRODUCTO TERMINADO'].iloc[0] if 'VALOR $ PRODUCTO TERMINADO' in df.columns else None
-                
-                data.append({"Mes": sheet, "Categoría": "MATERIA PRIMA", "Valor $": val_mp})
-                data.append({"Mes": sheet, "Categoría": "MATERIAL EMPAQUE", "Valor $": val_me})
-                data.append({"Mes": sheet, "Categoría": "PRODUCTO TERMINADO", "Valor $": val_pt})
-
-        df_consolidado = pd.DataFrame(data)
+        df_consolidado = consolidar(sheet_names, hojas_dict)
         
         # 2. Interfaz de Filtros
         st.markdown('<div class="module-header">MÉTRICAS DE CAPITAL DE INVENTARIO</div>', unsafe_allow_html=True)
@@ -211,7 +225,7 @@ def renderizar():
                 paper_bgcolor='rgba(0,0,0,0)',
                 legend=dict(orientation="h", yanchor="bottom", y=1.02, x=0.01)
             )
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, width="stretch")
 
         # 5.1 Tendencia del Valor Total (Abril → último mes)
         st.markdown("---")
@@ -236,7 +250,7 @@ def renderizar():
         
         st.dataframe(
             tabla_mostrar.style.format(formato_diccionario, na_rep="No registrado"), 
-            use_container_width=True, 
+            width="stretch", 
             hide_index=True
         )
 

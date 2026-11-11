@@ -7,6 +7,27 @@ from utils import datos
 def _cargar_sici(path=None):
     return datos.leer_hoja(datos.HOJA_SICI, header=None)
 
+def extraer_totales(df_raw):
+    """Totales valorizados y de inventario por CEDI (sin dibujar nada). También lo usa el Resumen ejecutivo."""
+    idx_val = df_raw[df_raw[1] == 'VALORIZADO'].index[0]
+    idx_inv = df_raw[df_raw[1] == 'INVENTARIO'].index[0]
+
+    val_ccs = pd.to_numeric(df_raw.iloc[idx_val+1, 3], errors='coerce')
+    val_car = pd.to_numeric(df_raw.iloc[idx_val+2, 3], errors='coerce')
+    val_ori = pd.to_numeric(df_raw.iloc[idx_val+3, 3], errors='coerce')
+    val_lar = pd.to_numeric(df_raw.iloc[idx_val+4, 3], errors='coerce')
+    val_zul = pd.to_numeric(df_raw.iloc[idx_val+5, 3], errors='coerce')
+    val_total = pd.to_numeric(df_raw.iloc[idx_val+6, 3], errors='coerce')
+
+    inv_ccs = pd.to_numeric(df_raw.iloc[idx_inv+1, 3], errors='coerce')
+    inv_car = pd.to_numeric(df_raw.iloc[idx_inv+2, 3], errors='coerce')
+    inv_ori = pd.to_numeric(df_raw.iloc[idx_inv+3, 3], errors='coerce')
+    inv_lar = pd.to_numeric(df_raw.iloc[idx_inv+4, 3], errors='coerce')
+    inv_zul = pd.to_numeric(df_raw.iloc[idx_inv+5, 3], errors='coerce')
+    inv_total = pd.to_numeric(df_raw.iloc[idx_inv+6, 3], errors='coerce')
+    return {"idx_val": idx_val, "idx_inv": idx_inv, "val_ccs": val_ccs, "val_car": val_car, "val_ori": val_ori, "val_lar": val_lar, "val_zul": val_zul, "val_total": val_total, "inv_ccs": inv_ccs, "inv_car": inv_car, "inv_ori": inv_ori, "inv_lar": inv_lar, "inv_zul": inv_zul, "inv_total": inv_total}
+
+
 def renderizar():
     st.markdown("# 🌍 Sistema Integral de Control Multicentro (SICI)")
     st.caption("Visión Global · Coberturas por CEDIS · Eficiencia Logística")
@@ -21,22 +42,21 @@ def renderizar():
         df_raw = _cargar_sici(file_path)
         
         # --- 1. EXTRACCIÓN INTELIGENTE DE TOTALES (Incluyendo Zulia en el índice +5 y Total en +6) ---
-        idx_val = df_raw[df_raw[1] == 'VALORIZADO'].index[0]
-        idx_inv = df_raw[df_raw[1] == 'INVENTARIO'].index[0]
-        
-        val_ccs = pd.to_numeric(df_raw.iloc[idx_val+1, 3], errors='coerce')
-        val_car = pd.to_numeric(df_raw.iloc[idx_val+2, 3], errors='coerce')
-        val_ori = pd.to_numeric(df_raw.iloc[idx_val+3, 3], errors='coerce')
-        val_lar = pd.to_numeric(df_raw.iloc[idx_val+4, 3], errors='coerce')
-        val_zul = pd.to_numeric(df_raw.iloc[idx_val+5, 3], errors='coerce')
-        val_total = pd.to_numeric(df_raw.iloc[idx_val+6, 3], errors='coerce')
-        
-        inv_ccs = pd.to_numeric(df_raw.iloc[idx_inv+1, 3], errors='coerce')
-        inv_car = pd.to_numeric(df_raw.iloc[idx_inv+2, 3], errors='coerce')
-        inv_ori = pd.to_numeric(df_raw.iloc[idx_inv+3, 3], errors='coerce')
-        inv_lar = pd.to_numeric(df_raw.iloc[idx_inv+4, 3], errors='coerce')
-        inv_zul = pd.to_numeric(df_raw.iloc[idx_inv+5, 3], errors='coerce')
-        inv_total = pd.to_numeric(df_raw.iloc[idx_inv+6, 3], errors='coerce')
+        _r = extraer_totales(df_raw)
+        idx_val = _r["idx_val"]
+        idx_inv = _r["idx_inv"]
+        val_ccs = _r["val_ccs"]
+        val_car = _r["val_car"]
+        val_ori = _r["val_ori"]
+        val_lar = _r["val_lar"]
+        val_zul = _r["val_zul"]
+        val_total = _r["val_total"]
+        inv_ccs = _r["inv_ccs"]
+        inv_car = _r["inv_car"]
+        inv_ori = _r["inv_ori"]
+        inv_lar = _r["inv_lar"]
+        inv_zul = _r["inv_zul"]
+        inv_total = _r["inv_total"]
         
         def formato_dinero(x):
             if pd.isna(x): return "-"
@@ -73,12 +93,12 @@ def renderizar():
         with col_d1:
             fig_val = go.Figure(data=[go.Pie(labels=labels_cedis, values=[val_ccs, val_car, val_ori, val_lar, val_zul], hole=.5, marker_colors=colores_cedis)])
             fig_val.update_layout(title_text="Distribución de Capital (USD)", margin=dict(t=40, b=10, l=0, r=0), height=300)
-            st.plotly_chart(fig_val, use_container_width=True)
+            st.plotly_chart(fig_val, width="stretch")
             
         with col_d2:
             fig_inv = go.Figure(data=[go.Pie(labels=labels_cedis, values=[inv_ccs, inv_car, inv_ori, inv_lar, inv_zul], hole=.5, marker_colors=colores_cedis)])
             fig_inv.update_layout(title_text="Distribución Física (Unidades)", margin=dict(t=40, b=10, l=0, r=0), height=300)
-            st.plotly_chart(fig_inv, use_container_width=True)
+            st.plotly_chart(fig_inv, width="stretch")
 
         # --- SECCIÓN 2: CONTROL MULTICENTRO (SELECTBOX) ---
         st.markdown("---")
@@ -137,7 +157,7 @@ def renderizar():
                     "Cobertura (Días)": lambda x: f"{x:.1f}" if pd.notnull(x) else "-",
                     "Eficiencia SICI": lambda x: f"{x:.0%}" if pd.notnull(x) else "-"
                 }),
-                use_container_width=True, hide_index=True
+                width="stretch", hide_index=True
             )
             
         else:
@@ -169,7 +189,7 @@ def renderizar():
                     "Demanda Mensual": lambda x: formato_entero(x),
                     "Balance": lambda x: formato_entero(x)
                 }),
-                use_container_width=True, hide_index=True
+                width="stretch", hide_index=True
             )
 
     except Exception as e:

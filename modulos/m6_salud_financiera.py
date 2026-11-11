@@ -7,6 +7,26 @@ from utils import datos
 def _cargar_kpis_financieros(path=None):
     return datos.leer_hoja(datos.HOJA_KPIS_FINANCIEROS, header=None)
 
+def extraer_kpis(df_raw):
+    """Valores base de la hoja de KPIs financieros (sin dibujar nada). También lo usa el Resumen ejecutivo."""
+    capital_inmovilizado = pd.to_numeric(df_raw.iloc[23, 2], errors='coerce')
+
+    # Cálculo de Fill Rate Ponderado
+    recepcion_mp = pd.to_numeric(df_raw.iloc[13, 1], errors='coerce')
+    recepcion_me = pd.to_numeric(df_raw.iloc[14, 1], errors='coerce')
+    req_mp = pd.to_numeric(df_raw.iloc[13, 2], errors='coerce')
+    req_me = pd.to_numeric(df_raw.iloc[14, 2], errors='coerce')
+    fill_rate_global = (recepcion_mp + recepcion_me) / (req_mp + req_me) if (req_mp + req_me) > 0 else 0
+
+    # Cálculo de DIO Global
+    inv_mp_tr = pd.to_numeric(df_raw.iloc[8, 1], errors='coerce')
+    inv_me_tr = pd.to_numeric(df_raw.iloc[9, 1], errors='coerce')
+    cons_mp_tr = pd.to_numeric(df_raw.iloc[8, 2], errors='coerce')
+    cons_me_tr = pd.to_numeric(df_raw.iloc[9, 2], errors='coerce')
+    dio_global = (inv_mp_tr + inv_me_tr) / (cons_mp_tr + cons_me_tr) if (cons_mp_tr + cons_me_tr) > 0 else 0
+    return {"capital_inmovilizado": capital_inmovilizado, "recepcion_mp": recepcion_mp, "recepcion_me": recepcion_me, "req_mp": req_mp, "req_me": req_me, "fill_rate_global": fill_rate_global, "inv_mp_tr": inv_mp_tr, "inv_me_tr": inv_me_tr, "cons_mp_tr": cons_mp_tr, "cons_me_tr": cons_me_tr, "dio_global": dio_global}
+
+
 def renderizar():
     st.markdown("# 🛡️ Salud Financiera y Riesgo de Suministro")
     st.caption("Activos Inventario · Fill Rate · Riesgo Operativo (Quiebre de Stock)")
@@ -22,21 +42,18 @@ def renderizar():
         df_raw = _cargar_kpis_financieros(file_path)
         
         # --- 1. EXTRACCIÓN DE DATOS MACRO ---
-        capital_inmovilizado = pd.to_numeric(df_raw.iloc[23, 2], errors='coerce')
-        
-        # Cálculo de Fill Rate Ponderado
-        recepcion_mp = pd.to_numeric(df_raw.iloc[13, 1], errors='coerce')
-        recepcion_me = pd.to_numeric(df_raw.iloc[14, 1], errors='coerce')
-        req_mp = pd.to_numeric(df_raw.iloc[13, 2], errors='coerce')
-        req_me = pd.to_numeric(df_raw.iloc[14, 2], errors='coerce')
-        fill_rate_global = (recepcion_mp + recepcion_me) / (req_mp + req_me) if (req_mp + req_me) > 0 else 0
-        
-        # Cálculo de DIO Global
-        inv_mp_tr = pd.to_numeric(df_raw.iloc[8, 1], errors='coerce')
-        inv_me_tr = pd.to_numeric(df_raw.iloc[9, 1], errors='coerce')
-        cons_mp_tr = pd.to_numeric(df_raw.iloc[8, 2], errors='coerce')
-        cons_me_tr = pd.to_numeric(df_raw.iloc[9, 2], errors='coerce')
-        dio_global = (inv_mp_tr + inv_me_tr) / (cons_mp_tr + cons_me_tr) if (cons_mp_tr + cons_me_tr) > 0 else 0
+        _r = extraer_kpis(df_raw)
+        capital_inmovilizado = _r["capital_inmovilizado"]
+        recepcion_mp = _r["recepcion_mp"]
+        recepcion_me = _r["recepcion_me"]
+        req_mp = _r["req_mp"]
+        req_me = _r["req_me"]
+        fill_rate_global = _r["fill_rate_global"]
+        inv_mp_tr = _r["inv_mp_tr"]
+        inv_me_tr = _r["inv_me_tr"]
+        cons_mp_tr = _r["cons_mp_tr"]
+        cons_me_tr = _r["cons_me_tr"]
+        dio_global = _r["dio_global"]
 
         formato_dinero = lambda x: f"${x:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
 
@@ -62,12 +79,12 @@ def renderizar():
         with col_dona1:
             fig1 = go.Figure(data=[go.Pie(labels=["Materia Prima", "Empaque"], values=[val_inicio_mp, val_inicio_me], hole=.5, marker_colors=colores_dona, textinfo='percent+label')])
             fig1.update_layout(title_text="Distribución a Inicio de Mes", showlegend=False, margin=dict(t=40, b=10, l=0, r=0), height=300)
-            st.plotly_chart(fig1, use_container_width=True)
+            st.plotly_chart(fig1, width="stretch")
 
         with col_dona2:
             fig2 = go.Figure(data=[go.Pie(labels=["Materia Prima", "Empaque"], values=[inv_mp_tr, inv_me_tr], hole=.5, marker_colors=colores_dona, textinfo='percent+label')])
             fig2.update_layout(title_text="Distribución en Tiempo Real", showlegend=False, margin=dict(t=40, b=10, l=0, r=0), height=300)
-            st.plotly_chart(fig2, use_container_width=True)
+            st.plotly_chart(fig2, width="stretch")
 
         # --- SECCIÓN 4: SUPPLIER FILL RATE ---
         st.markdown("---")
@@ -84,7 +101,7 @@ def renderizar():
             text=[f"{v:.2%}" for v in [fill_me, fill_mp]], textposition='auto'
         ))
         fig_fill.update_layout(xaxis=dict(tickformat=".0%", range=[0, 1]), height=220, margin=dict(t=20, b=20, l=20, r=20), plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)')
-        st.plotly_chart(fig_fill, use_container_width=True)
+        st.plotly_chart(fig_fill, width="stretch")
 
         # --- SECCIÓN 5: MOVIMIENTOS DEL MES ---    
         st.markdown("---")
@@ -178,7 +195,7 @@ def renderizar():
             yaxis=dict(title="Valor en USD ($)", gridcolor='#e2e8f0', zeroline=False)
         )
         
-        st.plotly_chart(fig_mov, use_container_width=True)
+        st.plotly_chart(fig_mov, width="stretch")
         st.markdown("<br>", unsafe_allow_html=True)
         # -----------------------------------------------------------
 
@@ -201,7 +218,7 @@ def renderizar():
                 "Consumo del Mes": formato_dinero,
                 "Inventario Final (Hoy)": formato_dinero
             }),
-            use_container_width=True, hide_index=True
+            width="stretch", hide_index=True
         )   
     except Exception as e:
         st.error(f"Error procesando los KPIs Financieros: {e}")

@@ -60,12 +60,12 @@ def renderizar(dias_efectivos, dias_restantes):
             col_g, col_q = st.columns(2)
             with col_g:
                 g_in = st.text_input("Gemini (temporal)", type="password", placeholder="AIza...")
-                if st.button("Usar Gemini", use_container_width=True):
+                if st.button("Usar Gemini", width="stretch"):
                     st.session_state["gemini_api_key"] = g_in.strip()
                     st.rerun()
             with col_q:
                 q_in = st.text_input("Groq (temporal)", type="password", placeholder="gsk_...")
-                if st.button("Usar Groq", use_container_width=True):
+                if st.button("Usar Groq", width="stretch"):
                     st.session_state["groq_api_key"] = q_in.strip()
                     st.rerun()
         gemini_api_key = leer_secreto("GEMINI_API_KEY") or st.session_state.get("gemini_api_key", "")

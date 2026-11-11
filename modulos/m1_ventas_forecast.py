@@ -1,96 +1,143 @@
-import streamlit as st
+import io
+
 import pandas as pd
-import os
-from utils import datos
+import streamlit as st
+
+from utils import datos, ui
+from utils.formato import num, pct, con_signo
+
 
 def _cargar_kpis(path=None):
     return datos.leer_hoja(datos.HOJA_VENTAS_KPIS, header=None)
 
+
 def _cargar_ventas_sku(path=None):
     return datos.leer_hoja(datos.HOJA_VENTAS_SKU)
 
+
+def _numero(valor):
+    v = pd.to_numeric(valor, errors="coerce")
+    return v if pd.notna(v) else 0
+
+
+def calcular():
+    """KPIs de la hoja 'VTS DASHBOARD' (sin dibujar nada). También lo usa el Resumen ejecutivo."""
+    df = _cargar_kpis()
+
+    eficiencia = df.iloc[2, 5]
+    if isinstance(eficiencia, str):
+        eficiencia = float(eficiencia.replace("%", "").replace(",", ".").strip())
+    elif isinstance(eficiencia, (int, float)):
+        eficiencia = eficiencia * 100 if eficiencia <= 1.0 else eficiencia
+    eficiencia = eficiencia if pd.notna(eficiencia) else 0
+
+    def _fecha(valor, respaldo):
+        f = pd.to_datetime(valor, errors="coerce")
+        return f if pd.notna(f) else pd.to_datetime(respaldo, dayfirst=True)
+
+    inicio = _fecha(df.iloc[4, 1], "01/07/2026")
+    final = _fecha(df.iloc[4, 3], "31/07/2026")
+
+    return {
+        "venta_bruta": _numero(df.iloc[2, 0]),
+        "venta_neta": _numero(df.iloc[2, 1]),
+        "promedio_diario": _numero(df.iloc[2, 2]),
+        "pronostico_mes": _numero(df.iloc[2, 3]),
+        "forecast": _numero(df.iloc[2, 4]),
+        "eficiencia": eficiencia,
+        "diferencia": _numero(df.iloc[2, 6]),
+        "devoluciones": _numero(df.iloc[4, 0]),
+        "inicio": inicio,
+        "final": final,
+        "inicio_str": inicio.strftime("%d/%m/%Y"),
+        "final_str": final.strftime("%d/%m/%Y"),
+    }
+
+
+def _tabla_sku():
+    df = _cargar_ventas_sku().copy()
+    formatos = {}
+    for col in df.columns:
+        nombre = str(col).upper()
+        if "REFERENCIA" in nombre:
+            df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0).astype(int).astype(str).replace("0", "")
+        elif "PROMEDIO" in nombre or "PROMD" in nombre or "VENTA" in nombre:
+            df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0).astype(int)
+            formatos[col] = lambda x: num(x)
+    return df, formatos
+
+
+def _excel(df):
+    buffer = io.BytesIO()
+    with pd.ExcelWriter(buffer, engine="openpyxl") as writer:
+        df.to_excel(writer, index=False, sheet_name="Ventas por SKU")
+    return buffer.getvalue()
+
+
 def renderizar(dias_efectivos, dias_restantes):
-    st.markdown("# 📈 Rendimiento Comercial y Proyecciones de Demanda")
-    st.caption("Ventas diarias · Forecast · Alcance")
+    ui.encabezado("Comercial › Ventas & Forecast", "Ventas & Forecast",
+                  "Ventas diarias, forecast y alcance del período · Cifras en unidades")
 
-    file_ventas = datos.ARCHIVO_DATOS
+    if not datos.existe():
+        datos.mostrar_error_archivo()
+        return
 
-    if not os.path.exists(file_ventas):
-        st.error(f"❌ **Archivo requerido no encontrado:** '{file_ventas}'")
-    else:
-        try:
-            df_kpis = _cargar_kpis(file_ventas)
+    try:
+        k = calcular()
+    except Exception as e:
+        st.error(f"No se pudieron leer los indicadores de ventas: {e}")
+        return
 
-            val_gross = pd.to_numeric(df_kpis.iloc[2, 0], errors='coerce') if pd.notna(pd.to_numeric(df_kpis.iloc[2, 0], errors='coerce')) else 0
-            val_net = pd.to_numeric(df_kpis.iloc[2, 1], errors='coerce') if pd.notna(pd.to_numeric(df_kpis.iloc[2, 1], errors='coerce')) else 0
-            val_prom_dia = pd.to_numeric(df_kpis.iloc[2, 2], errors='coerce') if pd.notna(pd.to_numeric(df_kpis.iloc[2, 2], errors='coerce')) else 0
-            val_pronost_mes = pd.to_numeric(df_kpis.iloc[2, 3], errors='coerce') if pd.notna(pd.to_numeric(df_kpis.iloc[2, 3], errors='coerce')) else 0
-            val_forecast = pd.to_numeric(df_kpis.iloc[2, 4], errors='coerce') if pd.notna(pd.to_numeric(df_kpis.iloc[2, 4], errors='coerce')) else 0
-            val_efficiency = df_kpis.iloc[2, 5]
-            val_dif_units = pd.to_numeric(df_kpis.iloc[2, 6], errors='coerce') if pd.notna(pd.to_numeric(df_kpis.iloc[2, 6], errors='coerce')) else 0
-            val_return = pd.to_numeric(df_kpis.iloc[4, 0], errors='coerce') if pd.notna(pd.to_numeric(df_kpis.iloc[4, 0], errors='coerce')) else 0
-            
-            fecha_inicio = df_kpis.iloc[4, 1]
-            fecha_final = df_kpis.iloc[4, 3]
+    devol_pct = (k["devoluciones"] / k["venta_bruta"] * 100) if k["venta_bruta"] else 0
 
-            if isinstance(val_efficiency, str):
-                val_efficiency = float(val_efficiency.replace('%', '').replace(',', '.').strip())
-            elif isinstance(val_efficiency, (int, float)):
-                val_efficiency = val_efficiency * 100 if val_efficiency <= 1.0 else val_efficiency
-            val_efficiency = val_efficiency if pd.notna(val_efficiency) else 0
+    ui.kpis([
+        ui.grupo_html("Venta", principal=(num(k["venta_bruta"]), "unid. brutas"), stats=[
+            ui.stat_html("Venta neta", num(k["venta_neta"]), "unid."),
+            ui.stat_html("Devoluciones", num(k["devoluciones"]), "unid.", f"{pct(devol_pct)} de la venta bruta"),
+        ]),
+        ui.grupo_html("Forecast", insignia=f"Eficiencia {k['eficiencia']:,.0f}%",
+                      progreso=(k["eficiencia"], f"Pronóstico mensual {num(k['pronostico_mes'])}", f"Forecast {num(k['forecast'])}"),
+                      stats=[
+                          ui.stat_html("Diferencia de alcance", con_signo(k["diferencia"]), "unid.",
+                                       "Brecha de cobertura" if k["diferencia"] < 0 else "Superávit comercial"),
+                          ui.stat_html("Promedio venta diaria", num(k["promedio_diario"]), "unid."),
+                      ]),
+        ui.grupo_html("Período", principal=f"{k['inicio_str']} – {k['final_str']}", stats=[
+            ui.stat_html("Días efectivos", str(dias_efectivos), "días"),
+            ui.stat_html("Días restantes", str(dias_restantes), "días"),
+        ]),
+    ], minimo=300)
 
-            fecha_inicio_str = pd.to_datetime(fecha_inicio).strftime('%d/%m/%Y') if pd.notna(pd.to_datetime(fecha_inicio, errors='coerce')) else "01/07/2026"
-            fecha_final_str = pd.to_datetime(fecha_final).strftime('%d/%m/%Y') if pd.notna(pd.to_datetime(fecha_final, errors='coerce')) else "31/07/2026"
+    try:
+        df_vts, formatos = _tabla_sku()
+    except Exception as e:
+        st.error(f"No se pudo leer la matriz de ventas por SKU: {e}")
+        return
 
-            st.markdown('<div class="module-header">DASHBOARD DE CONTROL OPERATIVO DE DEMANDA</div>', unsafe_allow_html=True)
+    col_prod = next((c for c in df_vts.columns if "PRODUCTO" in str(c).upper()), None)
+    col_venta = next((c for c in df_vts.columns if str(c).upper() == "VENTA BRUTA"), None)
+    if col_prod and col_venta:
+        total = df_vts[col_venta].sum()
+        top = df_vts.sort_values(col_venta, ascending=False).head(10)
+        with ui.tarjeta("top_sku", "Top 10 SKU por venta bruta", "Unidades · % de la venta bruta total"):
+            ui.barras([(r[col_prod], r[col_venta], [pct(r[col_venta] / total * 100) if total else "–"])
+                       for _, r in top.iterrows()], columnas_extra=(64,))
 
-            st.markdown('<p class="kpi-section-label">Indicadores de Volumen</p>', unsafe_allow_html=True)
-            c1, c2, c3, c4 = st.columns(4)
-            c1.metric("Total Units Sales Gross", f"{val_gross:,.0f}".replace(",", "."))
-            c2.metric("Total Units Sales Net", f"{val_net:,.0f}".replace(",", "."))
-            c3.metric("Promedio Venta Diaria", f"{val_prom_dia:,.0f}".replace(",", "."))
-            c4.metric("Pronóstico Venta Mensual", f"{val_pronost_mes:,.0f}".replace(",", "."))
-
-            st.markdown('<p class="kpi-section-label">Forecast & Alcance</p>', unsafe_allow_html=True)
-            c5, c6, c7 = st.columns(3)
-            c5.metric("Forecast", f"{val_forecast:,.0f}".replace(",", "."))
-            c6.metric("Forecast Efficiency", f"{val_efficiency:,.0f}%")
-            delta_dif = "- Brecha de Cobertura" if val_dif_units < 0 else "+ Superávit Comercial"
-            c7.metric("Diferencia Alcance Forecast", f"{val_dif_units:,.0f}".replace(",", "."), delta=delta_dif, delta_color="normal")
-
-            st.markdown("---")
-            st.markdown('<p class="kpi-section-label">Contexto Operativo</p>', unsafe_allow_html=True)
-            b1, b2, b3, b4, b5 = st.columns(5)
-            b1.metric("Units Return", f"{val_return:,.0f}".replace(",", "."))
-            b2.metric("Inicio de Venta", fecha_inicio_str)
-            b3.metric("Final de Venta", fecha_final_str)
-            b4.metric("Días Efectivos", f"{dias_efectivos} días")
-            b5.metric("Días Restantes", f"{dias_restantes} días")
-
-            st.markdown("---")
-            st.markdown("### 📋 Desglose Operativo: Matriz de Ventas por SKU")
-            busqueda_sku = st.text_input("🔍 Filtrar por Nombre de Producto o SKU de Producción", placeholder="Escriba para filtrar...")
-
-            df_vts = _cargar_ventas_sku(file_ventas)
-            df_vts_filtrado = df_vts.copy()
-
-            formatos_columnas = {}
-            for col in df_vts_filtrado.columns:
-                col_str = str(col).upper()
-                if 'REFERENCIA' in col_str:
-                    df_vts_filtrado[col] = pd.to_numeric(df_vts_filtrado[col], errors='coerce').fillna(0).astype(int).astype(str).replace('0', '')
-                elif 'PROMEDIO' in col_str or 'PROMD' in col_str or 'VENTA' in col_str:
-                    df_vts_filtrado[col] = pd.to_numeric(df_vts_filtrado[col], errors='coerce').fillna(0).astype(int)
-                    formatos_columnas[col] = lambda x: f"{x:,.0f}".replace(",", ".")
-
-            if busqueda_sku:
-                mask = df_vts_filtrado.astype(str).apply(lambda x: x.str.contains(busqueda_sku, case=False, na=False)).any(axis=1)
-                df_vts_filtrado = df_vts_filtrado[mask]
-
-            if formatos_columnas:
-                st.dataframe(df_vts_filtrado.style.format(formatos_columnas), use_container_width=True, hide_index=True)
-            else:
-                st.dataframe(df_vts_filtrado, use_container_width=True, hide_index=True)
-
-        except Exception as e:
-            st.error(f"Error analítico durante el procesamiento del archivo: {e}")
+    with ui.tarjeta("detalle_sku", "Detalle por SKU"):
+        c_busq, c_desc = st.columns([3, 1], vertical_alignment="bottom")
+        with c_busq:
+            busqueda = st.text_input("Buscar SKU", placeholder="Buscar por producto o referencia",
+                                     label_visibility="collapsed", icon=":material/search:")
+        df_filtrado = df_vts
+        if busqueda:
+            mascara = df_vts.astype(str).apply(lambda x: x.str.contains(busqueda, case=False, na=False)).any(axis=1)
+            df_filtrado = df_vts[mascara]
+        with c_desc:
+            st.download_button("Descargar Excel", data=_excel(df_filtrado), file_name="Ventas_por_SKU.xlsx",
+                               mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                               icon=":material/download:", width="stretch")
+        if formatos:
+            st.dataframe(df_filtrado.style.format(formatos), width="stretch", hide_index=True)
+        else:
+            st.dataframe(df_filtrado, width="stretch", hide_index=True)
+        st.caption(f"Mostrando {len(df_filtrado)} de {len(df_vts)} SKU")

@@ -1,10 +1,12 @@
-import streamlit as st
 import os
-import base64
-from utils.estilos import cargar_css
-from utils.auth import verificar_login
 
-# Importación de módulos
+import streamlit as st
+
+from utils import datos, ui
+from utils.auth import verificar_login
+from utils.estilos import cargar_css, ocultar_barra_lateral
+
+import modulos.m0_resumen as m0
 import modulos.m1_ventas_forecast as m1
 import modulos.m2_desviaciones as m2
 import modulos.m3_produccion as m3
@@ -14,203 +16,131 @@ import modulos.m6_salud_financiera as m6
 import modulos.m7_control_multicentro as m7
 import modulos.m8_ventas_regionales as m8
 
+VERSION = "v2.0"
+LOGO = "assets/logo_empresa.png"
+
 # ══════════════════════════════════════════════════════════
-# 0. CONFIGURACIÓN DE PÁGINA
+# 0. CONFIGURACIÓN
 # ══════════════════════════════════════════════════════════
 st.set_page_config(
     layout="wide",
     page_title="Portal Supply Chain & S&OP – Sapori",
-    page_icon="🟠"
+    page_icon=LOGO if os.path.exists(LOGO) else "🟠",
+    initial_sidebar_state="auto",
 )
 cargar_css()
 
 # ══════════════════════════════════════════════════════════
 # 1. AUTENTICACIÓN
 # ══════════════════════════════════════════════════════════
+if not st.session_state.get("autenticado", False):
+    ocultar_barra_lateral()
 if not verificar_login():
     st.stop()
 
-# ══════════════════════════════════════════════════════════
-# 2. TOPBAR INSTITUCIONAL (LOGO + TÍTULO + USUARIO + SALIR)
-# ══════════════════════════════════════════════════════════
-if os.path.exists("assets/logo_empresa.png"):
-    with open("assets/logo_empresa.png", "rb") as f:
-        logo_b64 = base64.b64encode(f.read()).decode()
-    logo_html = f'<img src="data:image/png;base64,{logo_b64}" class="erp-logo" />'
-else:
-    logo_html = '<span class="erp-logo-text">SAPORI</span>'
-
-usuario_activo = st.session_state.get("usuario_nombre", "Gerencia")
-
-col_brand, col_user, col_logout = st.columns([7.3, 1.8, 0.9], vertical_alignment="center")
-
-with col_brand:
-    st.markdown(f"""
-    <div class="erp-topbar-left">
-        {logo_html}
-        <div class="erp-topbar-info">
-            <span class="erp-topbar-title">Portal Supply Chain &amp; S&amp;OP</span>
-            <span class="erp-topbar-sub">Plataforma de Inteligencia Operativa &nbsp;·&nbsp; Sapori, C.A.</span>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
-
-with col_user:
-    st.markdown(f"""
-    <div style="display:flex; align-items:center; gap:0.6rem; justify-content:flex-end; height:100%;">
-        <span class="erp-user-badge">👤 {usuario_activo}</span>
-        <span class="erp-version">v1.7</span>
-    </div>
-    """, unsafe_allow_html=True)
-
-with col_logout:
-    if st.button("🚪 Salir", key="top_btn_logout", use_container_width=True):
-        st.session_state["autenticado"] = False
-        st.rerun()
 
 # ══════════════════════════════════════════════════════════
-# 3. NAVEGACIÓN PRINCIPAL – BOTONES ERP
+# 2. PARÁMETROS GLOBALES DEL PERÍODO (uno solo para todo el portal)
 # ══════════════════════════════════════════════════════════
-if "grupo_activo" not in st.session_state:
-    st.session_state["grupo_activo"] = "comercial"
+def dias():
+    return st.session_state.get("dias_efectivos", 8), st.session_state.get("dias_restantes", 15)
 
-grupo_activo = st.session_state["grupo_activo"]
-
-col1, col2, col3, col4, col5 = st.columns(5)
-
-with col1:
-    btn_type = "primary" if grupo_activo == "comercial" else "secondary"
-    if st.button("📊  Comercial", key="nav_comercial", type=btn_type, use_container_width=True):
-        if grupo_activo != "comercial":
-            st.session_state["grupo_activo"] = "comercial"
-            st.rerun()
-
-with col2:
-    btn_type = "primary" if grupo_activo == "operaciones" else "secondary"
-    if st.button("🏭  Operaciones", key="nav_operaciones", type=btn_type, use_container_width=True):
-        if grupo_activo != "operaciones":
-            st.session_state["grupo_activo"] = "operaciones"
-            st.rerun()
-
-with col3:
-    btn_type = "primary" if grupo_activo == "supply" else "secondary"
-    if st.button("📦  Supply & Inventario", key="nav_supply", type=btn_type, use_container_width=True):
-        if grupo_activo != "supply":
-            st.session_state["grupo_activo"] = "supply"
-            st.rerun()
-
-with col4:
-    btn_type = "primary" if grupo_activo == "finanzas" else "secondary"
-    if st.button("💰  Finanzas & Riesgo", key="nav_finanzas", type=btn_type, use_container_width=True):
-        if grupo_activo != "finanzas":
-            st.session_state["grupo_activo"] = "finanzas"
-            st.rerun()
-
-with col5:
-    btn_type = "primary" if grupo_activo == "ia" else "secondary"
-    if st.button("🤖  Asistente IA", key="nav_ia", type=btn_type, use_container_width=True):
-        if grupo_activo != "ia":
-            st.session_state["grupo_activo"] = "ia"
-            st.rerun()
-
-st.markdown('<div style="height: 0.8rem;"></div>', unsafe_allow_html=True)
 
 # ══════════════════════════════════════════════════════════
-# 4. DESPLIEGUE DEL ÁREA ACTIVA
+# 3. PÁGINAS
 # ══════════════════════════════════════════════════════════
+PAGINAS = {}
 
-# ──────────────────────────────────────────────────────────
-# ÁREA 1 · Comercial (M1 · Ventas & Forecast | M8 · Desempeño Regional)
-# ──────────────────────────────────────────────────────────
-if grupo_activo == "comercial":
-    de_prev = st.session_state.get("dias_efectivos", 8)
-    dr_prev = st.session_state.get("dias_restantes", 15)
-    with st.expander(
-        f"⚙️  Parámetros del Período  ·  {de_prev} días efectivos  ·  {dr_prev} restantes",
-        expanded=False
-    ):
-        col_a, col_b, _ = st.columns([1.6, 1.6, 5])
-        with col_a:
-            dias_efectivos = st.number_input(
-                "Días Efectivos de Venta", min_value=1, value=de_prev, step=1, key="de_grp1"
-            )
-        with col_b:
-            dias_restantes = st.number_input(
-                "Días Restantes de Venta", min_value=0, value=dr_prev, step=1, key="dr_grp1"
-            )
-        st.session_state["dias_efectivos"] = dias_efectivos
-        st.session_state["dias_restantes"] = dias_restantes
 
-    mod_tabs_c = st.tabs(["📈  Ventas & Forecast", "🗺️  Desempeño Regional (CEDIs)"])
-    with mod_tabs_c[0]:
-        m1.renderizar(dias_efectivos, dias_restantes)
-    with mod_tabs_c[1]:
-        m8.renderizar()
+def resumen():
+    m0.renderizar(PAGINAS, *dias())
 
-# ──────────────────────────────────────────────────────────
-# ÁREA 2 · Operaciones (M3 · Producción | M7 · Control Multicentro)
-# ──────────────────────────────────────────────────────────
-elif grupo_activo == "operaciones":
-    mod_tabs_o = st.tabs(["⚙️  Control de Producción", "🏢  Control Multicentro (SICI)"])
-    with mod_tabs_o[0]:
-        m3.renderizar()
-    with mod_tabs_o[1]:
-        m7.renderizar()
 
-# ──────────────────────────────────────────────────────────
-# ÁREA 3 · Supply & Inventario (M2 · Desviaciones | M5 · Cierre de Inventario)
-# ──────────────────────────────────────────────────────────
-elif grupo_activo == "supply":
-    mod_tabs_s = st.tabs(["📉  Desviaciones & Tendencias", "📦  Cierre de Inventario Valorizado"])
-    with mod_tabs_s[0]:
-        m2.renderizar()
-    with mod_tabs_s[1]:
-        m5.renderizar()
+def ventas():
+    m1.renderizar(*dias())
 
-# ──────────────────────────────────────────────────────────
-# ÁREA 4 · Finanzas & Riesgo (M6 · Salud Financiera)
-# ──────────────────────────────────────────────────────────
-elif grupo_activo == "finanzas":
+
+def cedis():
+    m8.renderizar()
+
+
+def produccion():
+    m3.renderizar()
+
+
+def multicentro():
+    m7.renderizar()
+
+
+def desviaciones():
+    m2.renderizar()
+
+
+def cierre():
+    m5.renderizar()
+
+
+def finanzas():
     m6.renderizar()
 
-# ──────────────────────────────────────────────────────────
-# ÁREA 5 · Asistente IA (M4 · Asistente de Consultas)
-# ──────────────────────────────────────────────────────────
-elif grupo_activo == "ia":
-    de_ia = st.session_state.get("dias_efectivos_ia", 8)
-    dr_ia = st.session_state.get("dias_restantes_ia", 15)
-    with st.expander(
-        f"⚙️  Parámetros del Período  ·  {de_ia} días efectivos  ·  {dr_ia} restantes",
-        expanded=False
-    ):
-        col_a, col_b, _ = st.columns([1.6, 1.6, 5])
-        with col_a:
-            dias_efectivos_ia = st.number_input(
-                "Días Efectivos de Venta", min_value=1, value=de_ia, step=1, key="de_grp5"
-            )
-        with col_b:
-            dias_restantes_ia = st.number_input(
-                "Días Restantes de Venta", min_value=0, value=dr_ia, step=1, key="dr_grp5"
-            )
-        st.session_state["dias_efectivos_ia"] = dias_efectivos_ia
-        st.session_state["dias_restantes_ia"] = dias_restantes_ia
 
-    m4.renderizar(dias_efectivos_ia, dias_restantes_ia)
+def asistente():
+    m4.renderizar(*dias())
+
+
+PAGINAS.update({
+    "resumen": st.Page(resumen, title="Resumen ejecutivo", icon=":material/home:", url_path="resumen", default=True),
+    "ventas": st.Page(ventas, title="Ventas & Forecast", icon=":material/trending_up:", url_path="ventas"),
+    "cedis": st.Page(cedis, title="Desempeño por CEDI", icon=":material/location_on:", url_path="cedis"),
+    "produccion": st.Page(produccion, title="Producción", icon=":material/factory:", url_path="produccion"),
+    "multicentro": st.Page(multicentro, title="Control Multicentro", icon=":material/apartment:", url_path="multicentro"),
+    "desviaciones": st.Page(desviaciones, title="Desviaciones", icon=":material/warning:", url_path="desviaciones"),
+    "cierre": st.Page(cierre, title="Cierre de inventario", icon=":material/inventory_2:", url_path="cierre"),
+    "finanzas": st.Page(finanzas, title="Salud financiera", icon=":material/account_balance_wallet:", url_path="finanzas"),
+    "asistente": st.Page(asistente, title="Asistente IA", icon=":material/chat:", url_path="asistente"),
+})
+
+navegacion = st.navigation({
+    "Inicio": [PAGINAS["resumen"]],
+    "Comercial": [PAGINAS["ventas"], PAGINAS["cedis"]],
+    "Operaciones": [PAGINAS["produccion"], PAGINAS["multicentro"]],
+    "Supply": [PAGINAS["desviaciones"], PAGINAS["cierre"]],
+    "Finanzas": [PAGINAS["finanzas"]],
+    "Asistente": [PAGINAS["asistente"]],
+}, position="sidebar")
 
 # ══════════════════════════════════════════════════════════
-# 5. PIE DE PÁGINA GLOBAL
+# 4. BARRA LATERAL
 # ══════════════════════════════════════════════════════════
-st.markdown("""
-<div class="footer-custom">
-    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.5rem;">
-        <div>
-            <strong>Plataforma de Inteligencia Operativa</strong><br>
-            <span style="font-size:0.75rem; color:#94a3b8;">Versión 1.7 · Sapori, C. A. Todos los derechos reservados</span>
-        </div>
-        <div style="text-align:right;">
-            Desarrollado por <strong>Jair Ramos</strong><br>
-            <span style="color:#1a3a5c; font-weight:600; font-size:0.82rem;">KaisenYork | Software</span>
-        </div>
-    </div>
-</div>
-""", unsafe_allow_html=True)
+if os.path.exists(LOGO):
+    st.logo(LOGO, size="large")
+
+with st.sidebar:
+    st.html('<p class="sp-side-label">Parámetros del período</p>')
+    c1, c2 = st.columns(2)
+    with c1:
+        st.number_input("Días efectivos", min_value=1, value=8, step=1, key="dias_efectivos")
+    with c2:
+        st.number_input("Días restantes", min_value=0, value=15, step=1, key="dias_restantes")
+
+    fecha = datos.fecha_actualizacion()
+    texto_fecha = fecha.strftime("%d/%m/%Y %H:%M") if fecha else "sin fecha"
+    st.html(f'<p class="sp-side-meta">Datos: {os.path.basename(datos.ARCHIVO_DATOS)} · {texto_fecha}</p>')
+
+    st.divider()
+    usuario = st.session_state.get("usuario_nombre", "Gerencia")
+    inicial = (usuario.strip()[:1] or "G").upper()
+    cu, cb = st.columns([3, 2], vertical_alignment="center")
+    with cu:
+        st.html(f'<div class="sp-user"><span class="sp-avatar">{ui._e(inicial)}</span>'
+                f'<span><span class="sp-user-name">{ui._e(usuario)}</span><span class="sp-user-ver">{VERSION}</span></span></div>')
+    with cb:
+        if st.button("Salir", key="btn_salir", icon=":material/logout:", width="stretch"):
+            st.session_state["autenticado"] = False
+            st.rerun()
+
+# ══════════════════════════════════════════════════════════
+# 5. PÁGINA ACTIVA + PIE
+# ══════════════════════════════════════════════════════════
+navegacion.run()
+ui.pie(VERSION)

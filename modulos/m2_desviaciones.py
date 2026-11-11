@@ -10,6 +10,58 @@ PREFIJO_COL_MES = "PROMD VTA DIA"
 def _cargar_desviaciones(path=None):
     return datos.leer_hoja(datos.HOJA_DESVIACIONES)
 
+def preparar(df):
+    """Prepara la tabla de desviaciones: columnas de mes, impacto, ABC y conteos. También lo usa el Resumen ejecutivo."""
+    if 'CATEGORÍA' not in df.columns:
+        df['CATEGORÍA'] = "Por Asignar"
+
+    # Columnas de mes detectadas por nombre: 'PROMD VTA DIA <MES>'.
+    # La primera es el mes anterior y la segunda el mes actual (orden del Excel).
+    cols_mes = [c for c in df.columns if str(c).strip().upper().startswith(PREFIJO_COL_MES)]
+    if len(cols_mes) != 2:
+        raise ValueError(
+            f"Se esperaban 2 columnas que empiecen por '{PREFIJO_COL_MES}' en la hoja "
+            f"'{datos.HOJA_DESVIACIONES}' y se encontraron {len(cols_mes)}: {cols_mes}"
+        )
+    COL_ANT, COL_ACT = cols_mes
+    MES_ANT = str(COL_ANT).strip()[len(PREFIJO_COL_MES):].strip().capitalize()
+    MES_ACT = str(COL_ACT).strip()[len(PREFIJO_COL_MES):].strip().capitalize()
+
+    for col in [COL_ANT, COL_ACT]:
+        if col in df.columns and df[col].dtype == 'object':
+            df[col] = df[col].astype(str).str.replace('.', '', regex=False).str.replace(',', '.', regex=False).astype(float)
+        if col in df.columns:
+            df[col] = df[col].round(0).astype(int)
+
+    if 'Porcentaje de desviación' in df.columns:
+        df['Desviacion_Num'] = df['Porcentaje de desviación'].astype(str).str.rstrip('%').str.replace(',', '.', regex=False).astype(float)
+    else:
+        df['Desviacion_Num'] = ((df[COL_ACT] - df[COL_ANT]) / df[COL_ANT]) * 100
+
+    tiene_precio = 'PRECIO UNITARIO' in df.columns
+    if tiene_precio:
+        df['Dif_Unidades_Diarias'] = df[COL_ACT] - df[COL_ANT]
+        df['Impacto_Diario_$'] = df['Dif_Unidades_Diarias'] * df['PRECIO UNITARIO']
+        df['Impacto Mensual $'] = df['Impacto_Diario_$'] * 30
+
+    df = df.sort_values(by=COL_ANT, ascending=False).reset_index(drop=True)
+    volumen_total_ant = df[COL_ANT].sum()
+    df['Porcentaje_Participacion'] = (df[COL_ANT] / volumen_total_ant) * 100 if volumen_total_ant > 0 else 0
+    df['Acumulado_ABC'] = df['Porcentaje_Participacion'].cumsum()
+
+    def asignar_abc(acumulado):
+        if acumulado <= 80: return 'A'
+        elif acumulado <= 95: return 'B'
+        return 'C'
+
+    df['Clasificación ABC'] = df['Acumulado_ABC'].apply(asignar_abc)
+
+    total_skus = len(df)
+    subio = len(df[df['Estado de tendencia'] == 'SUBIÓ']) if 'Estado de tendencia' in df.columns else len(df[df['Desviacion_Num'] > 0])
+    bajo = len(df[df['Estado de tendencia'] == 'BAJO']) if 'Estado de tendencia' in df.columns else len(df[df['Desviacion_Num'] < 0])
+    return {"df": df, "COL_ANT": COL_ANT, "COL_ACT": COL_ACT, "MES_ANT": MES_ANT, "MES_ACT": MES_ACT, "tiene_precio": tiene_precio, "total_skus": total_skus, "subio": subio, "bajo": bajo}
+
+
 def renderizar():
     st.markdown("# 📊 Impacto Financiero y Desviaciones Estratégicas")
     st.caption("Análisis Comparativo · Financiero · Pareto (ABC) por SKU")
@@ -22,53 +74,16 @@ def renderizar():
         try:
             df = _cargar_desviaciones(file_name)
 
-            if 'CATEGORÍA' not in df.columns:
-                df['CATEGORÍA'] = "Por Asignar"
-
-            # Columnas de mes detectadas por nombre: 'PROMD VTA DIA <MES>'.
-            # La primera es el mes anterior y la segunda el mes actual (orden del Excel).
-            cols_mes = [c for c in df.columns if str(c).strip().upper().startswith(PREFIJO_COL_MES)]
-            if len(cols_mes) != 2:
-                raise ValueError(
-                    f"Se esperaban 2 columnas que empiecen por '{PREFIJO_COL_MES}' en la hoja "
-                    f"'{datos.HOJA_DESVIACIONES}' y se encontraron {len(cols_mes)}: {cols_mes}"
-                )
-            COL_ANT, COL_ACT = cols_mes
-            MES_ANT = str(COL_ANT).strip()[len(PREFIJO_COL_MES):].strip().capitalize()
-            MES_ACT = str(COL_ACT).strip()[len(PREFIJO_COL_MES):].strip().capitalize()
-
-            for col in [COL_ANT, COL_ACT]:
-                if col in df.columns and df[col].dtype == 'object':
-                    df[col] = df[col].astype(str).str.replace('.', '', regex=False).str.replace(',', '.', regex=False).astype(float)
-                if col in df.columns:
-                    df[col] = df[col].round(0).astype(int)
-
-            if 'Porcentaje de desviación' in df.columns:
-                df['Desviacion_Num'] = df['Porcentaje de desviación'].astype(str).str.rstrip('%').str.replace(',', '.', regex=False).astype(float)
-            else:
-                df['Desviacion_Num'] = ((df[COL_ACT] - df[COL_ANT]) / df[COL_ANT]) * 100
-
-            tiene_precio = 'PRECIO UNITARIO' in df.columns
-            if tiene_precio:
-                df['Dif_Unidades_Diarias'] = df[COL_ACT] - df[COL_ANT]
-                df['Impacto_Diario_$'] = df['Dif_Unidades_Diarias'] * df['PRECIO UNITARIO']
-                df['Impacto Mensual $'] = df['Impacto_Diario_$'] * 30
-
-            df = df.sort_values(by=COL_ANT, ascending=False).reset_index(drop=True)
-            volumen_total_ant = df[COL_ANT].sum()
-            df['Porcentaje_Participacion'] = (df[COL_ANT] / volumen_total_ant) * 100 if volumen_total_ant > 0 else 0
-            df['Acumulado_ABC'] = df['Porcentaje_Participacion'].cumsum()
-
-            def asignar_abc(acumulado):
-                if acumulado <= 80: return 'A'
-                elif acumulado <= 95: return 'B'
-                return 'C'
-
-            df['Clasificación ABC'] = df['Acumulado_ABC'].apply(asignar_abc)
-
-            total_skus = len(df)
-            subio = len(df[df['Estado de tendencia'] == 'SUBIÓ']) if 'Estado de tendencia' in df.columns else len(df[df['Desviacion_Num'] > 0])
-            bajo = len(df[df['Estado de tendencia'] == 'BAJO']) if 'Estado de tendencia' in df.columns else len(df[df['Desviacion_Num'] < 0])
+            _r = preparar(df)
+            df = _r["df"]
+            COL_ANT = _r["COL_ANT"]
+            COL_ACT = _r["COL_ACT"]
+            MES_ANT = _r["MES_ANT"]
+            MES_ACT = _r["MES_ACT"]
+            tiene_precio = _r["tiene_precio"]
+            total_skus = _r["total_skus"]
+            subio = _r["subio"]
+            bajo = _r["bajo"]
 
             st.markdown('<div class="module-header">TABLERO DE DESVIACIONES Y TENDENCIAS</div>', unsafe_allow_html=True)
             st.markdown('<p class="kpi-section-label">Resumen Ejecutivo</p>', unsafe_allow_html=True)
@@ -115,7 +130,7 @@ def renderizar():
                 fig.add_trace(go.Bar(x=df_grafico['PRODUCTO'], y=df_grafico[COL_ANT], name=MES_ANT, marker_color='#1a3a5c'))
                 fig.add_trace(go.Bar(x=df_grafico['PRODUCTO'], y=df_grafico[COL_ACT], name=MES_ACT, marker_color='#d95f02'))
                 fig.update_layout(barmode='group', height=500, hovermode="x unified", legend=dict(orientation="h", yanchor="bottom", y=1.02, x=0.01), plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', margin=dict(l=20, r=20, t=40, b=20))
-                st.plotly_chart(fig, use_container_width=True)
+                st.plotly_chart(fig, width="stretch")
 
             st.markdown("---")
             st.markdown("### 📋 Detalle de Desviaciones")
@@ -140,7 +155,7 @@ def renderizar():
                 formato_columnas['Impacto Mensual $'] = lambda x: f"${x:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
 
             tabla_estilizada = df_filtrado[columnas_render].style.map(resaltar_tendencia, subset=['Estado de tendencia']).format(formato_columnas)
-            st.dataframe(tabla_estilizada, use_container_width=True, hide_index=True)
+            st.dataframe(tabla_estilizada, width="stretch", hide_index=True)
 
             st.markdown("---")
             buffer = io.BytesIO()

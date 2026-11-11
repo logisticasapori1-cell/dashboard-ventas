@@ -103,7 +103,7 @@ def _renderizar_comparativo(file_path, hojas, hoja_nacional=None):
             yaxis_title="Unidades", xaxis_title="",
             legend=dict(orientation="h", y=1.1),
         )
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width="stretch")
 
     # --- Avance %: barras horizontales con línea de meta ---
     with tab_avance:
@@ -121,7 +121,7 @@ def _renderizar_comparativo(file_path, hojas, hoja_nacional=None):
             margin=dict(l=0, r=40, t=30, b=0),
             xaxis_title="% de avance vs. proyección", yaxis_title="",
         )
-        st.plotly_chart(fig_av, use_container_width=True)
+        st.plotly_chart(fig_av, width="stretch")
 
     # --- Participación: dona ---
     with tab_part:
@@ -132,7 +132,7 @@ def _renderizar_comparativo(file_path, hojas, hoja_nacional=None):
         fig_pie.update_traces(textinfo="percent+label")
         fig_pie.update_layout(height=450, margin=dict(l=0, r=0, t=30, b=0),
                               showlegend=False)
-        st.plotly_chart(fig_pie, use_container_width=True)
+        st.plotly_chart(fig_pie, width="stretch")
 
     # --- Tabla resumen ---
     st.dataframe(
@@ -143,7 +143,7 @@ def _renderizar_comparativo(file_path, hojas, hoja_nacional=None):
             "Participacion_%": "{:.1f}%",
         }),
         hide_index=True,
-        use_container_width=True,
+        width="stretch",
     )
 
     # --- Cuadre: suma de CEDIs vs. hoja nacional ---
@@ -234,7 +234,7 @@ def renderizar():
                 margin=dict(l=0, r=0, t=30, b=0),
                 height=400
             )
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, width="stretch")
 
         with col_tabla:
             st.markdown("##### 📋 Detalle por SKU (Referencia y Venta)")
@@ -245,7 +245,7 @@ def renderizar():
                 df_mostrar.style.format({"Venta_Bruta": "{:,.0f}"}),
                 hide_index=True,
                 height=400,
-                use_container_width=True
+                width="stretch"
             )
 
         st.markdown("---")
@@ -275,7 +275,7 @@ def renderizar():
             xaxis_title="% de la venta del mes",
             yaxis_title="",
         )
-        st.plotly_chart(fig_pct, use_container_width=True)
+        st.plotly_chart(fig_pct, width="stretch")
 
     except Exception as e:
         st.error(f"⚠️ **Error al procesar el archivo:** {e}")
