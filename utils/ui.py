@@ -188,14 +188,15 @@ def grupo_html(titulo, principal=None, stats=(), insignia=None, progreso=None):
 # ══════════════════════════════════════════════════════════
 # BARRAS HORIZONTALES (comparativos simples, sin Plotly)
 # ══════════════════════════════════════════════════════════
-def barras(filas, columnas_extra=(), resaltar_primero=True):
+def barras(filas, columnas_extra=(), resaltar_primero=True, fmt=None, ancho_valor=72):
     """filas: [(nombre, valor, [textos extra...])] ya ordenadas.
     columnas_extra: anchos en px de las columnas de texto extra."""
     if not filas:
         return
     maximo = max(float(v) for _, v, *_ in filas) or 1
-    plantilla = "minmax(90px,200px) minmax(60px,1fr) 72px" + "".join(f" {w}px" for w in columnas_extra)
     from utils.formato import num
+    fmt = fmt or num
+    plantilla = f"minmax(90px,200px) minmax(60px,1fr) {ancho_valor}px" + "".join(f" {w}px" for w in columnas_extra)
     out = []
     for i, fila in enumerate(filas):
         nombre, valor = fila[0], float(fila[1])
@@ -206,7 +207,7 @@ def barras(filas, columnas_extra=(), resaltar_primero=True):
             f'<div class="sp-hb" style="grid-template-columns:{plantilla}">'
             f'<span class="sp-hb-name" title="{_e(nombre)}">{_e(nombre)}</span>'
             f'<span class="sp-track" style="height:12px"><span class="sp-fill" style="width:{valor / maximo * 100:.1f}%;height:12px;background:{color}"></span></span>'
-            f'<span class="sp-hb-val">{num(valor)}</span>{celdas}</div>')
+            f'<span class="sp-hb-val">{fmt(valor)}</span>{celdas}</div>')
     _render(f'<div class="sp-hbars">{"".join(out)}</div>')
 
 

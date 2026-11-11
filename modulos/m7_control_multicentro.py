@@ -1,8 +1,9 @@
 import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
-import os
-from utils import datos
+import io
+from utils import datos, ui
+from utils.formato import num, usd, pct
 
 def _cargar_sici(path=None):
     return datos.leer_hoja(datos.HOJA_SICI, header=None)
@@ -28,169 +29,125 @@ def extraer_totales(df_raw):
     return {"idx_val": idx_val, "idx_inv": idx_inv, "val_ccs": val_ccs, "val_car": val_car, "val_ori": val_ori, "val_lar": val_lar, "val_zul": val_zul, "val_total": val_total, "inv_ccs": inv_ccs, "inv_car": inv_car, "inv_ori": inv_ori, "inv_lar": inv_lar, "inv_zul": inv_zul, "inv_total": inv_total}
 
 
-def renderizar():
-    st.markdown("# 🌍 Sistema Integral de Control Multicentro (SICI)")
-    st.caption("Visión Global · Coberturas por CEDIS · Eficiencia Logística")
+CEDIS = ["Caracas", "Carabobo", "Oriente", "Lara", "Zulia"]
+VISTA_GLOBAL = "Visión global"
+# Columnas de cada CEDI en la hoja SICI (existencia, valor, cobertura, demanda, balance)
+MAPA_COLS = {"Caracas": [4, 5, 6, 7, 8], "Carabobo": [9, 10, 11, 12, 13], "Oriente": [14, 15, 16, 17, 18],
+             "Lara": [19, 20, 21, 22, 23], "Zulia": [24, 25, 26, 27, 28]}
 
-    file_path = datos.ARCHIVO_DATOS
-    if not os.path.exists(file_path):
-        st.error(f"❌ **Archivo requerido no encontrado:** '{file_path}'")
-        return
-        
+# Semáforos (mismos umbrales de siempre)
+_ROJO = "background-color:#fde7d9;color:#a84b0b;font-weight:600;"
+_AMBAR = "background-color:#fff4cc;color:#6b5000;font-weight:600;"
+_VERDE = "background-color:#e3f1e8;color:#17734a;font-weight:600;"
+
+
+def semaforo_cobertura(val):
     try:
-        # Cargar datos sin cabecera para extraer métricas y tablas dinámicamente
-        df_raw = _cargar_sici(file_path)
-        
-        # --- 1. EXTRACCIÓN INTELIGENTE DE TOTALES (Incluyendo Zulia en el índice +5 y Total en +6) ---
-        _r = extraer_totales(df_raw)
-        idx_val = _r["idx_val"]
-        idx_inv = _r["idx_inv"]
-        val_ccs = _r["val_ccs"]
-        val_car = _r["val_car"]
-        val_ori = _r["val_ori"]
-        val_lar = _r["val_lar"]
-        val_zul = _r["val_zul"]
-        val_total = _r["val_total"]
-        inv_ccs = _r["inv_ccs"]
-        inv_car = _r["inv_car"]
-        inv_ori = _r["inv_ori"]
-        inv_lar = _r["inv_lar"]
-        inv_zul = _r["inv_zul"]
-        inv_total = _r["inv_total"]
-        
-        def formato_dinero(x):
-            if pd.isna(x): return "-"
-            return f"${x:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
-            
-        def formato_entero(x):
-            if pd.isna(x): return "-"
-            return f"{x:,.0f}".replace(",", ".")
+        v = float(val)
+        return _ROJO if v < 7 else (_AMBAR if v <= 15 else _VERDE)
+    except (TypeError, ValueError):
+        return ""
 
-        # --- SECCIÓN 1: CABECERA MACRO (Matriz adaptada a los 5 CEDIS + Total) ---
-        st.markdown('<div class="module-header">SÍNTESIS GLOBAL DE CAPITAL E INVENTARIO</div>', unsafe_allow_html=True)
-        
-        # Fila 1: Total Global, Caracas y Carabobo
-        f1_c1, f1_c2, f1_c3 = st.columns(3)
-        f1_c1.metric("🌍 TOTAL CIDES (USD)", formato_dinero(val_total), f"{formato_entero(inv_total)} Unds Físicas")
-        f1_c2.metric("🏭 Caracas (USD)", formato_dinero(val_ccs), f"{formato_entero(inv_ccs)} Unds")
-        f1_c3.metric("🏭 Carabobo (USD)", formato_dinero(val_car), f"{formato_entero(inv_car)} Unds")
-        
-        st.markdown("<br>", unsafe_allow_html=True)
-        
-        # Fila 2: Oriente, Lara y Zulia
-        f2_c1, f2_c2, f2_c3 = st.columns(3)
-        f2_c1.metric("🌅 Oriente (USD)", formato_dinero(val_ori), f"{formato_entero(inv_ori)} Unds")
-        f2_c2.metric("🎸 Lara (USD)", formato_dinero(val_lar), f"{formato_entero(inv_lar)} Unds")
-        f2_c3.metric("☀️ Zulia (USD)", formato_dinero(val_zul), f"{formato_entero(inv_zul)} Unds")
-        
-        st.markdown("---")
-        
-        # Gráficos de Dona para los 5 CEDIs
-        col_d1, col_d2 = st.columns(2)
-        labels_cedis = ["Caracas", "Carabobo", "Oriente", "Lara", "Zulia"]
-        colores_cedis = ['#1a3a5c', '#fa7d2a', '#dc2626', '#16a34a', '#8b5cf6']
-        
-        with col_d1:
-            fig_val = go.Figure(data=[go.Pie(labels=labels_cedis, values=[val_ccs, val_car, val_ori, val_lar, val_zul], hole=.5, marker_colors=colores_cedis)])
-            fig_val.update_layout(title_text="Distribución de Capital (USD)", margin=dict(t=40, b=10, l=0, r=0), height=300)
-            st.plotly_chart(fig_val, width="stretch")
-            
-        with col_d2:
-            fig_inv = go.Figure(data=[go.Pie(labels=labels_cedis, values=[inv_ccs, inv_car, inv_ori, inv_lar, inv_zul], hole=.5, marker_colors=colores_cedis)])
-            fig_inv.update_layout(title_text="Distribución Física (Unidades)", margin=dict(t=40, b=10, l=0, r=0), height=300)
-            st.plotly_chart(fig_inv, width="stretch")
 
-        # --- SECCIÓN 2: CONTROL MULTICENTRO (SELECTBOX) ---
-        st.markdown("---")
-        st.markdown("### 🎛️ Centro de Mando Logístico")
-        
-        centro_seleccionado = st.selectbox(
-            "Seleccione la Vista Operativa (CEDIS):",
-            [
-                "🌐 Visión Global (Consolidado SICI)", 
-                "🏢 CEDIS Caracas", 
-                "🏭 CEDIS Carabobo", 
-                "🌅 CEDIS Oriente", 
-                "🎸 CEDIS Lara",
-                "☀️ CEDIS Zulia"
-            ]
-        )
-        
-        # Recortar solo las filas de productos (desde la fila 11)
-        df_tabla_raw = df_raw.iloc[12:idx_val-2].copy()
-        
-        # Lógicas de Semáforos Corporativos seguros
-        def semaforo_cobertura(val):
-            try:
-                v = float(val)
-                if v < 7: return 'background-color: #fce4d6; color: #c65911; font-weight: bold;'
-                elif v <= 15: return 'background-color: #fff2cc; color: #7f6000; font-weight: bold;'
-                else: return 'background-color: #e2f0d9; color: #385723; font-weight: bold;'
-            except: return ''
-            
-        def semaforo_eficiencia(val):
-            try:
-                v = float(val)
-                if v < 0.70: return 'background-color: #fce4d6; color: #c65911; font-weight: bold;'
-                elif v <= 0.95: return 'background-color: #fff2cc; color: #7f6000; font-weight: bold;'
-                else: return 'background-color: #e2f0d9; color: #385723; font-weight: bold;'
-            except: return ''
+def semaforo_eficiencia(val):
+    try:
+        v = float(val)
+        return _ROJO if v < 0.70 else (_AMBAR if v <= 0.95 else _VERDE)
+    except (TypeError, ValueError):
+        return ""
 
-        # Renderizado Dinámico
-        if centro_seleccionado == "🌐 Visión Global (Consolidado SICI)":
-            cols = [1, 2, 29, 30, 31, 32, 33] # Nuevas coordenadas globales con Zulia
-            df_render = df_tabla_raw[cols].copy()
-            df_render.columns = ["SKU", "Producto", "Existencia Total", "Valor Total ($)", "Demanda Promedio", "Cobertura (Días)", "Eficiencia SICI"]
-            
-            # Asegurar conversión numérica para evitar errores de formato
-            for col in ["Existencia Total", "Valor Total ($)", "Demanda Promedio", "Cobertura (Días)", "Eficiencia SICI"]:
-                df_render[col] = pd.to_numeric(df_render[col], errors='coerce')
 
-            st.dataframe(
-                df_render.style
-                .map(semaforo_cobertura, subset=['Cobertura (Días)'])
-                .map(semaforo_eficiencia, subset=['Eficiencia SICI'])
-                .format({
-                    "Existencia Total": lambda x: formato_entero(x),
-                    "Valor Total ($)": lambda x: formato_dinero(x),
-                    "Demanda Promedio": lambda x: formato_entero(x),
-                    "Cobertura (Días)": lambda x: f"{x:.1f}" if pd.notnull(x) else "-",
-                    "Eficiencia SICI": lambda x: f"{x:.0%}" if pd.notnull(x) else "-"
-                }),
-                width="stretch", hide_index=True
-            )
-            
-        else:
-            mapa_cols = {
-                "🏢 CEDIS Caracas": [4, 5, 6, 7, 8],
-                "🏭 CEDIS Carabobo": [9, 10, 11, 12, 13],
-                "🌅 CEDIS Oriente": [14, 15, 16, 17, 18],
-                "🎸 CEDIS Lara": [19, 20, 21, 22, 23],
-                "☀️ CEDIS Zulia": [24, 25, 26, 27, 28]
-            }
-            
-            cols_base = [1, 2]
-            cols_extra = mapa_cols[centro_seleccionado]
-            
-            df_render = df_tabla_raw[cols_base + cols_extra].copy()
-            df_render.columns = ["SKU", "Producto", "Existencia Local", "Valor Local ($)", "Cobertura (Días)", "Demanda Mensual", "Balance"]
-            
-            # Asegurar conversión numérica
-            for col in ["Existencia Local", "Valor Local ($)", "Cobertura (Días)", "Demanda Mensual", "Balance"]:
-                df_render[col] = pd.to_numeric(df_render[col], errors='coerce')
+def tabla_vista(df_raw, idx_val, vista):
+    """Tabla de productos para la vista elegida (global o un CEDI). Sin dibujar nada."""
+    df_tabla_raw = df_raw.iloc[12:idx_val - 2].copy()
+    if vista == VISTA_GLOBAL:
+        df = df_tabla_raw[[1, 2, 29, 30, 31, 32, 33]].copy()
+        df.columns = ["SKU", "Producto", "Existencia Total", "Valor Total ($)", "Demanda Promedio", "Cobertura (Días)", "Eficiencia SICI"]
+        numericas = ["Existencia Total", "Valor Total ($)", "Demanda Promedio", "Cobertura (Días)", "Eficiencia SICI"]
+    else:
+        df = df_tabla_raw[[1, 2] + MAPA_COLS[vista]].copy()
+        df.columns = ["SKU", "Producto", "Existencia Local", "Valor Local ($)", "Cobertura (Días)", "Demanda Mensual", "Balance"]
+        numericas = ["Existencia Local", "Valor Local ($)", "Cobertura (Días)", "Demanda Mensual", "Balance"]
+    for col in numericas:
+        df[col] = pd.to_numeric(df[col], errors="coerce")
+    return df
 
-            st.dataframe(
-                df_render.style
-                .map(semaforo_cobertura, subset=['Cobertura (Días)'])
-                .format({
-                    "Existencia Local": lambda x: formato_entero(x),
-                    "Valor Local ($)": lambda x: formato_dinero(x),
-                    "Cobertura (Días)": lambda x: f"{x:.1f}" if pd.notnull(x) else "-",
-                    "Demanda Mensual": lambda x: formato_entero(x),
-                    "Balance": lambda x: formato_entero(x)
-                }),
-                width="stretch", hide_index=True
-            )
+
+def _excel(df, hoja):
+    buffer = io.BytesIO()
+    with pd.ExcelWriter(buffer, engine="openpyxl") as writer:
+        df.to_excel(writer, index=False, sheet_name=hoja[:31])
+    return buffer.getvalue()
+
+
+def _usd(x):
+    return usd(x) if pd.notna(x) else "–"
+
+
+def renderizar():
+    ui.encabezado("Operaciones › Control Multicentro", "Control Multicentro (SICI)",
+                  "Inventario de producto terminado por CEDI · Valor en USD y existencia en unidades")
+
+    if not datos.existe():
+        datos.mostrar_error_archivo()
+        return
+
+    try:
+        df_raw = _cargar_sici()
+        t = extraer_totales(df_raw)
+        valores = dict(zip(CEDIS, [t["val_ccs"], t["val_car"], t["val_ori"], t["val_lar"], t["val_zul"]]))
+        unidades = dict(zip(CEDIS, [t["inv_ccs"], t["inv_car"], t["inv_ori"], t["inv_lar"], t["inv_zul"]]))
+        val_total, inv_total = t["val_total"], t["inv_total"]
+
+        # ── 1. Síntesis ──────────────────────────────
+        mayor = max(valores, key=lambda k: valores[k] if pd.notna(valores[k]) else -1)
+        ui.kpis([
+            ui.kpi_html("Inventario total en CEDIs", usd(val_total, simbolo=""), "USD",
+                        nota="Producto terminado valorizado"),
+            ui.kpi_html("Existencia total", num(inv_total), "unid.", nota="5 CEDIs"),
+            ui.kpi_html(f"Mayor concentración · {mayor}",
+                        pct(valores[mayor] / val_total * 100) if val_total else "–", "del capital",
+                        nota=f"{_usd(valores[mayor])} · {num(unidades[mayor])} unid."),
+        ], minimo=260)
+
+        with ui.tarjeta("sici_cedis", "Inventario por CEDI", "Valor (USD) · % del capital · unidades · % de la existencia"):
+            orden = sorted(CEDIS, key=lambda c: valores[c] if pd.notna(valores[c]) else -1, reverse=True)
+            ui.barras([(c, valores[c], [pct(valores[c] / val_total * 100) if val_total else "–",
+                                        num(unidades[c]), pct(unidades[c] / inv_total * 100) if inv_total else "–"])
+                       for c in orden], columnas_extra=(60, 72, 60), fmt=_usd, ancho_valor=120)
+            ui.linea_resumen([("Total CEDIs", _usd(val_total), False), ("Unidades", num(inv_total), False)])
+
+        # ── 2. Centro de mando logístico ─────────────
+        ui.seccion("Centro de mando logístico", "Existencia, valor, cobertura y demanda por producto")
+        vista = st.segmented_control("Vista operativa", [VISTA_GLOBAL] + CEDIS, default=VISTA_GLOBAL, required=True,
+                                     key="sici_vista", label_visibility="collapsed")
+        df_render = tabla_vista(df_raw, t["idx_val"], vista)
+
+        cob = df_render["Cobertura (Días)"]
+        criticos, medios, sanos = int((cob < 7).sum()), int(((cob >= 7) & (cob <= 15)).sum()), int((cob > 15).sum())
+        ui.kpis([
+            ui.kpi_html("Cobertura < 7 días", str(criticos), "SKU", nota="Riesgo de quiebre"),
+            ui.kpi_html("Cobertura 7 a 15 días", str(medios), "SKU", nota="Vigilar"),
+            ui.kpi_html("Cobertura > 15 días", str(sanos), "SKU", nota="Cubierto"),
+        ], minimo=200)
+
+        titulo = "Consolidado SICI" if vista == VISTA_GLOBAL else f"CEDI {vista}"
+        with ui.tarjeta("sici_tabla", f"Detalle por producto · {titulo}", f"{len(df_render)} productos"):
+            ui.leyenda([("Cobertura < 7 días / eficiencia < 70%", "#fde7d9"),
+                        ("7 a 15 días / 70% a 95%", "#fff4cc"), ("> 15 días / > 95%", "#e3f1e8")])
+            estilo = df_render.style.map(semaforo_cobertura, subset=["Cobertura (Días)"])
+            if vista == VISTA_GLOBAL:
+                estilo = estilo.map(semaforo_eficiencia, subset=["Eficiencia SICI"]).format({
+                    "Existencia Total": num, "Valor Total ($)": _usd, "Demanda Promedio": num,
+                    "Cobertura (Días)": lambda x: num(x, 1), "Eficiencia SICI": lambda x: pct(x * 100, 0)})
+            else:
+                estilo = estilo.format({
+                    "Existencia Local": num, "Valor Local ($)": _usd, "Cobertura (Días)": lambda x: num(x, 1),
+                    "Demanda Mensual": num, "Balance": num})
+            st.dataframe(estilo, width="stretch", hide_index=True)
+            st.download_button("Descargar Excel", data=_excel(df_render, titulo), file_name=f"SICI_{titulo.replace(' ', '_')}.xlsx",
+                               mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                               icon=":material/download:", key="sici_descarga")
 
     except Exception as e:
-        st.error(f"Error analizando la estructura del Excel SICI: {e}")
+        st.error(f"Error analizando la estructura del Excel SICI: {e}")
