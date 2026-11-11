@@ -45,7 +45,8 @@ def tendencia_total(df_consolidado, sheet_names):
 
 
 CATEGORIAS = ["MATERIA PRIMA", "MATERIAL EMPAQUE", "PRODUCTO TERMINADO"]
-COLORES = {"MATERIA PRIMA": ui.NAVY, "MATERIAL EMPAQUE": ui.LIGHTBLUE, "PRODUCTO TERMINADO": ui.ORANGE}
+def colores():
+    return {"MATERIA PRIMA": ui.NAVY, "MATERIAL EMPAQUE": ui.LIGHTBLUE, "PRODUCTO TERMINADO": ui.ORANGE}
 MESES_CORTOS = {m: m[:3].capitalize() for m in ["ENERO", "FEBRERO", "MARZO", "ABRIL", "MAYO", "JUNIO", "JULIO",
                                                "AGOSTO", "SEPTIEMBRE", "OCTUBRE", "NOVIEMBRE", "DICIEMBRE"]}
 
@@ -184,14 +185,14 @@ def renderizar():
         if filtro_mes == "Todos los meses":
             categorias_a_graficar = [filtro_categoria] if filtro_categoria != "Todas las Categorías" else CATEGORIAS
             with ui.tarjeta("cierre_categorias", "Cierre valorizado por categoría", "USD por mes"):
-                ui.leyenda([(c.capitalize(), COLORES[c]) for c in categorias_a_graficar])
+                ui.leyenda([(c.capitalize(), colores()[c]) for c in categorias_a_graficar])
                 fig = go.Figure()
                 for cat in categorias_a_graficar:
                     df_cat_plot = df_filtrado[df_filtrado["Categoría"] == cat].dropna(subset=["Valor $"])
                     if not df_cat_plot.empty:
                         fig.add_scatter(x=[etiqueta_mes(m) for m in df_cat_plot["Mes"]], y=df_cat_plot["Valor $"],
                                         mode="lines+markers", name=cat.capitalize(),
-                                        line=dict(color=COLORES[cat], width=2.5), marker=dict(size=8, color=COLORES[cat]),
+                                        line=dict(color=colores()[cat], width=2.5), marker=dict(size=8, color=colores()[cat]),
                                         hovertemplate="%{x} · " + cat.capitalize() + "<br>USD %{y:,.2f}<extra></extra>")
                 fig.update_layout(hovermode="x unified")
                 ui.estilo_grafico(fig, alto=380)

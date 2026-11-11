@@ -63,15 +63,13 @@ def preparar(df):
     return {"df": df, "COL_ANT": COL_ANT, "COL_ACT": COL_ACT, "MES_ANT": MES_ANT, "MES_ACT": MES_ACT, "tiene_precio": tiene_precio, "total_skus": total_skus, "subio": subio, "bajo": bajo}
 
 
-_SUBIO = "background-color:#e3f1e8;color:#17734a;font-weight:600;"
-_BAJO = "background-color:#fde7d9;color:#a84b0b;font-weight:600;"
 
 
 def resaltar_tendencia(val):
     if val == 'SUBIÓ':
-        return _SUBIO
+        return f"background-color:{ui.VERDE_BG};color:{ui.VERDE_TX};font-weight:600;"
     if val == 'BAJO':
-        return _BAJO
+        return f"background-color:{ui.ROJO_BG};color:{ui.ROJO_TX};font-weight:600;"
     return ''
 
 

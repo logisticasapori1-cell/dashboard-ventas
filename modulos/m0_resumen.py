@@ -210,7 +210,7 @@ def _grafico_produccion(prod):
     fig = go.Figure()
     fig.add_scatter(x=etiquetas, y=prod["Real"], mode="lines+markers", name="Producción",
                     line=dict(color=ui.NAVY, width=2.5),
-                    marker=dict(size=[7] * (len(prod) - 1) + [11], color=["#ffffff"] * (len(prod) - 1) + [ui.ORANGE],
+                    marker=dict(size=[7] * (len(prod) - 1) + [11], color=[ui.SURFACE] * (len(prod) - 1) + [ui.ORANGE],
                                 line=dict(width=2, color=[ui.NAVY] * (len(prod) - 1) + [ui.ORANGE])),
                     hovertemplate="%{x}<br>%{y:,.0f} unid.<extra></extra>")
     fig.add_hline(y=promedio, line_dash="dash", line_color=ui.MUTED, line_width=1.2,

@@ -2,7 +2,7 @@ import os
 
 import streamlit as st
 
-from utils import datos, ui
+from utils import apariencia, datos, ui
 from utils.auth import verificar_login
 from utils.estilos import cargar_css, ocultar_barra_lateral
 
@@ -35,6 +35,7 @@ cargar_css()
 # ══════════════════════════════════════════════════════════
 if not st.session_state.get("autenticado", False):
     ocultar_barra_lateral()
+    apariencia.aplicar_guardado()
 if not verificar_login():
     st.stop()
 
@@ -126,6 +127,9 @@ with st.sidebar:
     fecha = datos.fecha_actualizacion()
     texto_fecha = fecha.strftime("%d/%m/%Y %H:%M") if fecha else "sin fecha"
     st.html(f'<p class="sp-side-meta">Datos: {os.path.basename(datos.ARCHIVO_DATOS)} · {texto_fecha}</p>')
+
+    st.divider()
+    apariencia.selector()
 
     st.divider()
     usuario = st.session_state.get("usuario_nombre", "Gerencia")

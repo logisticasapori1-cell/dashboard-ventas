@@ -36,15 +36,15 @@ MAPA_COLS = {"Caracas": [4, 5, 6, 7, 8], "Carabobo": [9, 10, 11, 12, 13], "Orien
              "Lara": [19, 20, 21, 22, 23], "Zulia": [24, 25, 26, 27, 28]}
 
 # Semáforos (mismos umbrales de siempre)
-_ROJO = "background-color:#fde7d9;color:#a84b0b;font-weight:600;"
-_AMBAR = "background-color:#fff4cc;color:#6b5000;font-weight:600;"
-_VERDE = "background-color:#e3f1e8;color:#17734a;font-weight:600;"
+def _rojo(): return f"background-color:{ui.ROJO_BG};color:{ui.ROJO_TX};font-weight:600;"
+def _ambar(): return f"background-color:{ui.AMBAR_BG};color:{ui.AMBAR_TX};font-weight:600;"
+def _verde(): return f"background-color:{ui.VERDE_BG};color:{ui.VERDE_TX};font-weight:600;"
 
 
 def semaforo_cobertura(val):
     try:
         v = float(val)
-        return _ROJO if v < 7 else (_AMBAR if v <= 15 else _VERDE)
+        return _rojo() if v < 7 else (_ambar() if v <= 15 else _verde())
     except (TypeError, ValueError):
         return ""
 
@@ -52,7 +52,7 @@ def semaforo_cobertura(val):
 def semaforo_eficiencia(val):
     try:
         v = float(val)
-        return _ROJO if v < 0.70 else (_AMBAR if v <= 0.95 else _VERDE)
+        return _rojo() if v < 0.70 else (_ambar() if v <= 0.95 else _verde())
     except (TypeError, ValueError):
         return ""
 
@@ -133,8 +133,8 @@ def renderizar():
 
         titulo = "Consolidado SICI" if vista == VISTA_GLOBAL else f"CEDI {vista}"
         with ui.tarjeta("sici_tabla", f"Detalle por producto · {titulo}", f"{len(df_render)} productos"):
-            ui.leyenda([("Cobertura < 7 días / eficiencia < 70%", "#fde7d9"),
-                        ("7 a 15 días / 70% a 95%", "#fff4cc"), ("> 15 días / > 95%", "#e3f1e8")])
+            ui.leyenda([("Cobertura < 7 días / eficiencia < 70%", ui.ROJO_BG),
+                        ("7 a 15 días / 70% a 95%", ui.AMBAR_BG), ("> 15 días / > 95%", ui.VERDE_BG)])
             estilo = df_render.style.map(semaforo_cobertura, subset=["Cobertura (Días)"])
             if vista == VISTA_GLOBAL:
                 estilo = estilo.map(semaforo_eficiencia, subset=["Eficiencia SICI"]).format({

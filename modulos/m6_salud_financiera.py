@@ -28,7 +28,6 @@ def extraer_kpis(df_raw):
     return {"capital_inmovilizado": capital_inmovilizado, "recepcion_mp": recepcion_mp, "recepcion_me": recepcion_me, "req_mp": req_mp, "req_me": req_me, "fill_rate_global": fill_rate_global, "inv_mp_tr": inv_mp_tr, "inv_me_tr": inv_me_tr, "cons_mp_tr": cons_mp_tr, "cons_me_tr": cons_me_tr, "dio_global": dio_global}
 
 
-GRIS = "#b8c4d0"
 
 
 def movimientos(df_raw, k):
@@ -61,9 +60,9 @@ def color_tendencia(val):
     """Lógica financiera invertida: bajar inventario libera capital (favorable)."""
     s = str(val)
     if s.startswith('-'):
-        return "background-color:#e3f1e8;color:#17734a;font-weight:600;"
+        return f"background-color:{ui.VERDE_BG};color:{ui.VERDE_TX};font-weight:600;"
     if s.startswith('+'):
-        return "background-color:#fde7d9;color:#a84b0b;font-weight:600;"
+        return f"background-color:{ui.ROJO_BG};color:{ui.ROJO_TX};font-weight:600;"
     return ""
 
 
@@ -79,12 +78,13 @@ def _estado_compras(v):
 
 def _grafico_estructura(inicio, hoy):
     fig = go.Figure()
-    for nombre, idx, color in (("Materia prima", 0, ui.NAVY), ("Material de empaque", 1, ui.ORANGE)):
+    # texto dentro de cada barra con contraste AA sobre su color, en ambos modos
+    for nombre, idx, color, texto in (("Materia prima", 0, ui.NAVY, ui.SURFACE), ("Material de empaque", 1, ui.ORANGE, "#13263a")):
         vals = [hoy[idx], inicio[idx]]
         totales = [sum(hoy), sum(inicio)]
         fig.add_bar(y=["Hoy", "Inicio de mes"], x=vals, name=nombre, orientation="h", marker_color=color,
                     text=[f"{pct(v / t * 100 if t else 0)}" for v, t in zip(vals, totales)], textposition="inside",
-                    insidetextanchor="middle", textfont=dict(color="#ffffff", size=13),
+                    insidetextanchor="middle", textfont=dict(color=texto, size=13),
                     customdata=[usd(v) for v in vals],
                     hovertemplate="%{y} · " + nombre + "<br>%{customdata} (%{text})<extra></extra>")
     fig.update_layout(barmode="stack", barnorm="percent", bargap=0.35)
@@ -96,7 +96,7 @@ def _grafico_estructura(inicio, hoy):
 
 def _grafico_movimientos(df):
     fig = go.Figure()
-    series = [("Saldo Inicial (USD)", "Saldo inicial (día 1)", GRIS), ("Recepción/Compras del Mes", "Recepción / compras", ui.LIGHTBLUE),
+    series = [("Saldo Inicial (USD)", "Saldo inicial (día 1)", ui.GRIS), ("Recepción/Compras del Mes", "Recepción / compras", ui.LIGHTBLUE),
               ("Consumo del Mes", "Consumo del mes", ui.ORANGE), ("Inventario Final (Hoy)", "Inventario final (hoy)", ui.NAVY)]
     etiquetas = [c.capitalize() for c in df["Categoría"]]
     for col, nombre, color in series:
@@ -146,7 +146,7 @@ def renderizar():
 
         # ── 3. Conciliación del mes ─────────────────
         with ui.tarjeta("fin_movimientos", "Conciliación: movimientos del mes actual", "USD"):
-            ui.leyenda([("Saldo inicial", GRIS), ("Recepción / compras", ui.LIGHTBLUE),
+            ui.leyenda([("Saldo inicial", ui.GRIS), ("Recepción / compras", ui.LIGHTBLUE),
                         ("Consumo", ui.ORANGE), ("Inventario final (hoy)", ui.NAVY)])
             _grafico_movimientos(df_mov)
 

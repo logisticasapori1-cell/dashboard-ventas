@@ -101,7 +101,7 @@ def _grafico(df_final):
     fig = go.Figure(go.Scatter(
         x=df_final["Mes_Filtro"], y=df_final["Real"], mode="lines+markers+text" if n > 1 else "markers+text",
         line=dict(color=ui.NAVY, width=2.5),
-        marker=dict(size=[12 if i == pico else 8 for i in df_final.index], color=["#ffffff" if c == ui.NAVY else c for c in colores],
+        marker=dict(size=[12 if i == pico else 8 for i in df_final.index], color=[ui.SURFACE if c == ui.NAVY else c for c in colores],
                     line=dict(width=2, color=colores)),
         text=[num(v) for v in df_final["Real"]], textposition=ui.posiciones_etiquetas(df_final["Real"]), textfont=dict(size=11, color=ui.INK),
         cliponaxis=False, hovertemplate="%{x}<br>%{text} unid.<extra></extra>"))

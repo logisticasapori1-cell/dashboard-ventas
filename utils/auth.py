@@ -20,9 +20,9 @@ def verificar_login():
             with col_c:
                 st.image("assets/logo_empresa.png", width="stretch")
         else:
-            st.markdown("<h1 style='text-align:center; color:#1a3a5c; margin:0; font-size:2rem; letter-spacing:0.04em;'>SAPORI</h1>", unsafe_allow_html=True)
+            st.markdown("<h1 style='text-align:center; color:var(--ink); margin:0; font-size:2rem; letter-spacing:0.04em;'>SAPORI</h1>", unsafe_allow_html=True)
 
-        st.markdown("<p style='text-align:center; color:#2f353d; margin:0.3rem 0 1.4rem 0; font-size:1.3rem; font-family: \"Segoe UI\", Roboto, Helvetica, Arial, sans-serif; font-weight:600;'>Portal de Supply Chain &amp; S&amp;OP</p>", unsafe_allow_html=True)
+        st.markdown("<p style='text-align:center; color:var(--ink); margin:0.3rem 0 1.4rem 0; font-size:1.3rem; font-family: \"Segoe UI\", Roboto, Helvetica, Arial, sans-serif; font-weight:600;'>Portal de Supply Chain &amp; S&amp;OP</p>", unsafe_allow_html=True)
 
         with st.form("formulario_login"):
             st.markdown("##### Ingrese Credenciales")
@@ -48,7 +48,7 @@ def verificar_login():
                     st.error("❌ Credenciales incorrectas. Verifique e intente de nuevo.")
 
         st.markdown("""
-            <p style='text-align:center; color:#94a3b8; font-size:0.75rem; margin-top:1.8rem; line-height:1.5;'>
+            <p style='text-align:center; color:var(--muted); font-size:0.75rem; margin-top:1.8rem; line-height:1.5;'>
                 © 2026 kaisenYork | Software <br>
                 Versión 1.7 (Sapori, C. A.) | Todos los derechos reservados
             </p>

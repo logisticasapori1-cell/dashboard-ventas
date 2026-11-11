@@ -15,17 +15,21 @@ import streamlit as st
 # ══════════════════════════════════════════════════════════
 # TOKENS
 # ══════════════════════════════════════════════════════════
-NAVY = "#1a3a5c"
-INK = "#13263a"
-MUTED = "#556677"
-BORDER = "#e2e6ec"
-BG = "#f4f6f9"
-TRACK = "#eef1f5"
-ORANGE = "#fa7d2a"        # solo rellenos (barras, puntos, acentos)
-ORANGE_TXT = "#a84b0b"    # naranja para texto (contraste AA sobre blanco)
-LIGHTBLUE = "#8fb0d3"
-POS = "#17734a"
-NEG = "#b42318"
+# Los colores dependen del modo activo (claro u oscuro): ver utils/tema.py.
+# `ui.NAVY`, `ui.INK`, etc. siguen funcionando: se resuelven en cada uso con __getattr__.
+from utils import tema as _tema
+
+
+def _c(nombre):
+    return _tema.color(nombre)
+
+
+def __getattr__(nombre):
+    if nombre in _tema.CLARO:
+        return _tema.color(nombre)
+    raise AttributeError(nombre)
+
+
 FUENTE = "Inter, 'Segoe UI', system-ui, sans-serif"
 
 _ICONOS = {
@@ -50,7 +54,8 @@ def _svg_img(svg, ancho, alto, estilo=""):
             f'aria-hidden="true" style="display:block;flex:none;{estilo}">')
 
 
-def icono(nombre, size=16, color=INK, grosor=2.0):
+def icono(nombre, size=16, color=None, grosor=2.0):
+    color = color or _c("INK")
     svg = (f'<svg xmlns="http://www.w3.org/2000/svg" width="{size}" height="{size}" viewBox="0 0 24 24" fill="none" '
            f'stroke="{color}" stroke-width="{grosor}" stroke-linecap="round" stroke-linejoin="round">{_ICONOS[nombre]}</svg>')
     return _svg_img(svg, size, size)
@@ -104,7 +109,7 @@ def pie(version="v2.0"):
 def _delta_html(texto, positivo):
     if positivo is None:
         return f'<span class="sp-delta">{_e(texto)}</span>'
-    color = POS if positivo else NEG
+    color = _c("POS") if positivo else _c("NEG")
     flecha = icono("arrow_up" if positivo else "arrow_down", 14, color, 2.2)
     return f'<span class="sp-delta" style="color:{color}">{flecha}{_e(texto)}</span>'
 
@@ -128,8 +133,8 @@ def _sparkline(valores, ancho=220, alto=44):
     linea = " ".join(f"{x:.1f},{y:.1f}" for x, y in pts)
     lx, ly = pts[-1]
     svg = (f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {ancho} {alto}" preserveAspectRatio="none">'
-           f'<polyline points="{linea}" fill="none" stroke="{NAVY}" stroke-width="2" vector-effect="non-scaling-stroke"/>'
-           f'<circle cx="{lx:.1f}" cy="{ly:.1f}" r="3.5" fill="{ORANGE}"/></svg>')
+           f'<polyline points="{linea}" fill="none" stroke="{_c("NAVY")}" stroke-width="2" vector-effect="non-scaling-stroke"/>'
+           f'<circle cx="{lx:.1f}" cy="{ly:.1f}" r="3.5" fill="{_c("ORANGE")}"/></svg>')
     return _svg_img(svg, "100%", alto, "width:100%")
 
 
@@ -201,7 +206,7 @@ def barras(filas, columnas_extra=(), resaltar_primero=True, fmt=None, ancho_valo
     for i, fila in enumerate(filas):
         nombre, valor = fila[0], float(fila[1])
         extras = fila[2] if len(fila) > 2 else []
-        color = ORANGE if (resaltar_primero and i == 0) else NAVY
+        color = _c("ORANGE") if (resaltar_primero and i == 0) else _c("NAVY")
         celdas = "".join(f'<span class="sp-hb-extra">{_e(x)}</span>' for x in extras)
         out.append(
             f'<div class="sp-hb" style="grid-template-columns:{plantilla}">'
@@ -214,7 +219,7 @@ def barras(filas, columnas_extra=(), resaltar_primero=True, fmt=None, ancho_valo
 def linea_resumen(pares):
     """Fila de 'etiqueta valor' bajo un gráfico. pares: [(etiqueta, valor, destacado_bool)]"""
     items = "".join(
-        f'<span>{_e(e)} <strong style="color:{ORANGE_TXT if d else INK}">{_e(v)}</strong></span>' for e, v, d in pares)
+        f'<span>{_e(e)} <strong style="color:{_c("ORANGE_TXT") if d else _c("INK")}">{_e(v)}</strong></span>' for e, v, d in pares)
     _render(f'<div class="sp-summary">{items}</div>')
 
 
@@ -225,7 +230,7 @@ def leyenda(items):
 
 def estado(tono, titulo, texto=""):
     """Franja de estado compacta (conexión, configuración, avisos de la página)."""
-    color = {"neg": NEG, "aviso": ORANGE_TXT, "info": NAVY, "pos": POS}[tono]
+    color = {"neg": _c("NEG"), "aviso": _c("ORANGE_TXT"), "info": _c("NAVY"), "pos": _c("POS")}[tono]
     ico = {"neg": "alert", "aviso": "alert", "info": "trend", "pos": "check"}[tono]
     t = f'<span class="sp-status-text">{_e(texto)}</span>' if texto else ""
     _render(f'<div class="sp-status" style="border-color:{color}55;background:{color}0f">'
@@ -234,7 +239,7 @@ def estado(tono, titulo, texto=""):
 
 def alerta(icono_nombre, tono, titulo, texto):
     """Punto de atención (icono + título + texto). Debajo se puede poner un st.page_link."""
-    color = {"neg": NEG, "aviso": ORANGE_TXT, "info": NAVY, "pos": POS}[tono]
+    color = {"neg": _c("NEG"), "aviso": _c("ORANGE_TXT"), "info": _c("NAVY"), "pos": _c("POS")}[tono]
     _render(f'''
         <div class="sp-alert">
           <span class="sp-alert-ico" style="color:{color};background:{color}1f">{icono(icono_nombre, 16, color)}</span>
@@ -250,16 +255,16 @@ def estilo_grafico(fig: go.Figure, alto=320, leyenda_visible=False):
     fig.update_layout(
         height=alto,
         margin=dict(l=8, r=8, t=12, b=8),
-        font=dict(family=FUENTE, size=12, color=MUTED),
+        font=dict(family=FUENTE, size=12, color=_c("MUTED")),
         paper_bgcolor="rgba(0,0,0,0)",
         plot_bgcolor="rgba(0,0,0,0)",
         showlegend=leyenda_visible,
         legend=dict(orientation="h", yanchor="bottom", y=1.02, x=0, title=None),
-        hoverlabel=dict(bgcolor="#ffffff", bordercolor=BORDER, font=dict(family=FUENTE, color=INK, size=13)),
+        hoverlabel=dict(bgcolor=_c("SURFACE"), bordercolor=_c("BORDER"), font=dict(family=FUENTE, color=_c("INK"), size=13)),
         separators=",.",
     )
-    fig.update_xaxes(showgrid=False, linecolor=BORDER, tickfont=dict(color=MUTED), title=None, automargin=True)
-    fig.update_yaxes(gridcolor=BORDER, zeroline=False, tickfont=dict(color=MUTED), title=None, automargin=True)
+    fig.update_xaxes(showgrid=False, linecolor=_c("BORDER"), tickfont=dict(color=_c("MUTED")), title=None, automargin=True)
+    fig.update_yaxes(gridcolor=_c("BORDER"), zeroline=False, tickfont=dict(color=_c("MUTED")), title=None, automargin=True)
     return fig
 
 

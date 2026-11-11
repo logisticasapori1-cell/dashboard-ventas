@@ -5,14 +5,11 @@ import streamlit as st
 
 _CSS = """
 <style>
-:root{
-  --navy:#1a3a5c; --ink:#13263a; --muted:#556677; --border:#e2e6ec; --bg:#f4f6f9;
-  --track:#eef1f5; --orange:#fa7d2a; --orange-txt:#a84b0b; --pos:#17734a; --neg:#b42318;
-}
+/*__VARS__*/
 
 /* ── Chrome de Streamlit ───────────────────────────── */
 /* stToolbar NO se oculta: ahí vive el botón que abre el menú en teléfono */
-#MainMenu, footer, [data-testid="stDecoration"], [data-testid="stToolbarActions"], [data-testid="stMainMenu"], [data-testid="stAppDeployButton"] { display:none !important; }
+#MainMenu, footer, [data-testid="stDecoration"], [data-testid="stToolbarActions"], [data-testid="stAppDeployButton"] { display:none !important; }
 header[data-testid="stHeader"] { background:transparent !important; }
 .block-container { padding:2rem 2.25rem 2rem !important; max-width:1440px !important; }
 @media (max-width: 640px) { .block-container { padding:4rem 1rem 2rem !important; } }
@@ -60,7 +57,7 @@ header[data-testid="stHeader"] { background:transparent !important; }
 .sp-section-title { margin:0 !important; padding:0 !important; font-size:20px !important; font-weight:700 !important; color:var(--ink) !important; }
 
 /* ── Tarjetas ──────────────────────────────────────── */
-[class*="st-key-sp_card_"] { background:#ffffff; border-radius:12px !important; padding:20px !important; border-color:var(--border) !important; }
+[class*="st-key-sp_card_"] { background:var(--surface); border-radius:12px !important; padding:20px !important; border-color:var(--border) !important; }
 .sp-card-head { display:flex; flex-wrap:wrap; justify-content:space-between; align-items:baseline; gap:8px; }
 .sp-card-title { margin:0 !important; padding:0 !important; font-size:15px !important; font-weight:600 !important; color:var(--ink) !important; }
 .sp-card-note { font-size:13px; color:var(--muted); }
@@ -68,7 +65,7 @@ header[data-testid="stHeader"] { background:transparent !important; }
 /* ── KPIs ──────────────────────────────────────────── */
 .sp-grid { display:grid; gap:16px; }
 .sp-kpi {
-  background:#fff; border:1px solid var(--border); border-radius:12px; padding:20px; box-sizing:border-box;
+  background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:20px; box-sizing:border-box;
   display:flex; flex-direction:column; gap:10px; min-width:0;
 }
 .sp-label { margin:0; font-size:12px; font-weight:600; letter-spacing:.04em; text-transform:uppercase; color:var(--muted); }
@@ -119,6 +116,33 @@ header[data-testid="stHeader"] { background:transparent !important; }
 [class*="st-key-ia_sugerida_"] button { min-height:48px; justify-content:flex-start; }
 [class*="st-key-ia_sugerida_"] button p { white-space:normal !important; text-align:left; line-height:1.3; overflow:visible !important; text-overflow:clip !important; }
 
+/* ── Botón principal: texto con contraste AA en ambos modos ── */
+[data-testid="stMainBlockContainer"] button[kind="primary"], [data-testid="stMainBlockContainer"] [data-testid="stBaseButton-primary"] {
+  background-color:var(--primary) !important; border-color:var(--primary) !important; color:var(--on-primary) !important;
+}
+[data-testid="stMainBlockContainer"] [data-testid="stBaseButton-primary"] p { color:var(--on-primary) !important; }
+
+/* ── Selector de tema y botón técnico de recarga (invisible) ── */
+.st-key-sp_tema_rerun, [class*="st-key-sp_tema_js"] { display:none !important; }
+[data-testid="stSidebar"] iframe[title="st.iframe"], [data-testid="stSidebar"] [data-testid="stIFrame"] { display:none !important; }
+
+/* ── Selectores segmentados: texto del botón activo con contraste AA ── */
+[data-testid="stMainBlockContainer"] [data-testid="stButtonGroup"] button[aria-checked="true"],
+[data-testid="stMainBlockContainer"] [data-testid="stButtonGroup"] button[kind*="Active"] { color:var(--orange-txt) !important; }
+[data-testid="stMainBlockContainer"] [data-testid="stButtonGroup"] button[aria-checked="true"] p,
+[data-testid="stMainBlockContainer"] [data-testid="stButtonGroup"] button[kind*="Active"] p { color:var(--orange-txt) !important; }
+[data-testid="stSidebar"] [data-testid="stButtonGroup"] button[aria-checked="true"],
+[data-testid="stSidebar"] [data-testid="stButtonGroup"] button[kind*="Active"] {
+  color:#ffffff !important; background:rgba(250,125,42,.30) !important; border-color:var(--orange) !important;
+}
+[data-testid="stSidebar"] [data-testid="stButtonGroup"] button[aria-checked="true"] p,
+[data-testid="stSidebar"] [data-testid="stButtonGroup"] button[kind*="Active"] p { color:#ffffff !important; }
+
+/* Selector de apariencia: tres opciones en una sola fila */
+[data-testid="stSidebar"] .st-key-sp_tema [data-testid="stButtonGroup"] > div { flex-wrap:nowrap !important; }
+[data-testid="stSidebar"] .st-key-sp_tema button { padding-left:6px !important; padding-right:6px !important; min-height:36px; flex:1 1 0; min-width:0; }
+[data-testid="stSidebar"] .st-key-sp_tema button p { font-size:12.5px !important; }
+
 /* ── Pie ──────────────────────────────────────────── */
 .sp-foot { display:flex; flex-wrap:wrap; justify-content:space-between; gap:12px; margin-top:1rem; padding-top:20px; border-top:1px solid var(--border); font-size:12px; color:var(--muted); }
 
@@ -127,7 +151,7 @@ header[data-testid="stHeader"] { background:transparent !important; }
    ══════════════════════════════════════════════════ */
 h1, h2, h3, h4 { color:var(--ink) !important; letter-spacing:-.015em; }
 [data-testid="stMetric"] {
-  background:#fff; border:1px solid var(--border); border-radius:12px; padding:16px 18px;
+  background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:16px 18px;
 }
 [data-testid="stMetricLabel"] { color:var(--muted) !important; font-size:.73rem !important; text-transform:uppercase; letter-spacing:.04em; font-weight:600 !important; }
 [data-testid="stMetricValue"] { color:var(--ink) !important; font-weight:700 !important; font-size:1.45rem !important; }
@@ -152,8 +176,18 @@ CSS_LOGIN = """
 """
 
 
+def _variables():
+    from utils import tema
+    p = tema.paleta()
+    nombres = {"BG": "bg", "SURFACE": "surface", "TRACK": "track", "BORDER": "border", "INK": "ink", "MUTED": "muted",
+               "NAVY": "navy", "ORANGE": "orange", "ORANGE_TXT": "orange-txt", "POS": "pos", "NEG": "neg",
+               "PRIMARY": "primary", "ON_PRIMARY": "on-primary"}
+    return ":root{" + "".join(f"--{v}:{p[k]};" for k, v in nombres.items()) + "}"
+
+
 def cargar_css():
-    st.html(_CSS)
+    """CSS del portal con los colores del modo activo (claro u oscuro)."""
+    st.html(_CSS.replace("/*__VARS__*/", _variables()))
 
 
 def ocultar_barra_lateral():
