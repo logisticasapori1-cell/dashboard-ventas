@@ -30,6 +30,10 @@ CLARO = {
     "ROJO_BG": "#fde7d9", "ROJO_TX": "#8f3f09",
     "AMBAR_BG": "#fff4cc", "AMBAR_TX": "#6b5000",
     "VERDE_BG": "#e3f1e8", "VERDE_TX": "#145f3e",
+    # Barra lateral (en modo claro es blanca; en oscuro, azul noche)
+    "SB_BG": "#ffffff", "SB_TXT": "#2b3d52", "SB_MUTED": "#556677", "SB_STRONG": "#13263a",
+    "SB_ACTIVE_BG": "#fdeee4", "SB_ACTIVE_TXT": "#8f3f09", "SB_ACTIVE_ICON": "#c2570c",
+    "SB_HOVER": "#f1f4f8", "SB_LINE": "#e2e6ec", "SB_BTN_BORDER": "#d5dbe3", "SB_AVATAR": "#eef1f5",
 }
 
 OSCURO = {
@@ -51,6 +55,9 @@ OSCURO = {
     "ROJO_BG": "#4a2416", "ROJO_TX": "#ffc2a3",
     "AMBAR_BG": "#40360f", "AMBAR_TX": "#f6dc85",
     "VERDE_BG": "#123826", "VERDE_TX": "#8fe0b4",
+    "SB_BG": "#0b1a2b", "SB_TXT": "#d6e0ea", "SB_MUTED": "#a9bccf", "SB_STRONG": "#ffffff",
+    "SB_ACTIVE_BG": "#3a2618", "SB_ACTIVE_TXT": "#ffffff", "SB_ACTIVE_ICON": "#fa7d2a",
+    "SB_HOVER": "#132539", "SB_LINE": "#1f3247", "SB_BTN_BORDER": "#2f4560", "SB_AVATAR": "#1f3247",
 }
 
 PALETAS = {"light": CLARO, "dark": OSCURO}
@@ -92,6 +99,8 @@ PAREJAS_TEXTO = [
     ("INK", "SURFACE"), ("INK", "BG"), ("MUTED", "SURFACE"), ("MUTED", "BG"),
     ("ORANGE_TXT", "SURFACE"), ("POS", "SURFACE"), ("NEG", "SURFACE"), ("NAVY", "SURFACE"),
     ("ON_PRIMARY", "PRIMARY"), ("ROJO_TX", "ROJO_BG"), ("AMBAR_TX", "AMBAR_BG"), ("VERDE_TX", "VERDE_BG"),
+    ("SB_TXT", "SB_BG"), ("SB_MUTED", "SB_BG"), ("SB_STRONG", "SB_BG"), ("SB_ACTIVE_TXT", "SB_ACTIVE_BG"),
+    ("SB_TXT", "SB_HOVER"),
 ]
 
 if __name__ == "__main__":

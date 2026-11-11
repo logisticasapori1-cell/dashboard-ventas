@@ -15,38 +15,39 @@ header[data-testid="stHeader"] { background:transparent !important; }
 @media (max-width: 640px) { .block-container { padding:4rem 1rem 2rem !important; } }
 [data-testid="stMainBlockContainer"] { font-variant-numeric:tabular-nums; }
 
-/* ── Barra lateral ─────────────────────────────────── */
-[data-testid="stSidebar"] { border-right:none !important; }
+/* ── Barra lateral (colores según modo: SB_* en utils/tema.py) ── */
+[data-testid="stSidebar"] { border-right:1px solid var(--sb-line) !important; }
 [data-testid="stSidebarHeader"] { padding:1.5rem 1.5rem .5rem !important; }
 [data-testid="stSidebarHeader"] img { height:auto !important; max-height:72px !important; width:auto !important; }
 [data-testid="stNavSectionHeader"] {
   font-size:11px !important; font-weight:600 !important; letter-spacing:.08em; text-transform:uppercase;
-  color:#a9bccf !important; padding-left:.75rem !important;
+  color:var(--sb-muted) !important; padding-left:.75rem !important;
 }
 [data-testid="stSidebarNavLink"] { border-radius:8px !important; min-height:40px; }
-[data-testid="stSidebarNavLink"] span { color:#d6e0ea !important; font-weight:500; }
-[data-testid="stSidebarNavLink"]:hover { background:rgba(255,255,255,.08) !important; }
-[data-testid="stSidebarNavLink"][aria-current="page"] { background:rgba(250,125,42,.22) !important; }
-[data-testid="stSidebarNavLink"][aria-current="page"] span { color:#ffffff !important; font-weight:600; }
-[data-testid="stSidebarNavLink"] [data-testid="stIconMaterial"] { color:#a9bccf !important; }
-[data-testid="stSidebarNavLink"][aria-current="page"] [data-testid="stIconMaterial"] { color:var(--orange) !important; }
-[data-testid="stSidebarNavSeparator"] { border-color:rgba(255,255,255,.12) !important; }
+[data-testid="stSidebarNavLink"] span { color:var(--sb-txt) !important; font-weight:500; }
+[data-testid="stSidebarNavLink"]:hover { background:var(--sb-hover) !important; }
+[data-testid="stSidebarNavLink"][aria-current="page"] { background:var(--sb-active-bg) !important; }
+[data-testid="stSidebarNavLink"][aria-current="page"] span { color:var(--sb-active-txt) !important; font-weight:600; }
+[data-testid="stSidebarNavLink"] [data-testid="stIconMaterial"] { color:var(--sb-muted) !important; }
+[data-testid="stSidebarNavLink"][aria-current="page"] [data-testid="stIconMaterial"] { color:var(--sb-active-icon) !important; }
+[data-testid="stSidebarNavSeparator"] { border-color:var(--sb-line) !important; }
+[data-testid="stSidebar"] hr { border-color:var(--sb-line) !important; }
 [data-testid="stSidebar"] .sp-side-label {
-  margin:0 0 .25rem; font-size:11px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:#a9bccf;
+  margin:0 0 .25rem; font-size:11px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:var(--sb-muted);
 }
-[data-testid="stSidebar"] .sp-side-meta { margin:0; font-size:12px; color:#d6e0ea; }
+[data-testid="stSidebar"] .sp-side-meta { margin:0; font-size:12px; color:var(--sb-muted); }
 [data-testid="stSidebar"] .sp-user { display:flex; align-items:center; gap:10px; }
 [data-testid="stSidebar"] .sp-avatar {
-  width:32px; height:32px; border-radius:16px; background:rgba(255,255,255,.14);
-  display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:600; color:#fff; flex:none;
+  width:32px; height:32px; border-radius:16px; background:var(--sb-avatar);
+  display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:600; color:var(--sb-strong); flex:none;
 }
-[data-testid="stSidebar"] .sp-user-name { font-size:13px; font-weight:600; color:#fff; display:block; overflow-wrap:anywhere; }
-[data-testid="stSidebar"] .sp-user-ver { font-size:12px; color:#a9bccf; display:block; }
-[data-testid="stSidebar"] [data-testid="stNumberInput"] label p { color:#d6e0ea !important; font-size:12px !important; }
+[data-testid="stSidebar"] .sp-user-name { font-size:13px; font-weight:600; color:var(--sb-strong); display:block; overflow-wrap:anywhere; }
+[data-testid="stSidebar"] .sp-user-ver { font-size:12px; color:var(--sb-muted); display:block; }
+[data-testid="stSidebar"] [data-testid="stNumberInput"] label p { color:var(--sb-txt) !important; font-size:12px !important; }
 [data-testid="stSidebar"] .stButton > button {
-  background:transparent !important; border:1px solid rgba(255,255,255,.22) !important; color:#d6e0ea !important;
+  background:transparent !important; border:1px solid var(--sb-btn-border) !important; color:var(--sb-txt) !important;
 }
-[data-testid="stSidebar"] .stButton > button:hover { border-color:var(--orange) !important; color:#fff !important; }
+[data-testid="stSidebar"] .stButton > button:hover { border-color:var(--orange) !important; color:var(--sb-strong) !important; }
 
 /* ── Encabezado de página ──────────────────────────── */
 .sp-head { display:flex; flex-direction:column; gap:6px; margin:0 0 .25rem; }
@@ -131,12 +132,14 @@ header[data-testid="stHeader"] { background:transparent !important; }
 [data-testid="stMainBlockContainer"] [data-testid="stButtonGroup"] button[kind*="Active"] { color:var(--orange-txt) !important; }
 [data-testid="stMainBlockContainer"] [data-testid="stButtonGroup"] button[aria-checked="true"] p,
 [data-testid="stMainBlockContainer"] [data-testid="stButtonGroup"] button[kind*="Active"] p { color:var(--orange-txt) !important; }
+[data-testid="stSidebar"] [data-testid="stButtonGroup"] button { color:var(--sb-txt) !important; border-color:var(--sb-btn-border) !important; }
+[data-testid="stSidebar"] [data-testid="stButtonGroup"] button p { color:var(--sb-txt) !important; }
 [data-testid="stSidebar"] [data-testid="stButtonGroup"] button[aria-checked="true"],
 [data-testid="stSidebar"] [data-testid="stButtonGroup"] button[kind*="Active"] {
-  color:#ffffff !important; background:rgba(250,125,42,.30) !important; border-color:var(--orange) !important;
+  color:var(--sb-active-txt) !important; background:var(--sb-active-bg) !important; border-color:var(--sb-active-icon) !important;
 }
 [data-testid="stSidebar"] [data-testid="stButtonGroup"] button[aria-checked="true"] p,
-[data-testid="stSidebar"] [data-testid="stButtonGroup"] button[kind*="Active"] p { color:#ffffff !important; }
+[data-testid="stSidebar"] [data-testid="stButtonGroup"] button[kind*="Active"] p { color:var(--sb-active-txt) !important; font-weight:600; }
 
 /* Selector de apariencia: tres opciones en una sola fila */
 [data-testid="stSidebar"] .st-key-sp_tema [data-testid="stButtonGroup"] > div { flex-wrap:nowrap !important; }
@@ -181,7 +184,10 @@ def _variables():
     p = tema.paleta()
     nombres = {"BG": "bg", "SURFACE": "surface", "TRACK": "track", "BORDER": "border", "INK": "ink", "MUTED": "muted",
                "NAVY": "navy", "ORANGE": "orange", "ORANGE_TXT": "orange-txt", "POS": "pos", "NEG": "neg",
-               "PRIMARY": "primary", "ON_PRIMARY": "on-primary"}
+               "PRIMARY": "primary", "ON_PRIMARY": "on-primary",
+               "SB_BG": "sb-bg", "SB_TXT": "sb-txt", "SB_MUTED": "sb-muted", "SB_STRONG": "sb-strong",
+               "SB_ACTIVE_BG": "sb-active-bg", "SB_ACTIVE_TXT": "sb-active-txt", "SB_ACTIVE_ICON": "sb-active-icon",
+               "SB_HOVER": "sb-hover", "SB_LINE": "sb-line", "SB_BTN_BORDER": "sb-btn-border", "SB_AVATAR": "sb-avatar"}
     return ":root{" + "".join(f"--{v}:{p[k]};" for k, v in nombres.items()) + "}"
 
 
