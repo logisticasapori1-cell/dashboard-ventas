@@ -3,7 +3,8 @@ import pandas as pd
 import plotly.graph_objects as go
 import os
 import io
-from utils import datos
+from utils import datos, ui
+from utils.formato import num, usd, pct
 
 PREFIJO_COL_MES = "PROMD VTA DIA"
 
@@ -62,106 +63,159 @@ def preparar(df):
     return {"df": df, "COL_ANT": COL_ANT, "COL_ACT": COL_ACT, "MES_ANT": MES_ANT, "MES_ACT": MES_ACT, "tiene_precio": tiene_precio, "total_skus": total_skus, "subio": subio, "bajo": bajo}
 
 
+_SUBIO = "background-color:#e3f1e8;color:#17734a;font-weight:600;"
+_BAJO = "background-color:#fde7d9;color:#a84b0b;font-weight:600;"
+
+
+def resaltar_tendencia(val):
+    if val == 'SUBIÓ':
+        return _SUBIO
+    if val == 'BAJO':
+        return _BAJO
+    return ''
+
+
+def filtrar(df, tendencia="Todos", abc="Todos", categoria="Todos", busqueda=""):
+    """Mismos filtros de siempre, sin dibujar nada."""
+    out = df.copy()
+    if tendencia != "Todos" and 'Estado de tendencia' in out.columns:
+        out = out[out['Estado de tendencia'] == tendencia]
+    if abc != "Todos":
+        out = out[out['Clasificación ABC'] == abc]
+    if categoria != "Todos":
+        out = out[out['CATEGORÍA'] == categoria]
+    if busqueda:
+        out = out[out['PRODUCTO'].str.contains(busqueda, case=False, na=False) |
+                  out['REFERENCIA INTERNA'].astype(str).str.contains(busqueda, na=False)]
+    return out
+
+
+def _grafico_comparativo(df_grafico, COL_ANT, COL_ACT, MES_ANT, MES_ACT):
+    fig = go.Figure()
+    fig.add_bar(x=df_grafico['PRODUCTO'], y=df_grafico[COL_ANT], name=MES_ANT, marker_color=ui.NAVY,
+                hovertemplate="%{x}<br>" + MES_ANT + ": %{y:,.0f} unid./día<extra></extra>")
+    fig.add_bar(x=df_grafico['PRODUCTO'], y=df_grafico[COL_ACT], name=MES_ACT, marker_color=ui.ORANGE,
+                hovertemplate="%{x}<br>" + MES_ACT + ": %{y:,.0f} unid./día<extra></extra>")
+    fig.update_layout(barmode='group', bargap=0.25, bargroupgap=0.05, hovermode="x unified")
+    ui.estilo_grafico(fig, alto=460)
+    fig.update_xaxes(tickangle=-45, tickfont=dict(size=10))
+    fig.update_yaxes(tickformat=",.0f")
+    ui.grafico(fig, clave="desv_comparativo")
+
+
+def _grafico_impacto(df_filtrado):
+    d = df_filtrado.dropna(subset=['Impacto Mensual $'])
+    if d.empty:
+        return
+    negativos = d.nsmallest(8, 'Impacto Mensual $')
+    negativos = negativos[negativos['Impacto Mensual $'] < 0]
+    positivos = d.nlargest(8, 'Impacto Mensual $')
+    positivos = positivos[positivos['Impacto Mensual $'] > 0]
+    top = pd.concat([negativos, positivos]).drop_duplicates().sort_values('Impacto Mensual $')
+    if top.empty:
+        return
+    colores = [ui.ORANGE if v < 0 else ui.NAVY for v in top['Impacto Mensual $']]
+    fig = go.Figure(go.Bar(
+        x=top['Impacto Mensual $'], y=top['PRODUCTO'], orientation="h", marker_color=colores,
+        text=[usd(v) for v in top['Impacto Mensual $']], textposition="outside", cliponaxis=False,
+        hovertemplate="%{y}<br>%{text} / mes<extra></extra>"))
+    ui.estilo_grafico(fig, alto=max(300, len(top) * 30))
+    rango = top['Impacto Mensual $'].abs().max() * 1.45
+    fig.update_xaxes(range=[-rango if (top['Impacto Mensual $'] < 0).any() else 0, rango if (top['Impacto Mensual $'] > 0).any() else 0],
+                     zeroline=True, zerolinecolor=ui.MUTED, showgrid=True, gridcolor=ui.BORDER, tickformat=",.0f")
+    fig.update_yaxes(showgrid=False, tickfont=dict(size=11, color=ui.INK))
+    ui.grafico(fig, clave="desv_impacto")
+
+
 def renderizar():
-    st.markdown("# 📊 Impacto Financiero y Desviaciones Estratégicas")
-    st.caption("Análisis Comparativo · Financiero · Pareto (ABC) por SKU")
+    if not datos.existe():
+        ui.encabezado("Supply › Desviaciones", "Desviaciones")
+        datos.mostrar_error_archivo()
+        return
 
-    file_name = datos.ARCHIVO_DATOS
+    try:
+        _r = preparar(_cargar_desviaciones())
+    except Exception as e:
+        ui.encabezado("Supply › Desviaciones", "Desviaciones")
+        st.error(f"No se pudo leer la hoja de desviaciones: {e}")
+        return
 
-    if not os.path.exists(file_name):
-        st.error(f"❌ **No se encontró el archivo de datos:** '{file_name}'")
+    df = _r["df"]
+    COL_ANT, COL_ACT, MES_ANT, MES_ACT = _r["COL_ANT"], _r["COL_ACT"], _r["MES_ANT"], _r["MES_ACT"]
+    tiene_precio, total_skus, subio, bajo = _r["tiene_precio"], _r["total_skus"], _r["subio"], _r["bajo"]
+
+    ui.encabezado("Supply › Desviaciones", "Desviaciones",
+                  f"Venta diaria promedio por SKU: {MES_ACT} vs. {MES_ANT} · Pareto ABC e impacto financiero (USD)")
+
+    # ── KPIs ─────────────────────────────────────────
+    tarjetas = [
+        ui.kpi_html("SKUs en planta", str(total_skus), "prod."),
+        ui.kpi_html("SKUs en alza", str(subio), "SKU", delta=(f"{pct(subio / total_skus * 100, 0)} del total", True) if total_skus else None),
+        ui.kpi_html("SKUs en alerta", str(bajo), "SKU", delta=(f"{pct(bajo / total_skus * 100, 0)} del total", False) if total_skus else None),
+    ]
+    if tiene_precio:
+        impacto_total = df['Impacto Mensual $'].sum()
+        tarjetas.append(ui.kpi_html("Balance financiero proyectado", ("+" if impacto_total >= 0 else "") + usd(impacto_total, simbolo=""),
+                                    "USD", delta=(f"Por mes vs. {MES_ANT.lower()}", impacto_total >= 0)))
     else:
-        try:
-            df = _cargar_desviaciones(file_name)
+        tarjetas.append(ui.kpi_html("Balance financiero proyectado", "Falta precio unitario",
+                                    nota="Agrega la columna PRECIO UNITARIO en la hoja"))
+    ui.kpis(tarjetas, minimo=220)
 
-            _r = preparar(df)
-            df = _r["df"]
-            COL_ANT = _r["COL_ANT"]
-            COL_ACT = _r["COL_ACT"]
-            MES_ANT = _r["MES_ANT"]
-            MES_ACT = _r["MES_ACT"]
-            tiene_precio = _r["tiene_precio"]
-            total_skus = _r["total_skus"]
-            subio = _r["subio"]
-            bajo = _r["bajo"]
+    # ── Filtros ──────────────────────────────────────
+    col_f1, col_f2, col_f3, col_f4 = st.columns(4)
+    with col_f1:
+        filtro_tendencia = st.selectbox("Estado de tendencia", ["Todos", "SUBIÓ", "BAJO"], key="desv_tendencia")
+    with col_f2:
+        filtro_abc = st.selectbox("Clasificación ABC", ["Todos", "A", "B", "C"], key="desv_abc")
+    with col_f3:
+        lista_categorias = ["Todos"] + sorted(df['CATEGORÍA'].dropna().unique().tolist())
+        filtro_categoria = st.selectbox("Categoría / marca", lista_categorias, key="desv_categoria")
+    with col_f4:
+        busqueda = st.text_input("Buscar", placeholder="Producto o referencia", key="desv_busqueda", icon=":material/search:")
 
-            st.markdown('<div class="module-header">TABLERO DE DESVIACIONES Y TENDENCIAS</div>', unsafe_allow_html=True)
-            st.markdown('<p class="kpi-section-label">Resumen Ejecutivo</p>', unsafe_allow_html=True)
-            
-            kpi1, kpi2, kpi3, kpi4 = st.columns(4)
-            kpi1.metric("Total SKUs en Planta", f"{total_skus} Prod.")
-            kpi2.metric("SKUs en Alza", f"{subio}", delta=f"+{subio} SKUs", delta_color="normal")
-            kpi3.metric("SKUs en Alerta", f"{bajo}", delta=f"-{bajo} SKUs", delta_color="normal")
+    df_filtrado = filtrar(df, filtro_tendencia, filtro_abc, filtro_categoria, busqueda)
 
-            if tiene_precio:
-                impacto_total = df['Impacto Mensual $'].sum()
-                delta_financiero = f"- Mensual vs {MES_ANT}" if impacto_total < 0 else f"+ Mensual vs {MES_ANT}"
-                impacto_str = f"${impacto_total:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
-                kpi4.metric("Balance Financiero Proyectado", impacto_str, delta=delta_financiero, delta_color="normal")
-            else:
-                kpi4.metric("Balance", "Falta Precio Unitario")
+    # ── Gráficos ─────────────────────────────────────
+    df_grafico = df_filtrado.sort_values(by=COL_ACT, ascending=False)
+    with ui.tarjeta("desv_comparativo", f"Venta diaria promedio por SKU · {MES_ANT} vs. {MES_ACT}",
+                    f"Unidades por día · {len(df_filtrado)} de {total_skus} SKU"):
+        if df_grafico.empty:
+            st.info("No hay SKUs con los filtros seleccionados.")
+        else:
+            ui.leyenda([(MES_ANT, ui.NAVY), (MES_ACT, ui.ORANGE)])
+            _grafico_comparativo(df_grafico, COL_ANT, COL_ACT, MES_ANT, MES_ACT)
 
-            st.markdown("---")
+    if tiene_precio and not df_filtrado.empty:
+        with ui.tarjeta("desv_impacto", "Mayor impacto financiero", "USD por mes · hasta 8 SKU que más suman y 8 que más restan"):
+            ui.leyenda([("Suma al balance", ui.NAVY), ("Resta al balance", ui.ORANGE)])
+            _grafico_impacto(df_filtrado)
 
-            col_f1, col_f2, col_f3, col_f4 = st.columns(4)
-            with col_f1: filtro_tendencia = st.selectbox("🎯 Estado de Tendencia", ["Todos", "SUBIÓ", "BAJO"])
-            with col_f2: filtro_abc = st.selectbox("📊 Clasificación ABC", ["Todos", "A", "B", "C"])
-            with col_f3: 
-                lista_categorias = ["Todos"] + sorted(df['CATEGORÍA'].dropna().unique().tolist())
-                filtro_categoria = st.selectbox("🏷️ Categoría / Marca", lista_categorias)
-            with col_f4: busqueda = st.text_input("🔍 Filtrar Nombre", placeholder="Producto o referencia...")
+    # ── Tabla ────────────────────────────────────────
+    if tiene_precio:
+        columnas_render = ['REFERENCIA INTERNA', 'PRODUCTO', 'CATEGORÍA', 'Clasificación ABC', COL_ANT, COL_ACT, 'Porcentaje de desviación', 'Impacto Mensual $', 'Estado de tendencia']
+    else:
+        columnas_render = ['REFERENCIA INTERNA', 'PRODUCTO', 'CATEGORÍA', 'Clasificación ABC', COL_ANT, COL_ACT, 'Porcentaje de desviación', 'Estado de tendencia']
 
-            df_filtrado = df.copy()
-            if filtro_tendencia != "Todos" and 'Estado de tendencia' in df_filtrado.columns:
-                df_filtrado = df_filtrado[df_filtrado['Estado de tendencia'] == filtro_tendencia]
-            if filtro_abc != "Todos":
-                df_filtrado = df_filtrado[df_filtrado['Clasificación ABC'] == filtro_abc]
-            if filtro_categoria != "Todos":
-                df_filtrado = df_filtrado[df_filtrado['CATEGORÍA'] == filtro_categoria]
-            if busqueda:
-                df_filtrado = df_filtrado[
-                    df_filtrado['PRODUCTO'].str.contains(busqueda, case=False, na=False) |
-                    df_filtrado['REFERENCIA INTERNA'].astype(str).str.contains(busqueda, na=False)
-                ]
+    with ui.tarjeta("desv_tabla", "Detalle de desviaciones", f"{len(df_filtrado)} SKU"):
+        conteo = df['Clasificación ABC'].value_counts()
+        ui.linea_resumen([(f"Clase {c}", f"{int(conteo.get(c, 0))} SKU", False) for c in ("A", "B", "C")]
+                         + [("Criterio", "A ≤ 80% · B ≤ 95% del volumen acumulado", False)])
+        formato_columnas = {COL_ANT: num, COL_ACT: num, 'Porcentaje de desviación': lambda x: pct(x * 100, 2)}
+        if tiene_precio:
+            formato_columnas['Impacto Mensual $'] = usd
+        tabla_estilizada = df_filtrado[columnas_render].style.map(resaltar_tendencia, subset=['Estado de tendencia']).format(formato_columnas)
+        cc = st.column_config
+        st.dataframe(tabla_estilizada, width="stretch", hide_index=True, column_config={
+            "REFERENCIA INTERNA": cc.Column("Ref.", width=72), "PRODUCTO": cc.Column("Producto", width="medium"),
+            "CATEGORÍA": cc.Column("Categoría"), "Clasificación ABC": cc.Column("ABC", width=56),
+            COL_ANT: cc.Column(f"Prom. diario {MES_ANT[:3]}."), COL_ACT: cc.Column(f"Prom. diario {MES_ACT[:3]}."),
+            "Porcentaje de desviación": cc.Column("Desviación"), "Impacto Mensual $": cc.Column("Impacto mensual"),
+            "Estado de tendencia": cc.Column("Tendencia")})
 
-            df_grafico = df_filtrado.sort_values(by=COL_ACT, ascending=False)
-            if not df_grafico.empty:
-                fig = go.Figure()
-                fig.add_trace(go.Bar(x=df_grafico['PRODUCTO'], y=df_grafico[COL_ANT], name=MES_ANT, marker_color='#1a3a5c'))
-                fig.add_trace(go.Bar(x=df_grafico['PRODUCTO'], y=df_grafico[COL_ACT], name=MES_ACT, marker_color='#d95f02'))
-                fig.update_layout(barmode='group', height=500, hovermode="x unified", legend=dict(orientation="h", yanchor="bottom", y=1.02, x=0.01), plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', margin=dict(l=20, r=20, t=40, b=20))
-                st.plotly_chart(fig, width="stretch")
-
-            st.markdown("---")
-            st.markdown("### 📋 Detalle de Desviaciones")
-
-            if tiene_precio:
-                columnas_render = ['REFERENCIA INTERNA', 'PRODUCTO', 'CATEGORÍA', 'Clasificación ABC', COL_ANT, COL_ACT, 'Porcentaje de desviación', 'Impacto Mensual $', 'Estado de tendencia']
-            else:
-                columnas_render = ['REFERENCIA INTERNA', 'PRODUCTO', 'CATEGORÍA', 'Clasificación ABC', COL_ANT, COL_ACT, 'Porcentaje de desviación', 'Estado de tendencia']
-
-            def resaltar_tendencia(val):
-                if val == 'SUBIÓ': return 'background-color: #e2f0d9; color: #385723; font-weight: bold;'
-                if val == 'BAJO': return 'background-color: #fce4d6; color: #c65911; font-weight: bold;'
-                return ''
-
-            formato_columnas = {
-                COL_ANT: lambda x: f"{x:,.0f}".replace(",", "."),
-                COL_ACT: lambda x: f"{x:,.0f}".replace(",", "."),
-                'Porcentaje de desviación': '{:.2%}'
-            }
-            
-            if tiene_precio:
-                formato_columnas['Impacto Mensual $'] = lambda x: f"${x:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
-
-            tabla_estilizada = df_filtrado[columnas_render].style.map(resaltar_tendencia, subset=['Estado de tendencia']).format(formato_columnas)
-            st.dataframe(tabla_estilizada, width="stretch", hide_index=True)
-
-            st.markdown("---")
-            buffer = io.BytesIO()
-            with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
-                df_filtrado[columnas_render].to_excel(writer, sheet_name='Reporte_Filtrado', index=False)
-            st.download_button("📄 Descargar Reporte para Firmas", data=buffer.getvalue(), file_name="Reporte_Desviaciones.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", type="primary")
-
-        except Exception as e:
-            st.error(f"Error crítico en la lectura del archivo Excel: {e}")
+        buffer = io.BytesIO()
+        with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
+            df_filtrado[columnas_render].to_excel(writer, sheet_name='Reporte_Filtrado', index=False)
+        st.download_button("Descargar reporte para firmas", data=buffer.getvalue(), file_name="Reporte_Desviaciones.xlsx",
+                           mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", type="primary",
+                           icon=":material/download:", key="desv_descarga")

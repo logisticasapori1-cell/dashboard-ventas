@@ -281,6 +281,18 @@ def ejes_miles(fig, desde_cero=True, pasos=5):
     return fig
 
 
+def posiciones_etiquetas(valores):
+    """Etiqueta debajo de los valles y arriba del resto, para que la línea no la tape."""
+    vals = list(valores)
+    pos = []
+    for i, v in enumerate(vals):
+        izq = vals[i - 1] if i > 0 else None
+        der = vals[i + 1] if i < len(vals) - 1 else None
+        valle = (izq is None or v < izq) and (der is None or v < der) and (izq is not None or der is not None)
+        pos.append("bottom center" if valle else "top center")
+    return pos
+
+
 def grafico(fig, clave=None):
     st.plotly_chart(fig, width="stretch", theme=None, key=clave,
                     config={"displayModeBar": False})

@@ -73,7 +73,7 @@ header[data-testid="stHeader"] { background:transparent !important; }
 }
 .sp-label { margin:0; font-size:12px; font-weight:600; letter-spacing:.04em; text-transform:uppercase; color:var(--muted); }
 .sp-big { margin:0; font-size:30px; line-height:1.1; font-weight:700; color:var(--ink); letter-spacing:-.01em; overflow-wrap:anywhere; }
-.sp-unit { font-size:14px; font-weight:500; color:var(--muted); margin-left:4px; letter-spacing:0; }
+.sp-unit { font-size:14px; font-weight:500; color:var(--muted); margin-left:4px; letter-spacing:0; white-space:nowrap; display:inline-block; overflow-wrap:normal; }
 .sp-row { display:flex; align-items:center; justify-content:space-between; gap:12px; }
 .sp-delta { display:inline-flex; align-items:center; gap:4px; font-size:13px; font-weight:600; color:var(--muted); }
 .sp-note { margin:0; font-size:13px; color:var(--muted); }

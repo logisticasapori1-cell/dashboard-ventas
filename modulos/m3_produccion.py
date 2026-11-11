@@ -93,17 +93,6 @@ def _excel(df):
     return buffer.getvalue()
 
 
-def _posiciones(vals):
-    """Etiqueta debajo de los valles y arriba del resto, para que no la tape la línea."""
-    pos = []
-    for i, v in enumerate(vals):
-        izq = vals[i - 1] if i > 0 else None
-        der = vals[i + 1] if i < len(vals) - 1 else None
-        valle = (izq is None or v < izq) and (der is None or v < der) and (izq is not None or der is not None)
-        pos.append("bottom center" if valle else "top center")
-    return pos
-
-
 def _grafico(df_final):
     promedio = df_final["Real"].mean()
     n = len(df_final)
@@ -114,7 +103,7 @@ def _grafico(df_final):
         line=dict(color=ui.NAVY, width=2.5),
         marker=dict(size=[12 if i == pico else 8 for i in df_final.index], color=["#ffffff" if c == ui.NAVY else c for c in colores],
                     line=dict(width=2, color=colores)),
-        text=[num(v) for v in df_final["Real"]], textposition=_posiciones(list(df_final["Real"])), textfont=dict(size=11, color=ui.INK),
+        text=[num(v) for v in df_final["Real"]], textposition=ui.posiciones_etiquetas(df_final["Real"]), textfont=dict(size=11, color=ui.INK),
         cliponaxis=False, hovertemplate="%{x}<br>%{text} unid.<extra></extra>"))
     if n > 1:
         fig.add_hline(y=promedio, line_dash="dash", line_color=ui.MUTED, line_width=1.2,

@@ -1,8 +1,9 @@
 import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
-import os
-from utils import datos
+import io
+from utils import datos, ui
+from utils.formato import usd, pct
 
 def _cargar_cierre_inventario(path=None):
     """Lee las hojas 'CIERRE <MES> <AÑO>' y retorna (meses, dict de DataFrames), sin el prefijo."""
@@ -42,58 +43,76 @@ def tendencia_total(df_consolidado, sheet_names):
     return {"resumen": resumen, "df_plot": df_plot, "v_ini": v_ini, "v_fin": v_fin, "var_total": var_total}, None
 
 
-def _renderizar_tendencia_total(df_consolidado, sheet_names, formato_dinero):
-    """Gráfica de línea con el Valor Total del inventario (MP + ME + PT) desde abril hasta el último mes."""
-    st.subheader("📊 Tendencia del Valor Total del Inventario (desde Abril)")
-    st.caption("Suma de Materia Prima + Material de Empaque + Producto Terminado. Cifras en USD. No depende de los filtros superiores.")
+
+CATEGORIAS = ["MATERIA PRIMA", "MATERIAL EMPAQUE", "PRODUCTO TERMINADO"]
+COLORES = {"MATERIA PRIMA": ui.NAVY, "MATERIAL EMPAQUE": ui.LIGHTBLUE, "PRODUCTO TERMINADO": ui.ORANGE}
+MESES_CORTOS = {m: m[:3].capitalize() for m in ["ENERO", "FEBRERO", "MARZO", "ABRIL", "MAYO", "JUNIO", "JULIO",
+                                               "AGOSTO", "SEPTIEMBRE", "OCTUBRE", "NOVIEMBRE", "DICIEMBRE"]}
+
+
+def etiqueta_mes(mes):
+    """'OCTUBRE 2026' -> 'Oct-2026'."""
+    partes = str(mes).split()
+    corto = MESES_CORTOS.get(partes[0].upper(), partes[0].capitalize()) if partes else str(mes)
+    return f"{corto}-{partes[1]}" if len(partes) > 1 else corto
+
+
+def _usd(x):
+    return usd(x) if pd.notna(x) else "No registrado"
+
+
+def _excel(df):
+    buffer = io.BytesIO()
+    with pd.ExcelWriter(buffer, engine="openpyxl") as writer:
+        df.to_excel(writer, index=False, sheet_name="Cierres")
+    return buffer.getvalue()
+
+
+# ══════════════════════════════════════════════════════════
+# 1. TENDENCIA DEL VALOR TOTAL (no depende de los filtros)
+# ══════════════════════════════════════════════════════════
+def _renderizar_tendencia_total(df_consolidado, sheet_names, formato_dinero=None):
+    ui.seccion("Tendencia del valor total", "Materia prima + material de empaque + producto terminado, desde abril · No depende de los filtros")
 
     _t, _aviso = tendencia_total(df_consolidado, sheet_names)
     if _aviso:
         st.info(_aviso)
         return
-    resumen, df_plot, v_ini, v_fin, var_total = _t["resumen"], _t["df_plot"], _t["v_ini"], _t["v_fin"], _t["var_total"]
-    k1, k2, k3 = st.columns(3)
-    k1.metric(f"Valor {df_plot['Mes'].iloc[0]} (USD)", formato_dinero(v_ini))
-    k2.metric(f"Valor {df_plot['Mes'].iloc[-1]} (USD)", formato_dinero(v_fin))
-    k3.metric("Variación en el período", f"{var_total:+.1f}%".replace(".", ","))
+    df_plot, v_ini, v_fin, var_total = _t["df_plot"], _t["v_ini"], _t["v_fin"], _t["var_total"]
 
-    # Textos de hover con formato local
+    ui.kpis([
+        ui.kpi_html(f"Valor {etiqueta_mes(df_plot['Mes'].iloc[0])}", usd(v_ini, simbolo=""), "USD"),
+        ui.kpi_html(f"Valor {etiqueta_mes(df_plot['Mes'].iloc[-1])}", usd(v_fin, simbolo=""), "USD",
+                    spark=list(df_plot["Valor_Total"])),
+        ui.kpi_html("Variación en el período", pct(var_total, signo=True),
+                    delta=(f"{etiqueta_mes(df_plot['Mes'].iloc[0])} → {etiqueta_mes(df_plot['Mes'].iloc[-1])}", var_total >= 0)),
+    ], minimo=240)
+
     def _hover(fila):
-        texto = f"<b>{fila['Mes']}</b><br>Valor total: {formato_dinero(fila['Valor_Total'])}"
+        texto = f"<b>{etiqueta_mes(fila['Mes'])}</b><br>Valor total: {usd(fila['Valor_Total'])}"
         if pd.notna(fila["Var_%"]):
-            texto += f"<br>Var. vs mes anterior: {fila['Var_%']:+.1f}%".replace(".", ",")
+            texto += f"<br>Var. vs mes anterior: {pct(fila['Var_%'], signo=True)}"
         if fila["Categorias"] < 3:
-            texto += f"<br>⚠️ Incompleto: {fila['Categorias']}/3 categorías registradas"
+            texto += f"<br>Incompleto: {fila['Categorias']}/3 categorías registradas"
         return texto
 
     incompletos = df_plot["Categorias"] < 3
-    colores_marcador = ["#fa7d2a" if inc else "#1a3a5c" for inc in incompletos]
+    with ui.tarjeta("cierre_total", "Valor total del inventario por cierre", "USD"):
+        leyenda = [("Valor total", ui.NAVY)]
+        if incompletos.any():
+            leyenda.append(("Mes con alguna categoría sin registrar (total subestimado)", ui.ORANGE))
+        ui.leyenda(leyenda)
+        fig = go.Figure(go.Scatter(
+            x=[etiqueta_mes(m) for m in df_plot["Mes"]], y=df_plot["Valor_Total"], mode="lines+markers+text",
+            line=dict(color=ui.NAVY, width=2.5),
+            marker=dict(size=10, color=[ui.ORANGE if inc else ui.NAVY for inc in incompletos]),
+            text=[usd(v, dec=0) for v in df_plot["Valor_Total"]], textposition=ui.posiciones_etiquetas(df_plot["Valor_Total"]),
+            textfont=dict(size=11, color=ui.INK), cliponaxis=False,
+            customdata=df_plot.apply(_hover, axis=1), hovertemplate="%{customdata}<extra></extra>"))
+        ui.estilo_grafico(fig, alto=360)
+        ui.ejes_miles(fig, desde_cero=False)
+        ui.grafico(fig, clave="cierre_total")
 
-    fig = go.Figure(go.Scatter(
-        x=df_plot["Mes"],
-        y=df_plot["Valor_Total"],
-        mode="lines+markers+text",
-        name="Valor Total",
-        line=dict(color="#1a3a5c", width=3),
-        marker=dict(size=10, color=colores_marcador),
-        text=[formato_dinero(v).split(",")[0] for v in df_plot["Valor_Total"]],
-        textposition="top center",
-        customdata=df_plot.apply(_hover, axis=1),
-        hovertemplate="%{customdata}<extra></extra>",
-    ))
-    fig.update_layout(
-        height=420,
-        margin=dict(l=20, r=20, t=40, b=20),
-        yaxis=dict(title="Valor Total (USD)", gridcolor="#e2e8f0"),
-        xaxis=dict(title="Período de Cierre", gridcolor="#f1f5f9"),
-        plot_bgcolor="rgba(0,0,0,0)",
-        paper_bgcolor="rgba(0,0,0,0)",
-        showlegend=False,
-    )
-    st.plotly_chart(fig, width="stretch")
-
-    if incompletos.any():
-        st.caption("🟠 Los puntos naranjas son meses con alguna categoría sin registrar; su total puede estar subestimado.")
 
 def consolidar(sheet_names, hojas_dict):
     """Une las hojas de cierre en una tabla larga (Mes, Categoría, Valor $)."""
@@ -115,144 +134,90 @@ def consolidar(sheet_names, hojas_dict):
     return df_consolidado
 
 
+# ══════════════════════════════════════════════════════════
+# PÁGINA
+# ══════════════════════════════════════════════════════════
 def renderizar():
-    st.markdown("# 📦 Cierre de Inventario Valorizado")
-    st.caption("Evolución financiera de Materia Prima, Material de Empaque y Producto Terminado")
+    ui.encabezado("Supply › Cierre de inventario", "Cierre de inventario valorizado",
+                  "Materia prima, material de empaque y producto terminado al cierre de cada mes · Cifras en USD")
 
-    file_path = datos.ARCHIVO_DATOS
-
-    if not os.path.exists(file_path):
-        st.error(f"❌ **Archivo requerido no encontrado:** '{file_path}'")
+    if not datos.existe():
+        datos.mostrar_error_archivo()
         return
 
     try:
-        # 1. Extracción y Consolidación de Datos
-        sheet_names, hojas_dict = _cargar_cierre_inventario(file_path)
+        sheet_names, hojas_dict = _cargar_cierre_inventario()
         df_consolidado = consolidar(sheet_names, hojas_dict)
-        
-        # 2. Interfaz de Filtros
-        st.markdown('<div class="module-header">MÉTRICAS DE CAPITAL DE INVENTARIO</div>', unsafe_allow_html=True)
-        st.markdown("### 🎛️ Parámetros de Consulta")
-        
+
+        _renderizar_tendencia_total(df_consolidado, sheet_names)
+
+        # ══ 2. CONSULTA POR MES Y CATEGORÍA ══
+        ui.seccion("Consulta por mes y categoría")
         col_f1, col_f2 = st.columns(2)
         with col_f1:
-            meses_opciones = ["Todos los meses"] + list(sheet_names)
-            filtro_mes = st.selectbox("📅 Seleccione el Mes", meses_opciones)
-            
+            filtro_mes = st.selectbox("Mes", ["Todos los meses"] + list(sheet_names), key="cierre_mes",
+                                      format_func=lambda m: m if m == "Todos los meses" else etiqueta_mes(m))
         with col_f2:
-            categorias_opciones = ["Todas las Categorías", "MATERIA PRIMA", "MATERIAL EMPAQUE", "PRODUCTO TERMINADO"]
-            filtro_categoria = st.selectbox("🏷️ Seleccione la Categoría", categorias_opciones)
+            filtro_categoria = st.selectbox("Categoría", ["Todas las Categorías"] + CATEGORIAS, key="cierre_categoria",
+                                            format_func=lambda c: "Todas las categorías" if c == "Todas las Categorías" else c.capitalize())
 
-        # 3. Aplicación de Filtros
         df_filtrado = df_consolidado.copy()
-        
         if filtro_mes != "Todos los meses":
             df_filtrado = df_filtrado[df_filtrado["Mes"] == filtro_mes]
-            
         if filtro_categoria != "Todas las Categorías":
             df_filtrado = df_filtrado[df_filtrado["Categoría"] == filtro_categoria]
 
-        # 4. Renderizado de KPIs (NUEVA ESTRUCTURA JERÁRQUICA)
-        st.markdown("---")
-        st.markdown('<p class="kpi-section-label">Resumen de Valorización</p>', unsafe_allow_html=True)
-        
-        # Excluimos nulos para la suma total
         valor_total = df_filtrado["Valor $"].sum(skipna=True)
-        
-        # Función rápida para formato monetario corporativo
-        formato_dinero = lambda x: f"${x:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
-        
-        # 4.1. Tarjeta Principal (Padre) - Cúspide
-        st.markdown(f"""
-            <div style="background-color: #d1e0f0; padding: 25px; border-radius: 8px; border: 1px solid #d1e0f0; text-align: center; margin-bottom: 25px;">
-                <p style="margin:0; color: #94a3b8; font-size: 14px; font-weight: bold; letter-spacing: 1.5px;">VALOR TOTAL DEL INVENTARIO</p>
-                <p style="margin:0; font-size: 42px; font-weight: 800;"><span style="color: #ffffff !important;">{formato_dinero(valor_total)}</span></p>
-            </div>
-        """, unsafe_allow_html=True)
-        
-        # 4.2. Sub-clasificaciones (Hijos) - Base de 3 columnas
+        n_meses = df_filtrado["Mes"].nunique()
+        etiqueta_total = (f"Cierre {etiqueta_mes(filtro_mes)}" if filtro_mes != "Todos los meses"
+                          else f"Suma de {n_meses} cierres mensuales")
+        tarjetas = [ui.kpi_html(etiqueta_total, usd(valor_total, simbolo=""), "USD",
+                                nota=None if filtro_mes != "Todos los meses" else "Suma de saldos de cierre; no es el inventario de un mes")]
         if filtro_categoria == "Todas las Categorías":
-            mp_total = df_filtrado[df_filtrado["Categoría"] == "MATERIA PRIMA"]["Valor $"].sum(skipna=True)
-            me_total = df_filtrado[df_filtrado["Categoría"] == "MATERIAL EMPAQUE"]["Valor $"].sum(skipna=True)
-            pt_total = df_filtrado[df_filtrado["Categoría"] == "PRODUCTO TERMINADO"]["Valor $"].sum(skipna=True)
-            
-            c1, c2, c3 = st.columns(3)
-            c1.metric("TOTAL MATERIA PRIMA", formato_dinero(mp_total))
-            c2.metric("TOTAL MATERIAL EMPAQUE", formato_dinero(me_total))
-            c3.metric("TOTAL PRODUCTO TERMINADO", formato_dinero(pt_total))
+            for cat in CATEGORIAS:
+                tarjetas.append(ui.kpi_html(cat.capitalize(), usd(df_filtrado[df_filtrado["Categoría"] == cat]["Valor $"].sum(skipna=True), simbolo=""), "USD"))
         else:
             promedio = df_filtrado["Valor $"].mean(skipna=True)
-            st.metric("Promedio en el Período", formato_dinero(promedio) if pd.notna(promedio) else "$0,00")
+            tarjetas.append(ui.kpi_html("Promedio en el período", usd(promedio if pd.notna(promedio) else 0, simbolo=""), "USD"))
+        ui.kpis(tarjetas, minimo=220)
 
-        # 5. Gráfica Lineal de Tendencias (Si se seleccionan varios meses)
-        st.markdown("---")
         if filtro_mes == "Todos los meses":
-            st.subheader("📈 Tendencia Lineal de Cierre Valorizado")
-            
-            fig = go.Figure()
-            
-            # Definir colores corporativos para cada línea
-            colores = {
-                "MATERIA PRIMA": "#1a3a5c",
-                "MATERIAL EMPAQUE": "#fa7d2a",
-                "PRODUCTO TERMINADO": "#16a34a"
-            }
+            categorias_a_graficar = [filtro_categoria] if filtro_categoria != "Todas las Categorías" else CATEGORIAS
+            with ui.tarjeta("cierre_categorias", "Cierre valorizado por categoría", "USD por mes"):
+                ui.leyenda([(c.capitalize(), COLORES[c]) for c in categorias_a_graficar])
+                fig = go.Figure()
+                for cat in categorias_a_graficar:
+                    df_cat_plot = df_filtrado[df_filtrado["Categoría"] == cat].dropna(subset=["Valor $"])
+                    if not df_cat_plot.empty:
+                        fig.add_scatter(x=[etiqueta_mes(m) for m in df_cat_plot["Mes"]], y=df_cat_plot["Valor $"],
+                                        mode="lines+markers", name=cat.capitalize(),
+                                        line=dict(color=COLORES[cat], width=2.5), marker=dict(size=8, color=COLORES[cat]),
+                                        hovertemplate="%{x} · " + cat.capitalize() + "<br>USD %{y:,.2f}<extra></extra>")
+                fig.update_layout(hovermode="x unified")
+                ui.estilo_grafico(fig, alto=380)
+                ui.ejes_miles(fig)
+                ui.grafico(fig, clave="cierre_categorias")
 
-            categorias_a_graficar = [filtro_categoria] if filtro_categoria != "Todas las Categorías" else ["MATERIA PRIMA", "MATERIAL EMPAQUE", "PRODUCTO TERMINADO"]
-            
-            for cat in categorias_a_graficar:
-                df_cat = df_filtrado[df_filtrado["Categoría"] == cat]
-                # Conectamos solo los puntos que existen (ignora nulos visualmente)
-                df_cat_plot = df_cat.dropna(subset=["Valor $"])
-                
-                if not df_cat_plot.empty:
-                    fig.add_trace(go.Scatter(
-                        x=df_cat_plot["Mes"], 
-                        y=df_cat_plot["Valor $"],
-                        mode='lines+markers',
-                        name=cat,
-                        line=dict(color=colores[cat], width=3),
-                        marker=dict(size=8, color=colores[cat])
-                    ))
-                    
-            fig.update_layout(
-                height=450, 
-                margin=dict(l=20, r=20, t=30, b=20), 
-                hovermode="x unified", 
-                yaxis=dict(title="Valor Total ($)", gridcolor='#e2e8f0'), 
-                xaxis=dict(title="Período de Cierre", gridcolor='#f1f5f9'), 
-                plot_bgcolor='rgba(0,0,0,0)', 
-                paper_bgcolor='rgba(0,0,0,0)',
-                legend=dict(orientation="h", yanchor="bottom", y=1.02, x=0.01)
-            )
-            st.plotly_chart(fig, width="stretch")
-
-        # 5.1 Tendencia del Valor Total (Abril → último mes)
-        st.markdown("---")
-        _renderizar_tendencia_total(df_consolidado, sheet_names, formato_dinero)
-        st.markdown("---")
-
-        # 6. Tabla Detallada
-        st.subheader("📋 Desglose de Registros")
-        
-        # Preparamos tabla pivotada o directa según el filtro para que se vea más limpia
-        if filtro_categoria == "Todas las Categorías":
-            tabla_mostrar = df_filtrado.pivot(index='Mes', columns='Categoría', values='Valor $').reset_index()
-            # Respetamos el orden cronológico de los meses originales
-            tabla_mostrar['Mes'] = pd.Categorical(tabla_mostrar['Mes'], categories=sheet_names, ordered=True)
-            tabla_mostrar = tabla_mostrar.sort_values('Mes')
-        else:
-            tabla_mostrar = df_filtrado.dropna(subset=["Valor $"])
-            
-        # Aplicamos el formato con puntos y comas a todas las columnas numéricas
-        columnas_numericas = tabla_mostrar.select_dtypes(include=['float64', 'int64']).columns
-        formato_diccionario = {col: formato_dinero for col in columnas_numericas}
-        
-        st.dataframe(
-            tabla_mostrar.style.format(formato_diccionario, na_rep="No registrado"), 
-            width="stretch", 
-            hide_index=True
-        )
+        with ui.tarjeta("cierre_tabla", "Desglose de registros", "USD"):
+            if filtro_categoria == "Todas las Categorías":
+                tabla_mostrar = df_filtrado.pivot(index='Mes', columns='Categoría', values='Valor $').reset_index()
+                tabla_mostrar['Mes'] = pd.Categorical(tabla_mostrar['Mes'], categories=sheet_names, ordered=True)
+                tabla_mostrar = tabla_mostrar.sort_values('Mes')
+            else:
+                tabla_mostrar = df_filtrado.dropna(subset=["Valor $"])
+            columnas_numericas = list(tabla_mostrar.select_dtypes(include=['float64', 'int64']).columns)
+            # Streamlit muestra 'None' en celdas vacías: la tabla visible se entrega ya formateada
+            vista = tabla_mostrar.copy()
+            vista["Mes"] = [etiqueta_mes(m) for m in vista["Mes"]]
+            for c in columnas_numericas:
+                vista[c] = [_usd(v) for v in vista[c]]
+            vista = vista.rename(columns={c: c.capitalize() for c in columnas_numericas if c in CATEGORIAS})
+            st.dataframe(vista, width="stretch", hide_index=True, column_config={
+                c: st.column_config.TextColumn(alignment="right") for c in vista.columns if c not in ("Mes", "Categoría")})
+            st.download_button("Descargar Excel", data=_excel(tabla_mostrar.astype({"Mes": str}) if "Mes" in tabla_mostrar else tabla_mostrar),
+                               file_name="Cierre_Inventario.xlsx",
+                               mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                               icon=":material/download:", key="cierre_descarga")
 
     except Exception as e:
-        st.error(f"Error procesando el histórico de inventarios: {e}")
+        st.error(f"Error procesando el histórico de inventarios: {e}")
