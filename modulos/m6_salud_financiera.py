@@ -2,16 +2,16 @@ import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
 import os
+from utils import datos
 
-@st.cache_data
-def _cargar_kpis_financieros(path):
-    return pd.read_excel(path, sheet_name='Hoja1', header=None)
+def _cargar_kpis_financieros(path=None):
+    return datos.leer_hoja(datos.HOJA_KPIS_FINANCIEROS, header=None)
 
 def renderizar():
     st.markdown("# 🛡️ Salud Financiera y Riesgo de Suministro")
     st.caption("Activos Inventario · Fill Rate · Riesgo Operativo (Quiebre de Stock)")
 
-    file_path = "data/Kpis Financieros Inventario.xlsx"
+    file_path = datos.ARCHIVO_DATOS
 
     if not os.path.exists(file_path):
         st.error(f"❌ **Archivo requerido no encontrado:** '{file_path}'")
@@ -204,4 +204,4 @@ def renderizar():
             use_container_width=True, hide_index=True
         )   
     except Exception as e:
-        st.error(f"Error procesando los KPIs Financieros: {e}")
+        st.error(f"Error procesando los KPIs Financieros: {e}")

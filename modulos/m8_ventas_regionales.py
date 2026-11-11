@@ -3,8 +3,9 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 import os
+from utils import datos
 
-PREFIJO_HOJA = "VENTAS CONSOLIDADA"
+PREFIJO_HOJA = datos.PREFIJO_CEDIS
 HOJA_NACIONAL = "VENTAS CONSOLIDADA"  # Hoja con el total nacional (se excluye del comparativo)
 
 
@@ -12,16 +13,13 @@ def _es_nacional(hoja):
     return hoja.strip().upper() == HOJA_NACIONAL
 
 
-@st.cache_data
-def _cargar_hojas_regionales(path):
-    """Retorna la lista de hojas con 'VENTAS CONSOLIDADA' en el nombre."""
-    xls = pd.ExcelFile(path)
-    return [h for h in xls.sheet_names if PREFIJO_HOJA in h]
+def _cargar_hojas_regionales(path=None):
+    """Retorna la lista de hojas que empiezan por 'VENTAS CONSOLIDADA'."""
+    return datos.hojas_con_prefijo(PREFIJO_HOJA)
 
 
-@st.cache_data
 def _cargar_hoja_regional(path, hoja):
-    return pd.read_excel(path, sheet_name=hoja, skiprows=5)
+    return datos.leer_hoja(hoja, skiprows=5)
 
 
 def _limpiar_df(df):
@@ -46,7 +44,7 @@ def _nombre_cedi(hoja):
 
 
 @st.cache_data
-def _resumen_cedis(path, hojas):
+def _resumen_cedis(path, hojas, ver=None):
     """Consolida Venta Bruta y Proyección de todos los CEDIs en un solo DataFrame."""
     filas = []
     for hoja in hojas:
@@ -76,7 +74,7 @@ def _renderizar_comparativo(file_path, hojas, hoja_nacional=None):
     st.markdown("### 📊 Comparativo entre CEDIs")
     st.caption("Venta Bruta actual vs. Proyección fin de mes por Centro de Distribución (unidades)")
 
-    resumen = _resumen_cedis(file_path, tuple(hojas))
+    resumen = _resumen_cedis(file_path, tuple(hojas), datos.version())
 
     if resumen.empty:
         st.info("No hay datos disponibles para comparar.")
@@ -167,8 +165,7 @@ def renderizar():
     st.markdown("# 🗺️ Desempeño Regional de Ventas (CEDIs)")
     st.caption("Análisis de Venta Bruta y Proyección por Centro de Distribución")
 
-    # Ruta del archivo
-    file_path = "data/Ventas por cedis.xlsx"
+    file_path = datos.ARCHIVO_DATOS
 
     if not os.path.exists(file_path):
         st.error(f"❌ **No se encontró el archivo:** '{file_path}'")
@@ -281,4 +278,4 @@ def renderizar():
         st.plotly_chart(fig_pct, use_container_width=True)
 
     except Exception as e:
-        st.error(f"⚠️ **Error al procesar el archivo:** {e}")
+        st.error(f"⚠️ **Error al procesar el archivo:** {e}")

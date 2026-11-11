@@ -2,16 +2,16 @@ import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
 import os
+from utils import datos
 
-@st.cache_data
-def _cargar_sici(path):
-    return pd.read_excel(path, sheet_name=0, header=None)
+def _cargar_sici(path=None):
+    return datos.leer_hoja(datos.HOJA_SICI, header=None)
 
 def renderizar():
     st.markdown("# 🌍 Sistema Integral de Control Multicentro (SICI)")
     st.caption("Visión Global · Coberturas por CEDIS · Eficiencia Logística")
 
-    file_path = "data/Sistema Integral de Control de Inventarios.xlsx"
+    file_path = datos.ARCHIVO_DATOS
     if not os.path.exists(file_path):
         st.error(f"❌ **Archivo requerido no encontrado:** '{file_path}'")
         return
@@ -173,4 +173,4 @@ def renderizar():
             )
 
     except Exception as e:
-        st.error(f"Error analizando la estructura del Excel SICI: {e}")
+        st.error(f"Error analizando la estructura del Excel SICI: {e}")

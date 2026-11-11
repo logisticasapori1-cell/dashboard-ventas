@@ -2,37 +2,29 @@ import streamlit as st
 import pandas as pd
 import os
 import requests
+from utils import datos
 
-@st.cache_data
-def _cargar_ventas_dashboard(path):
-    return pd.read_excel(path, sheet_name="DASHBOARD", header=None)
+# Todas las lecturas salen del Excel único (ver utils/datos.py)
+def _cargar_ventas_dashboard(path=None):
+    return datos.leer_hoja(datos.HOJA_VENTAS_KPIS, header=None)
 
-@st.cache_data
-def _cargar_ventas_matriz(path):
-    return pd.read_excel(path, sheet_name="file_ventas")
+def _cargar_ventas_matriz(path=None):
+    return datos.leer_hoja(datos.HOJA_VENTAS_SKU)
 
-@st.cache_data
-def _cargar_desviaciones(path):
-    return pd.read_excel(path, sheet_name="Table 1")
+def _cargar_desviaciones(path=None):
+    return datos.leer_hoja(datos.HOJA_DESVIACIONES)
 
-@st.cache_data
-def _cargar_produccion_todas(path):
-    xls = pd.ExcelFile(path)
-    hojas = {sheet: pd.read_excel(xls, sheet_name=sheet) for sheet in xls.sheet_names}
-    return xls.sheet_names, hojas
+def _cargar_produccion_todas(path=None):
+    return datos.leer_grupo(datos.PREFIJO_PRODUCCION)
 
-@st.cache_data
-def _cargar_cierre_todas(path):
-    xls = pd.ExcelFile(path)
-    return {sheet: pd.read_excel(xls, sheet_name=sheet) for sheet in xls.sheet_names}
+def _cargar_cierre_todas(path=None):
+    return datos.leer_grupo(datos.PREFIJO_CIERRE, quitar_prefijo=True)[1]
 
-@st.cache_data
-def _cargar_kpis_fin(path):
-    return pd.read_excel(path, sheet_name=0, header=None)
+def _cargar_kpis_fin(path=None):
+    return datos.leer_hoja(datos.HOJA_KPIS_FINANCIEROS, header=None)
 
-@st.cache_data
-def _cargar_sici(path):
-    return pd.read_excel(path, sheet_name=0, header=None)
+def _cargar_sici(path=None):
+    return datos.leer_hoja(datos.HOJA_SICI, header=None)
 
 def renderizar(dias_efectivos, dias_restantes):
     st.title("🤖 Asistente de Consultas — Supply Chain & S&OP")
@@ -87,7 +79,7 @@ def renderizar(dias_efectivos, dias_restantes):
         bloques.append(f"Parámetros de tiempo: días efectivos = {dias_efectivos}, días restantes = {dias_restantes}.")
 
         # --- MÓDULOS ANTERIORES (INTACTOS) ---
-        file_ventas = "data/VINCULO VTS BY SKU.xlsx"
+        file_ventas = datos.ARCHIVO_DATOS
         if os.path.exists(file_ventas):
             try:
                 df_kpis = _cargar_ventas_dashboard(file_ventas)
@@ -101,9 +93,9 @@ def renderizar(dias_efectivos, dias_restantes):
                 bloques.append("\n=== MUESTRA MATRIZ DE VENTAS ===")
                 bloques.append(df_vts.head(80).to_string(index=False))
             except Exception as e: bloques.append(f"[Error leyendo ventas: {e}]")
-        else: bloques.append("[Archivo ventas no encontrado]")
+        else: bloques.append("[Hojas de ventas no encontradas]")
 
-        file_desv = "data/Comparación de Venta Diaria por SKU (Julio vs Agosto).xlsx"
+        file_desv = datos.ARCHIVO_DATOS
         if os.path.exists(file_desv):
             try:
                 df = _cargar_desviaciones(file_desv)
@@ -112,7 +104,7 @@ def renderizar(dias_efectivos, dias_restantes):
                 bloques.append(df.head(60).to_string(index=False))
             except Exception as e: bloques.append(f"[Error leyendo desviaciones: {e}]")
 
-        file_prod = "data/Historico_Produccion_CREMIGURT.xlsx"
+        file_prod = datos.ARCHIVO_DATOS
         if os.path.exists(file_prod):
             try:
                 sheet_names_prod, hojas_prod = _cargar_produccion_todas(file_prod)
@@ -125,7 +117,7 @@ def renderizar(dias_efectivos, dias_restantes):
             except Exception as e: bloques.append(f"[Error leyendo producción: {e}]")
 
         # --- NUEVOS MÓDULOS INTEGRADOS (M5, M6, M7) ---
-        file_cierre = "data/Historico Cierre Inventario Valorizado.xlsx"
+        file_cierre = datos.ARCHIVO_DATOS
         if os.path.exists(file_cierre):
             try:
                 hojas_cierre = _cargar_cierre_todas(file_cierre)
@@ -135,9 +127,9 @@ def renderizar(dias_efectivos, dias_restantes):
                     bloques.append(df_cierre.to_string(index=False))
             except Exception as e: bloques.append(f"[Error leyendo Cierre Valorizado: {e}]")
         else: 
-            bloques.append("\n[Archivo Historico Cierre Inventario Valorizado.xlsx no encontrado]")
+            bloques.append("\n[Hojas de cierre de inventario no encontradas]")
 
-        file_kpis_fin = "data/Kpis Financieros Inventario.xlsx"
+        file_kpis_fin = datos.ARCHIVO_DATOS
         if os.path.exists(file_kpis_fin):
             try:
                 df_kf = _cargar_kpis_fin(file_kpis_fin)
@@ -145,9 +137,9 @@ def renderizar(dias_efectivos, dias_restantes):
                 bloques.append(df_kf.head(40).to_string(index=False))
             except Exception as e: bloques.append(f"[Error leyendo KPIs Financieros: {e}]")
         else: 
-            bloques.append("\n[Archivo Kpis Financieros Inventario.xlsx no encontrado]")
+            bloques.append("\n[Hoja de KPIs financieros no encontrada]")
 
-        file_sici = "data/Sistema Integral de Control de Inventarios.xlsx"
+        file_sici = datos.ARCHIVO_DATOS
         if os.path.exists(file_sici):
             try:
                 df_sici = _cargar_sici(file_sici)
@@ -156,7 +148,7 @@ def renderizar(dias_efectivos, dias_restantes):
                 bloques.append(df_sici_clean.head(75).to_string(index=False))
             except Exception as e: bloques.append(f"[Error leyendo SICI: {e}]")
         else: 
-            bloques.append("\n[Archivo Sistema Integral de Control de Inventarios.xlsx no encontrado]")
+            bloques.append("\n[Hoja SICI no encontrada]")
 
         return "\n".join(bloques)
 
@@ -212,4 +204,4 @@ def renderizar(dias_efectivos, dias_restantes):
 
     if st.button("🗑️ Limpiar chat"):
         st.session_state["chat_messages"] = []
-        st.rerun()
+        st.rerun()

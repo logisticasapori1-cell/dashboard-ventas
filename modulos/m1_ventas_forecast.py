@@ -1,21 +1,19 @@
 import streamlit as st
 import pandas as pd
 import os
+from utils import datos
 
-@st.cache_data
-def _cargar_kpis(path):
-    return pd.read_excel(path, sheet_name="DASHBOARD", header=None)
+def _cargar_kpis(path=None):
+    return datos.leer_hoja(datos.HOJA_VENTAS_KPIS, header=None)
 
-@st.cache_data
-def _cargar_ventas_sku(path):
-    return pd.read_excel(path, sheet_name="file_ventas")
+def _cargar_ventas_sku(path=None):
+    return datos.leer_hoja(datos.HOJA_VENTAS_SKU)
 
 def renderizar(dias_efectivos, dias_restantes):
     st.markdown("# 📈 Rendimiento Comercial y Proyecciones de Demanda")
     st.caption("Ventas diarias · Forecast · Alcance")
 
-    # NUEVA RUTA
-    file_ventas = "data/VINCULO VTS BY SKU.xlsx"
+    file_ventas = datos.ARCHIVO_DATOS
 
     if not os.path.exists(file_ventas):
         st.error(f"❌ **Archivo requerido no encontrado:** '{file_ventas}'")
@@ -95,4 +93,4 @@ def renderizar(dias_efectivos, dias_restantes):
                 st.dataframe(df_vts_filtrado, use_container_width=True, hide_index=True)
 
         except Exception as e:
-            st.error(f"Error analítico durante el procesamiento del archivo: {e}")
+            st.error(f"Error analítico durante el procesamiento del archivo: {e}")

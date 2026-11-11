@@ -2,13 +2,11 @@ import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
 import os
+from utils import datos
 
-@st.cache_data
-def _cargar_cierre_inventario(path):
-    """Lee todas las hojas del histórico de cierre y retorna sheet_names + dict de DataFrames."""
-    xls = pd.ExcelFile(path)
-    hojas = {sheet: pd.read_excel(xls, sheet_name=sheet) for sheet in xls.sheet_names}
-    return xls.sheet_names, hojas
+def _cargar_cierre_inventario(path=None):
+    """Lee las hojas 'CIERRE <MES> <AÑO>' y retorna (meses, dict de DataFrames), sin el prefijo."""
+    return datos.leer_grupo(datos.PREFIJO_CIERRE, quitar_prefijo=True)
 
 
 def _renderizar_tendencia_total(df_consolidado, sheet_names, formato_dinero):
@@ -93,7 +91,7 @@ def renderizar():
     st.markdown("# 📦 Cierre de Inventario Valorizado")
     st.caption("Evolución financiera de Materia Prima, Material de Empaque y Producto Terminado")
 
-    file_path = "data/Historico Cierre Inventario Valorizado.xlsx"
+    file_path = datos.ARCHIVO_DATOS
 
     if not os.path.exists(file_path):
         st.error(f"❌ **Archivo requerido no encontrado:** '{file_path}'")
@@ -243,4 +241,4 @@ def renderizar():
         )
 
     except Exception as e:
-        st.error(f"Error procesando el histórico de inventarios: {e}")
+        st.error(f"Error procesando el histórico de inventarios: {e}")

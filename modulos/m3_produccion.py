@@ -3,20 +3,17 @@ import pandas as pd
 import plotly.graph_objects as go
 import os
 import re
+from utils import datos
 
-@st.cache_data
-def _cargar_hojas_produccion(path):
-    """Retorna un dict con {nombre_hoja: DataFrame} para todas las hojas."""
-    xls = pd.ExcelFile(path)
-    hojas = {sheet: pd.read_excel(xls, sheet_name=sheet) for sheet in xls.sheet_names}
-    return xls.sheet_names, hojas
+def _cargar_hojas_produccion(path=None):
+    """Retorna (nombres, {nombre_hoja: DataFrame}) de las hojas de producción."""
+    return datos.leer_grupo(datos.PREFIJO_PRODUCCION)
 
 def renderizar():
     st.markdown("# 🏭 Tablero de Control de Producción Mensual")
     st.caption("Monitoreo de Volúmenes de Producción por Categoría · Feb-26 hasta Mes Actual")
 
-    # NUEVA RUTA
-    file_historico_path = "data/Historico_Produccion_CREMIGURT.xlsx"
+    file_historico_path = datos.ARCHIVO_DATOS
 
     if os.path.exists(file_historico_path):
         try:
@@ -141,4 +138,4 @@ def renderizar():
         except Exception as e:
             st.error(f"Error analítico durante el procesamiento horizontal: {e}")
     else:
-        st.error(f"❌ **Archivo requerido no encontrado:** '{file_historico_path}'")
+        st.error(f"❌ **Archivo requerido no encontrado:** '{file_historico_path}'")

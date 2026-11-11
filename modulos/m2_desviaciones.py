@@ -3,17 +3,16 @@ import pandas as pd
 import plotly.graph_objects as go
 import os
 import io
+from utils import datos
 
-@st.cache_data
-def _cargar_desviaciones(path):
-    return pd.read_excel(path, sheet_name="Table 1")
+def _cargar_desviaciones(path=None):
+    return datos.leer_hoja(datos.HOJA_DESVIACIONES)
 
 def renderizar():
     st.markdown("# 📊 Impacto Financiero y Desviaciones Estratégicas")
     st.caption("Análisis Comparativo · Financiero · Pareto (ABC) por SKU")
 
-    # NUEVA RUTA
-    file_name = "data/Comparación de Venta Diaria por SKU.xlsx"
+    file_name = datos.ARCHIVO_DATOS
 
     if not os.path.exists(file_name):
         st.error(f"❌ **No se encontró el archivo de datos:** '{file_name}'")
@@ -142,4 +141,4 @@ def renderizar():
             st.download_button("📄 Descargar Reporte para Firmas", data=buffer.getvalue(), file_name="Reporte_Desviaciones.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", type="primary")
 
         except Exception as e:
-            st.error(f"Error crítico en la lectura del archivo Excel: {e}")
+            st.error(f"Error crítico en la lectura del archivo Excel: {e}")
