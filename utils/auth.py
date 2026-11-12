@@ -36,7 +36,7 @@ def verificar_login():
                     "admin": "sapori2026",
                     "Jair Ramos": "1402",
                     "Romulo Delgado": "gerencia123",
-                    "logistica": "logistica2026",
+                    "Carlos Montoya": "produccion123",
                     "Gerente General": "sapori2026"
                 }
                 if usuario in usuarios_autorizados and usuarios_autorizados[usuario] == contrasena:
