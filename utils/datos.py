@@ -25,6 +25,7 @@ HOJA_VENTAS_KPIS = "VTS DASHBOARD"           # m1, m4
 HOJA_DESVIACIONES = "DESV Venta Diaria SKU"  # m2, m4
 HOJA_KPIS_FINANCIEROS = "FIN KPIs Inventario"  # m6, m4
 HOJA_SICI = "SICI Inventarios"               # m7, m4
+MONEDA_SICI = "USD"                          # moneda de la valorización de la hoja SICI (confirmado por el usuario)
 
 # Grupos de hojas (inicio del nombre de la pestaña)
 PREFIJO_PRODUCCION = "Produccion Total"      # m3, m4 -> una hoja por categoría

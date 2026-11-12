@@ -154,8 +154,8 @@ def renderizar(dias_efectivos, dias_restantes):
             try:
                 df_sici = _cargar_sici(file_sici)
                 bloques.append(f"\n=== SICI: CONTROL DE INVENTARIO MULTICENTRO ===")
-                df_sici_clean = df_sici.dropna(how='all') 
-                bloques.append(df_sici_clean.head(75).to_string(index=False))
+                from modulos import m7_control_multicentro as m7
+                bloques.append(m7.resumen_texto(df_sici))
             except Exception as e: bloques.append(f"[Error leyendo SICI: {e}]")
         else: 
             bloques.append("\n[Hoja SICI no encontrada]")

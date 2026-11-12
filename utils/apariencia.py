@@ -16,7 +16,6 @@ Requiere `toolbarMode = "viewer"` en config.toml (para que exista el menú nativ
 import json
 
 import streamlit as st
-import streamlit.components.v1 as components
 
 from utils import tema
 
@@ -126,7 +125,7 @@ def _motor(deseado, primera, clave):
                    .replace("__PRIMERA__", "true" if primera else "false")
                    .replace("__ETIQUETAS__", json.dumps(_ETIQUETAS))
                    .replace("__TINTA__", json.dumps({k: v["INK"].lower() for k, v in tema.PALETAS.items()})))
-        components.html(html, height=0)
+        st.iframe(html, height=1)  # contenido propio y fijo (no viene de usuarios), invisible por CSS
 
 
 def selector():
