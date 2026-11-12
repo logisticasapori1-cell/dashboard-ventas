@@ -26,6 +26,18 @@ _JS = """
 <script>
 (function () {
   const P = window.parent, D = P.document;
+
+  // 0. El portal está en español: se marca así y se pide al navegador no traducirlo.
+  //    (Streamlit declara la página como inglés y Chrome la traducía: "unid." -> "sin identificar",
+  //    "58.177" -> "58,177".)
+  try {
+    const R = D.documentElement;
+    R.setAttribute("lang", "es-VE"); R.setAttribute("translate", "no"); R.classList.add("notranslate");
+    if (!D.querySelector('meta[name="google"][content="notranslate"]')) {
+      const m = D.createElement("meta"); m.name = "google"; m.content = "notranslate"; D.head.appendChild(m);
+    }
+    if (D.body) { D.body.setAttribute("translate", "no"); D.body.classList.add("notranslate"); }
+  } catch (e) {}
   const deseado = __DESEADO__;          // "sistema" | "claro" | "oscuro" | null (pantalla de acceso)
   const tipoPython = "__TIPO__";        // modo con el que Python pintó esta ejecución
   const primera = __PRIMERA__;          // primera ejecución de la sesión
@@ -132,7 +144,7 @@ def selector():
     """Control de apariencia para la barra lateral."""
     primera = "sp_tema_iniciado" not in st.session_state
     st.session_state["sp_tema_iniciado"] = True
-    st.html('<p class="sp-side-label">Apariencia</p>')
+    st.html('<p class="sp-side-label notranslate">Apariencia</p>')
     deseado = st.segmented_control("Apariencia", list(OPCIONES), default="sistema", required=True,
                                    help="Sistema sigue el modo claro u oscuro de tu computador.",
                                    format_func=OPCIONES.get, key="sp_tema", label_visibility="collapsed",

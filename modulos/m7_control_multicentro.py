@@ -150,6 +150,7 @@ def dias_del_mes():
     """Días de venta del mes: los mismos con que las hojas de CEDI arman la proyección (venta diaria × 21)."""
     return 21
 
+
 def demanda_mensual_por_cedi():
     """{CEDI: Serie(proyección mensual por Código)} desde las hojas VENTAS CONSOLIDADA <CEDI>."""
     from modulos import m8_ventas_regionales as m8
@@ -362,15 +363,22 @@ def renderizar():
     titulo = "Consolidado SICI" if vista == VISTA_GLOBAL else f"CEDI {vista}"
     with ui.tarjeta("sici_tabla", f"Detalle por producto · {titulo}", f"{len(df_render)} productos"):
         ui.leyenda([("Cobertura < 7 días", ui.ROJO_BG), ("7 a 15 días", ui.AMBAR_BG), ("> 15 días", ui.VERDE_BG)])
-        estilo = df_render.style.map(semaforo_cobertura, subset=["Cobertura (Días)"]).format({
+        # Streamlit muestra 'None' en celdas vacías (y el traductor del navegador lo cambiaba):
+        # la proyección y la cobertura se entregan ya como texto; el Excel descargado conserva los números.
+        cob = df_render["Cobertura (Días)"].tolist()
+        tabla_vis = df_render.copy()
+        tabla_vis["Demanda mensual"] = [num(x) if pd.notna(x) else "Sin proyección" for x in df_render["Demanda mensual"]]
+        tabla_vis["Cobertura (Días)"] = ["Sin proyección" if pd.isna(d) else ("Sin venta" if d <= 0 else num(c, 1))
+                                         for d, c in zip(df_render["Demanda mensual"], cob)]
+        estilo = tabla_vis.style.apply(lambda _: [semaforo_cobertura(v) for v in cob], subset=["Cobertura (Días)"]).format({
             "Precio": lambda x: _usd(x) if x > 0 else "Sin precio", "Odoo": num, "Notas": num, "Existencia": num,
-            "Valor": _usd, "Demanda mensual": lambda x: num(x) if pd.notna(x) else "Sin proyección",
-            "Cobertura (Días)": lambda x: num(x, 1) if pd.notna(x) else "–"})
+            "Valor": _usd})
         st.dataframe(estilo, width="stretch", hide_index=True, column_config={
+            "Cobertura (Días)": st.column_config.TextColumn("Cobertura (días de venta)", alignment="right"),
             "Código": st.column_config.Column("SKU", width=72), "Producto": st.column_config.Column(width="medium"),
             "Precio": st.column_config.Column(f"Precio ({moneda})"), "Valor": st.column_config.Column(f"Valor ({moneda})"),
             "Existencia": st.column_config.Column("Existencia total"),
-            "Demanda mensual": st.column_config.Column("Proyección mensual" if vista != VISTA_GLOBAL else "Proyección mensual (5 CEDIs)")})
+            "Demanda mensual": st.column_config.TextColumn("Proyección mensual" if vista != VISTA_GLOBAL else "Proyección mensual (5 CEDIs)", alignment="right")})
         st.download_button("Descargar Excel", data=_excel(df_render, titulo), file_name=f"SICI_{titulo.replace(' ', '_')}.xlsx",
                            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                            icon=":material/download:", key="sici_descarga")

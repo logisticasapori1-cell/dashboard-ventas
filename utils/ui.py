@@ -62,8 +62,12 @@ def icono(nombre, size=16, color=None, grosor=2.0):
 
 
 def _render(html):
-    """Inserta HTML sin pasar por Markdown (evita que la indentación se vuelva código)."""
-    st.html("".join(linea.strip() for linea in html.splitlines()))
+    """Inserta HTML sin pasar por Markdown (evita que la indentación se vuelva código).
+
+    Va marcado como "no traducir": el traductor del navegador confundía "unid." con
+    "sin identificar" y cambiaba el separador de miles (58.177 -> 58,177)."""
+    contenido = "".join(linea.strip() for linea in html.splitlines())
+    st.html(f'<div class="notranslate" translate="no">{contenido}</div>')
 
 
 # ══════════════════════════════════════════════════════════

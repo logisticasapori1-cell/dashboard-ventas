@@ -117,7 +117,7 @@ if os.path.exists(LOGO):
     st.logo(LOGO, size="large")
 
 with st.sidebar:
-    st.html('<p class="sp-side-label">Parámetros del período</p>')
+    st.html('<p class="sp-side-label notranslate">Parámetros del período</p>')
     c1, c2 = st.columns(2)
     with c1:
         st.number_input("Días efectivos", min_value=1, value=8, step=1, key="dias_efectivos")
@@ -126,7 +126,7 @@ with st.sidebar:
 
     fecha = datos.fecha_actualizacion()
     texto_fecha = fecha.strftime("%d/%m/%Y %H:%M") if fecha else "sin fecha"
-    st.html(f'<p class="sp-side-meta">Datos: {os.path.basename(datos.ARCHIVO_DATOS)} · {texto_fecha}</p>')
+    st.html(f'<p class="sp-side-meta notranslate">Datos: {os.path.basename(datos.ARCHIVO_DATOS)} · {texto_fecha}</p>')
 
     st.divider()
     apariencia.selector()
@@ -136,7 +136,7 @@ with st.sidebar:
     inicial = (usuario.strip()[:1] or "G").upper()
     cu, cb = st.columns([3, 2], vertical_alignment="center")
     with cu:
-        st.html(f'<div class="sp-user"><span class="sp-avatar">{ui._e(inicial)}</span>'
+        st.html(f'<div class="sp-user notranslate"><span class="sp-avatar">{ui._e(inicial)}</span>'
                 f'<span><span class="sp-user-name">{ui._e(usuario)}</span><span class="sp-user-ver">{VERSION}</span></span></div>')
     with cb:
         if st.button("Salir", key="btn_salir", icon=":material/logout:", width="stretch"):
